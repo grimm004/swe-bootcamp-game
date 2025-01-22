@@ -594,8 +594,9 @@ export class Application {
         const app = this;
 
         function mainloop(currentTime) {
-            currentTime /= 1000.0;
-            const deltaTime = currentTime - previousTime;
+            if (previousTime === 0) previousTime = currentTime;
+
+            const deltaTime = (currentTime - previousTime) / 1000;
 
             app.update(deltaTime);
             app.draw(deltaTime);

@@ -416,6 +416,37 @@ export class Vector3 extends Vector {
         return new Vector3(x, y, z);
     }
 
+    static orientationFromQuaternion(quaternion) {
+        const { w, x, y, z } = quaternion;
+
+        const test = 2 * (w * x - y * z);
+        let yaw, pitch, roll;
+
+        if (test > 0.999999) {
+            pitch = Math.PI / 2;
+            yaw   = Math.atan2(y, w);
+            roll  = 0;
+        } else if (test < -0.999999) {
+            pitch = -Math.PI / 2;
+            yaw   = Math.atan2(y, w);
+            roll  = 0;
+        } else {
+            pitch = Math.asin(test);
+
+            yaw = Math.atan2(
+                2 * (w * y + x * z),
+                1 - 2 * (x * x + y * y)
+            );
+
+            roll = Math.atan2(
+                2 * (w * z + x * y),
+                1 - 2 * (x * x + z * z)
+            );
+        }
+
+        return new Vector3(yaw, pitch, roll);
+    }
+
     static get zeros() {
         return new Vector3();
     }

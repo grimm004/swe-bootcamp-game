@@ -12025,7 +12025,7 @@ Object.assign( World.prototype, {
 
         // shape rotation in degree
         var r2 = o.rotShape || [0,0,0];
-        r2 = r.map( function(x) { return x * _Math.degtorad; } );
+        r2 = r2.map( function(x) { return x * _Math.degtorad; } );
 
         // SIZE
 
