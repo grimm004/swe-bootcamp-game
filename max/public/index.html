@@ -1,74 +1,67 @@
 <!DOCTYPE html>
 
 <html lang="en-GB">
-    <head>
-        <title>BP EC SE Game</title>
+<head>
+  <title>BP EC SE Game</title>
 
-        <link rel="stylesheet" type="text/css" href="./css/bootstrap.css">
-        <link rel="stylesheet" type="text/css" href="./css/style.css">
+  <link rel="stylesheet" type="text/css" href="./css/bootstrap.css">
+  <link rel="stylesheet" type="text/css" href="./css/style.css">
 
-        <script src="./lib/gl-matrix.js"></script>
-        <script src="./lib/oimo.js"></script>
-        <script src="./lib/ape-ecs.js"></script>
-        <script src="./js/math.js"></script>
-        <script src="./js/graphics.js"></script>
-        <script src="./js/meshes.js"></script>
-        <script src="./js/objects.js"></script>
-        <script src="./js/index.js"></script>
-    </head>
+  <script type="module" src="./js/index.js"></script>
+</head>
 
-    <body>
+<body>
 
-    <div>
-        <canvas id="glCanvas" width="1200" height="900">
-            Browser does not sport HTML5.
-        </canvas>
+<div>
+  <canvas id="glCanvas" width="1200" height="900">
+    Browser does not sport HTML5.
+  </canvas>
 
-        <div id="ui" class="form-group">
-            <div><label id="fpsLabel"></label> FPS</div>
+  <div id="ui" class="form-group">
+    <div><label id="fpsLabel"></label> FPS</div>
 
-            <div class="custom-control custom-checkbox">
-                <input id="enableControlsCheckbox" type="checkbox" class="custom-control-input">
-                <label for="enableControlsCheckbox" class="custom-control-label">Show Scene Controls</label>
-            </div>
-
-            <div id="controls" class="d-none">
-                <div class="custom-control custom-checkbox">
-                    <input id="lightCheckbox" type="checkbox" class="custom-control-input" checked>
-                    <label for="lightCheckbox" class="custom-control-label">Light On</label>
-                </div>
-
-                <div class="custom-control custom-checkbox">
-                    <input id="lightSwingCheckbox" type="checkbox" class="custom-control-input" checked>
-                    <label for="lightSwingCheckbox" class="custom-control-label">Light Swing</label>
-                </div>
-
-                <label for="tableRotationSlider">Table rotation (with chairs)</label>
-                <input id="tableRotationSlider" class="custom-range" type="range" value="0" min="-1800" max="1800"/>
-
-                <label for="xPosSlider">Scene X position</label>
-                <input id="xPosSlider" class="custom-range" type="range" value="0" min="-100" max="100"/>
-
-                <label for="yPosSlider">Scene Y position</label>
-                <input id="yPosSlider" class="custom-range" type="range" value="0" min="-100" max="100"/>
-
-                <label for="zPosSlider">Scene Z position</label>
-                <input id="zPosSlider" class="custom-range" type="range" value="0" min="-100" max="100"/>
-
-                <label for="yawRotSlider">Scene Yaw</label>
-                <input id="yawRotSlider" class="custom-range" type="range" value="0" min="-1800" max="1800"/>
-
-                <label for="pitchRotSlider">Scene Pitch</label>
-                <input id="pitchRotSlider" class="custom-range" type="range" value="0" min="-900" max="900"/>
-
-                <label for="rollRotSlider">Scene Roll</label>
-                <input id="rollRotSlider" class="custom-range" type="range" value="0" min="-900" max="900"/>
-
-                <label for="scaleSlider">Scene Scale</label>
-                <input id="scaleSlider" class="custom-range" type="range" value="10" min="0" max="100"/>
-            </div>
-        </div>
+    <div class="custom-control custom-checkbox">
+      <input id="enableControlsCheckbox" type="checkbox" class="custom-control-input">
+      <label for="enableControlsCheckbox" class="custom-control-label">Show Scene Controls</label>
     </div>
 
-    </body>
+    <div id="controls" class="d-none">
+      <div class="custom-control custom-checkbox">
+        <input id="lightCheckbox" type="checkbox" class="custom-control-input" checked>
+        <label for="lightCheckbox" class="custom-control-label">Light On</label>
+      </div>
+
+      <div class="custom-control custom-checkbox">
+        <input id="lightSwingCheckbox" type="checkbox" class="custom-control-input" checked>
+        <label for="lightSwingCheckbox" class="custom-control-label">Light Swing</label>
+      </div>
+
+      <label for="tableRotationSlider">Table rotation (with chairs)</label>
+      <input id="tableRotationSlider" class="custom-range" type="range" value="0" min="-1800" max="1800"/>
+
+      <label for="xPosSlider">Scene X position</label>
+      <input id="xPosSlider" class="custom-range" type="range" value="0" min="-100" max="100"/>
+
+      <label for="yPosSlider">Scene Y position</label>
+      <input id="yPosSlider" class="custom-range" type="range" value="0" min="-100" max="100"/>
+
+      <label for="zPosSlider">Scene Z position</label>
+      <input id="zPosSlider" class="custom-range" type="range" value="0" min="-100" max="100"/>
+
+      <label for="yawRotSlider">Scene Yaw</label>
+      <input id="yawRotSlider" class="custom-range" type="range" value="0" min="-1800" max="1800"/>
+
+      <label for="pitchRotSlider">Scene Pitch</label>
+      <input id="pitchRotSlider" class="custom-range" type="range" value="0" min="-900" max="900"/>
+
+      <label for="rollRotSlider">Scene Roll</label>
+      <input id="rollRotSlider" class="custom-range" type="range" value="0" min="-900" max="900"/>
+
+      <label for="scaleSlider">Scene Scale</label>
+      <input id="scaleSlider" class="custom-range" type="range" value="10" min="0" max="100"/>
+    </div>
+  </div>
+</div>
+
+</body>
 </html>

@@ -1,6 +1,6 @@
-"use strict";
+import {Colour, Matrix4, Vector2, Vector3, Vector4} from "./math.js";
 
-class Texture {
+export class Texture {
     constructor(gl, image, wrap = gl.CLAMP_TO_EDGE, slot = 0) {
         this.gl = gl;
 
@@ -23,7 +23,7 @@ class Texture {
     }
 }
 
-class Shader {
+export class Shader {
     constructor(gl, vertexShaderSource, fragmentShaderSource) {
         this.gl = gl;
 
@@ -70,11 +70,11 @@ class Shader {
     }
 
     hasLayout(name) {
-        return this._layouts.hasOwnProperty(name);
+        return Object.prototype.hasOwnProperty.call(this._layouts, name);
     }
 
     getAttrib(name) {
-        if (!this._locationCache.attributes.hasOwnProperty(name))
+        if (!Object.prototype.hasOwnProperty.call(this._locationCache.attributes, name))
             this._locationCache.attributes[name] = this.gl.getAttribLocation(this.id, name);
         if (this._locationCache.attributes[name] === -1)
             throw new Error(`Unknown attribute name: ${name}`);
@@ -82,7 +82,7 @@ class Shader {
     }
 
     getUniform(name) {
-        if (!this._locationCache.uniforms.hasOwnProperty(name))
+        if (!Object.prototype.hasOwnProperty.call(this._locationCache.uniforms, name))
             this._locationCache.uniforms[name] = this.gl.getUniformLocation(this.id, name);
         if (this._locationCache.uniforms[name] === null)
             throw new Error(`Unknown uniform name: ${name}`);
@@ -141,7 +141,7 @@ class Shader {
     }
 }
 
-class Buffer {
+export class Buffer {
     constructor(gl, type, typedData, accessType = gl.STATIC_DRAW) {
         this.gl = gl;
 
@@ -157,19 +157,19 @@ class Buffer {
     }
 }
 
-class VertexBuffer extends Buffer {
+export class VertexBuffer extends Buffer {
     constructor(gl, vertexData) {
         super(gl, gl.ARRAY_BUFFER, new Float32Array(vertexData));
     }
 }
 
-class IndexBuffer extends Buffer {
+export class IndexBuffer extends Buffer {
     constructor(gl, indexData) {
         super(gl, gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indexData));
     }
 }
 
-class VertexBufferLayout {
+export class VertexBufferLayout {
     constructor(gl) {
         this.gl = gl;
         this.attributes = [];
@@ -202,7 +202,7 @@ class VertexBufferLayout {
     }
 }
 
-class VertexArray {
+export class VertexArray {
     constructor(gl) {
         this.gl = gl;
         this.id = gl.createVertexArray();
@@ -229,7 +229,7 @@ class VertexArray {
     }
 }
 
-class Mesh {
+export class Mesh {
     constructor(gl, vertexArray, indexBuffer, shaderName, texture) {
         this.gl = gl;
         this.vertexArray = vertexArray;
@@ -250,7 +250,7 @@ class Mesh {
     }
 }
 
-class Renderer {
+export class Renderer {
     constructor(gl, clearColour = Colour.black) {
         this.gl = gl;
 
@@ -273,7 +273,7 @@ class Renderer {
     }
 }
 
-class WorldObject {
+export class WorldObject {
     constructor(position = Vector3.zeros, orientationRad = Vector3.zeros) {
         this._position = new Vector3(position);
         this._orientation = new Vector3(orientationRad);
@@ -309,7 +309,7 @@ class WorldObject {
     }
 }
 
-class SceneNode extends WorldObject {
+export class SceneNode extends WorldObject {
     constructor(position = Vector3.zeros, orientationRad = Vector3.zeros, scale = Vector3.ones, children = []) {
         super(position, orientationRad);
 
@@ -358,7 +358,7 @@ class SceneNode extends WorldObject {
     }
 }
 
-class DrawableSceneNode extends SceneNode {
+export class DrawableSceneNode extends SceneNode {
     constructor(mesh, position = Vector3.zeros, orientationRad = Vector3.zeros, scale = Vector3.ones, children = []) {
         super(position, orientationRad, scale, children);
 
@@ -367,7 +367,7 @@ class DrawableSceneNode extends SceneNode {
     }
 
     update(deltaTime, uniforms, transform = Matrix4.identity) {
-        if (typeof uniforms === "object" && uniforms.hasOwnProperty(this.mesh.shaderName))
+        if (typeof uniforms === "object" && Object.prototype.hasOwnProperty.call(uniforms, this.mesh.shaderName))
             this.uniforms = {...this.uniforms, ...uniforms[this.mesh.shaderName]};
 
         super.update(deltaTime, uniforms, transform);
@@ -383,7 +383,7 @@ class DrawableSceneNode extends SceneNode {
     }
 }
 
-class Camera extends WorldObject {
+export class Camera extends WorldObject {
     constructor(fovRad, aspectRatio, near = 0.1, far = 1000, position = Vector3.zeros, orientationRad = Vector3.zeros) {
         super(position, orientationRad);
 
@@ -516,7 +516,7 @@ class Camera extends WorldObject {
     }
 }
 
-class Application {
+export class Application {
     constructor(gl) {
         this.gl = gl;
         this.gl.shaders = {};
@@ -580,12 +580,12 @@ class Application {
         return this;
     }
 
-    update(deltaTime) {
+    update() {
         if (!this.initialised) throw Error("Not initialised.");
         this.mouseChange = Vector2.zeros;
     }
 
-    draw(deltaTime) {
+    draw() {
         if (!this.initialised) throw Error("Not initialised.");
     }
 

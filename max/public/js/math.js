@@ -1,10 +1,12 @@
+import {mat4, vec3, vec4} from "../lib/gl-matrix/index.js";
+import * as OIMO from "../lib/oimo.module.js";
+
 Math.clamp = (x, min, max) => Math.min(Math.max(x, min), max);
 Math.radians = (degrees) => Math.PI * degrees / 180.0;
 Math.degrees = (radians) => 180.0 * radians / Math.PI;
 Math.lerp = (a, b, v) => (a * (1 - v)) + (b * v);
 
-
-class FrameCounter {
+export class FrameCounter {
     constructor(bufferSize = 50) {
         this._bufferSize = bufferSize;
         this._frameTimeBuffer = new Float32Array(bufferSize);
@@ -28,15 +30,14 @@ class FrameCounter {
     }
 }
 
-
-class Matrix4 extends Float32Array {
+export class Matrix4 extends Float32Array {
     constructor(value) {
         let elements;
         if (value instanceof Matrix4) elements = new Float32Array(value.elements);
         else if (value instanceof Float32Array || value instanceof Array) {
             elements = new Float32Array(16);
             for (let i = 0; i < Math.min(16, value.length); i++) elements[i] = value[i];
-        } else elements = glMatrix.mat4.create();
+        } else elements = mat4.create();
 
         super(elements);
     }
@@ -54,21 +55,21 @@ class Matrix4 extends Float32Array {
     }
 
     transpose() {
-        glMatrix.mat4.transpose(this, this);
+        mat4.transpose(this, this);
         return this;
     }
 
     invert() {
-        return glMatrix.mat4.invert(this, this);
+        return mat4.invert(this, this);
     }
 
     multiply(rhs) {
         if (rhs instanceof Matrix4)
-            return glMatrix.mat4.mul(this, this, rhs.elements);
+            return mat4.mul(this, this, rhs.elements);
         else if (rhs instanceof Vector3)
-            return glMatrix.vec3.transformMat4(new Vector3(), rhs, this);
-        else if (rhs instanceof Vector3)
-            return glMatrix.vec4.transformMat4(new Vector4(), rhs, this);
+            return vec3.transformMat4(new Vector3(), rhs, this);
+        else if (rhs instanceof Vector4)
+            return vec4.transformMat4(new Vector4(), rhs, this);
     }
 
     mul(rhs) {
@@ -80,7 +81,7 @@ class Matrix4 extends Float32Array {
     }
 
     multiplyLeft(lhs) {
-        return glMatrix.mat4.mul(this, lhs, this);
+        return mat4.mul(this, lhs, this);
     }
 
     mull(lhs) {
@@ -93,7 +94,7 @@ class Matrix4 extends Float32Array {
 
     scale(scaleVector, concat = true) {
         if (!concat) this.identity();
-        glMatrix.mat4.scale(this, this, scaleVector);
+        mat4.scale(this, this, scaleVector);
         return this;
     }
 
@@ -103,7 +104,7 @@ class Matrix4 extends Float32Array {
 
     rotate(angleRad, axisVector, concat = true) {
         if (!concat) this.identity();
-        glMatrix.mat4.rotate(this, this, angleRad, axisVector.elements);
+        mat4.rotate(this, this, angleRad, axisVector.elements);
         return this;
     }
 
@@ -113,7 +114,7 @@ class Matrix4 extends Float32Array {
 
     translate(translationVector, concat = true) {
         if (!concat) this.identity();
-        glMatrix.mat4.translate(this, this, translationVector);
+        mat4.translate(this, this, translationVector);
         return this;
     }
 
@@ -122,7 +123,7 @@ class Matrix4 extends Float32Array {
     }
 
     identity() {
-        glMatrix.mat4.identity(this);
+        mat4.identity(this);
         return this;
     }
 
@@ -131,7 +132,7 @@ class Matrix4 extends Float32Array {
     }
 
     perspective(fov, aspectRatio, near, far) {
-        glMatrix.mat4.perspective(this, fov, aspectRatio, near, far);
+        mat4.perspective(this, fov, aspectRatio, near, far);
         return this;
     }
 
@@ -140,7 +141,7 @@ class Matrix4 extends Float32Array {
     }
 
     lookAt(eyeVector, centerVector, upVector) {
-        glMatrix.mat4.lookAt(this, eyeVector, centerVector, upVector);
+        mat4.lookAt(this, eyeVector, centerVector, upVector);
         return this;
     }
 
@@ -150,7 +151,7 @@ class Matrix4 extends Float32Array {
 
     targetTo(eyeVector, centerVector, upVector, concat = true) {
         if (!concat) this.identity();
-        glMatrix.mat4.lookAt(this, eyeVector, centerVector, upVector);
+        mat4.lookAt(this, eyeVector, centerVector, upVector);
         return this;
     }
 
@@ -173,8 +174,7 @@ class Matrix4 extends Float32Array {
     }
 }
 
-
-class Vector extends Float32Array {
+export class Vector extends Float32Array {
     constructor(elements, constructor) {
         super(elements);
         if (this.constructor === Vector) throw new Error("Cannot instantiate abstract Vector.");
@@ -186,7 +186,7 @@ class Vector extends Float32Array {
     }
 
     set elements(elements) {
-        return this.apply((x, i) => this[i] = elements[i]);
+        this.apply((x, i) => this[i] = elements[i]);
     }
 
     get elements() {
@@ -302,8 +302,7 @@ class Vector extends Float32Array {
     }
 }
 
-
-class Vector2 extends Vector {
+export class Vector2 extends Vector {
     constructor(x = undefined, y = undefined) {
 
         let xVal = 0.0, yVal = 0.0;
@@ -347,8 +346,7 @@ class Vector2 extends Vector {
     }
 }
 
-
-class Vector3 extends Vector {
+export class Vector3 extends Vector {
     constructor(x = undefined, y = undefined, z = undefined) {
         let xVal = 0.0, yVal = 0.0, zVal = 0.0;
         if (typeof x === "number") {
@@ -427,8 +425,7 @@ class Vector3 extends Vector {
     }
 }
 
-
-class Vector4 {
+export class Vector4 {
     constructor(x = undefined, y = undefined, z = undefined, w = undefined) {
         this.x = this.y = this.z = 0.0;
         this.w = 1.0;
@@ -478,7 +475,7 @@ class Vector4 {
 
     normalise() {
         const elements = this.elements;
-        glMatrix.vec4.normalize(elements, elements);
+        vec4.normalize(elements, elements);
         this.elements = elements;
     }
 
@@ -564,8 +561,7 @@ class Vector4 {
     }
 }
 
-
-class Colour {
+export class Colour {
     constructor(r, g, b, a) {
         const vec = new Vector4(r, g, b, a);
         this.r = vec.x;

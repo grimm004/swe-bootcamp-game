@@ -1,4 +1,7 @@
-function parseObj(gl, obj, texture, colour = Colour.white, shader = "") {
+import {Colour, Vector2, Vector3} from "./math.js";
+import {IndexBuffer, Mesh, VertexArray, VertexBuffer} from "./graphics.js";
+
+export function parseObj(gl, obj, texture, colour = Colour.white, shader = "") {
     const objParts = obj.split("\n");
 
     if (shader === "")
@@ -83,7 +86,7 @@ function parseObj(gl, obj, texture, colour = Colour.white, shader = "") {
     return new Mesh(gl, va, indexBuffer, shader, texture);
 }
 
-class CubeMesh extends Mesh {
+export class CubeMesh extends Mesh {
     constructor(gl, vertexArray, shaderName, texture) {
         const indexBuffer = new IndexBuffer(gl, [
             0, 1, 2, 0, 2, 3,    // front
@@ -98,8 +101,7 @@ class CubeMesh extends Mesh {
     }
 }
 
-
-class TexCubeMesh extends CubeMesh {
+export class TexCubeMesh extends CubeMesh {
     constructor(gl, texture, size = Vector3.ones, textureSize = Vector2.ones) {
         size.div(2);
         const vertexBuffer = new VertexBuffer(gl, [
@@ -145,8 +147,7 @@ class TexCubeMesh extends CubeMesh {
     }
 }
 
-
-class ColCubeMesh extends CubeMesh {
+export class ColCubeMesh extends CubeMesh {
     constructor(gl, faceColourData) {
         const vertexPositions = [
             // Front face
@@ -203,8 +204,7 @@ class ColCubeMesh extends CubeMesh {
     }
 }
 
-
-class TexPlaneMesh extends Mesh {
+export class TexPlaneMesh extends Mesh {
     constructor(gl, texture, size = Vector2.ones, normalVector = new Vector3(0.0, 1.0, 0.0)) {
         const vertexBuffer = new VertexBuffer(gl, [
             -size.x,  0.0, -size.y,   normalVector.x, normalVector.y, normalVector.z,  0.0,    0.0,

@@ -1,4 +1,8 @@
-"use strict";
+import {Application, Camera, Renderer, SceneNode, Shader, Texture, VertexBufferLayout} from "./graphics.js";
+import {Colour, FrameCounter, Matrix4, Vector2, Vector3} from "./math.js";
+import {parseObj, TexCubeMesh, TexPlaneMesh} from "./meshes.js";
+import {LitSceneNode, UnlitSceneNode} from "./objects.js";
+import * as OIMO from "../lib/oimo.module.js";
 
 function fetchText(url) {
     return new Promise((resolve, reject) => {
@@ -53,8 +57,6 @@ class SweBootcampGame extends Application {
         this.table = null;
         this.chair = null;
         this.chairTarget = -1.9;
-
-        this.shelfAnimation = 0.0;
 
         this.sceneGraph = null;
 
@@ -304,10 +306,6 @@ class SweBootcampGame extends Application {
         else if (this.chair.position.z > -0.91)
             this.chairTarget = -1.9;
 
-        // Animate the shelf falling over
-        // this.shelf.orientation = new Vector3(0.0, 0.0, Math.radians(45.0 + (45.0 * Math.sin(this.shelfAnimation))));
-        // this.shelfAnimation += 2.5 * deltaTime;
-
         const worldTransform = Matrix4.positionOrientationScale(
             SweBootcampGame.getSliderVector("PosSlider"),
             SweBootcampGame.getSliderVector("RotSlider", "yaw", "pitch", "roll").apply(x => Math.radians(x)),
@@ -425,7 +423,7 @@ class Program {
         }, false);
         canvas.addEventListener("mousedown", e => app.mouseDown(e.button), false);
         canvas.addEventListener("mouseup", e => app.mouseUp(e.button), false);
-        canvas.addEventListener('contextmenu', e => {
+        canvas.addEventListener("contextmenu", e => {
             if (e.button === 2) e.preventDefault();
         });
 
@@ -439,3 +437,5 @@ class Program {
 }
 
 window.onload = Program.main;
+
+export {};
