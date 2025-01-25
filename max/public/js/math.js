@@ -1,3 +1,5 @@
+// noinspection JSCheckFunctionSignatures,JSValidateTypes,JSUnusedGlobalSymbols
+
 import {mat4, vec3, vec4} from "../lib/gl-matrix/index.js";
 import * as OIMO from "../lib/oimo.module.js";
 
@@ -63,6 +65,17 @@ export class Matrix4 extends Float32Array {
         return mat4.invert(this, this);
     }
 
+    /**
+     * @returns {Vector3}
+     */
+    get translation() {
+        return mat4.getTranslation(new Vector3(), this);
+    }
+
+    /**
+     * @param {Matrix4|Vector3|Vector4} rhs
+     * @returns {Matrix4|Vector3|Vector4}
+     */
     multiply(rhs) {
         if (rhs instanceof Matrix4)
             return mat4.mul(this, this, rhs.elements);
@@ -80,6 +93,10 @@ export class Matrix4 extends Float32Array {
         return this.copy.multiply(rhs);
     }
 
+    /**
+     * @param {Matrix4} lhs
+     * @returns {Matrix4}
+     */
     multiplyLeft(lhs) {
         return mat4.mul(this, lhs, this);
     }
@@ -92,6 +109,11 @@ export class Matrix4 extends Float32Array {
         return this.copy.multiplyLeft(lhs);
     }
 
+    /**
+     * @param {Vector3} scaleVector
+     * @param {boolean} [concat=true]
+     * @returns {Matrix4}
+     */
     scale(scaleVector, concat = true) {
         if (!concat) this.identity();
         mat4.scale(this, this, scaleVector);
@@ -102,6 +124,12 @@ export class Matrix4 extends Float32Array {
         return new Matrix4().scale(scaleVector);
     }
 
+    /**
+     * @param {number} angleRad
+     * @param {Vector4|Vector3} axisVector
+     * @param {boolean} [concat=true]
+     * @returns {Matrix4}
+     */
     rotate(angleRad, axisVector, concat = true) {
         if (!concat) this.identity();
         mat4.rotate(this, this, angleRad, axisVector.elements);
@@ -112,6 +140,11 @@ export class Matrix4 extends Float32Array {
         return new Matrix4().scale(angleRad, axisVector);
     }
 
+    /**
+     * @param {Vector3} translationVector
+     * @param {boolean} [concat=true]
+     * @returns {Matrix4}
+     */
     translate(translationVector, concat = true) {
         if (!concat) this.identity();
         mat4.translate(this, this, translationVector);
@@ -122,15 +155,28 @@ export class Matrix4 extends Float32Array {
         return new Matrix4().translate(translationVector);
     }
 
+    /**
+     * @returns {Matrix4}
+     */
     identity() {
         mat4.identity(this);
         return this;
     }
 
+    /**
+     * @returns {Matrix4}
+     */
     static get identity() {
         return new Matrix4();
     }
 
+    /**
+     * @param {number} fov
+     * @param {number} aspectRatio
+     * @param {number} near
+     * @param {number} far
+     * @returns {Matrix4}
+     */
     perspective(fov, aspectRatio, near, far) {
         mat4.perspective(this, fov, aspectRatio, near, far);
         return this;
@@ -140,6 +186,12 @@ export class Matrix4 extends Float32Array {
         return new Matrix4().perspective(fov, aspectRatio, near, far);
     }
 
+    /**
+     * @param {Vector3} eyeVector
+     * @param {Vector3} centerVector
+     * @param {Vector3} upVector
+     * @returns {Matrix4}
+     */
     lookAt(eyeVector, centerVector, upVector) {
         mat4.lookAt(this, eyeVector, centerVector, upVector);
         return this;
@@ -149,6 +201,13 @@ export class Matrix4 extends Float32Array {
         return new Matrix4().lookAt(eyeVector, centerVector, upVector);
     }
 
+    /**
+     * @param {Vector3} eyeVector
+     * @param {Vector3} centerVector
+     * @param {Vector3} upVector
+     * @param {boolean} [concat=true]
+     * @returns {Matrix4}
+     */
     targetTo(eyeVector, centerVector, upVector, concat = true) {
         if (!concat) this.identity();
         mat4.lookAt(this, eyeVector, centerVector, upVector);
@@ -159,6 +218,13 @@ export class Matrix4 extends Float32Array {
         return new Matrix4().targetTo(eyeVector, centerVector, upVector);
     }
 
+    /**
+     * @param {Vector3} [position=Vector3.zeros]
+     * @param {Vector3} [orientation=Vector3.zeros]
+     * @param {Vector3} [scale=Vector3.ones]
+     * @param {boolean} [concat=false]
+     * @returns {Matrix4}
+     */
     positionOrientationScale(position = Vector3.zeros, orientation = Vector3.zeros, scale = Vector3.ones, concat = false) {
         if (!concat) this.identity();
         this.translate(position)
@@ -169,6 +235,12 @@ export class Matrix4 extends Float32Array {
         return this;
     }
 
+    /**
+     * @param {Vector3} [position=Vector3.zeros]
+     * @param {Vector3} [orientation=Vector3.zeros]
+     * @param {Vector3} [scale=Vector3.ones]
+     * @returns {Matrix4}
+     */
     static positionOrientationScale(position = Vector3.zeros, orientation = Vector3.zeros, scale = Vector3.ones) {
         return new Matrix4().positionOrientationScale(position, orientation, scale, true);
     }
@@ -193,6 +265,9 @@ export class Vector extends Float32Array {
         return new Float32Array(this);
     }
 
+    /**
+     * @returns {number}
+     */
     get sum() {
         let total = 0.0;
         for (const element of this)
@@ -200,6 +275,9 @@ export class Vector extends Float32Array {
         return total;
     }
 
+    /**
+     * @returns {number}
+     */
     get squareSum() {
         let total = 0.0;
         for (const element of this)
@@ -207,6 +285,9 @@ export class Vector extends Float32Array {
         return total;
     }
 
+    /**
+     * @returns {this}
+     */
     normalise() {
         return this.div(this.magnitude() || 1.0);
     }
@@ -215,16 +296,27 @@ export class Vector extends Float32Array {
         return this.copy.normalise();
     }
 
+    /**
+     * @param {(x: number, i: number, vec: Vector) => number} f
+     * @returns {this}
+     */
     apply(f) {
         for (let i = 0; i < this.length; i++)
             this[i] = f(this[i], i, this);
         return this;
     }
 
+    /**
+     * @param {(x: number, i: number, vec: Vector) => number} f
+     * @returns {Vector}
+     */
     map(f) {
         return new this._constructor(super.map(f));
     }
 
+    /**
+     * @returns {this}
+     */
     negate() {
         return this.apply(x => -x);
     }
@@ -233,6 +325,9 @@ export class Vector extends Float32Array {
         return this.copy.negate();
     }
 
+    /**
+     * @returns {this}
+     */
     invert() {
         return this.apply(x => 1 / x);
     }
@@ -241,6 +336,10 @@ export class Vector extends Float32Array {
         return this.copy.invert();
     }
 
+    /**
+     * @param {Vector|number} val
+     * @returns {this}
+     */
     add(val) {
         if (val.constructor === this._constructor)
             this.apply((x, i) => x + val[i]);
@@ -249,10 +348,18 @@ export class Vector extends Float32Array {
         return this;
     }
 
+    /**
+     * @param {Vector|number} val
+     * @returns {this}
+     */
     plus(val) {
         return this.copy.add(val);
     }
 
+    /**
+     * @param {Vector|number} val
+     * @returns {this}
+     */
     mul(val) {
         if (val.constructor === this._constructor)
             this.apply((x, i) => x * val[i]);
@@ -265,6 +372,10 @@ export class Vector extends Float32Array {
         return this.copy.mul(val);
     }
 
+    /**
+     * @param {Vector|number} val
+     * @returns {this}
+     */
     sub(val) {
         return this.add(typeof val === "number" ? new this._constructor(-val) : val.copy.negate());
     }
@@ -273,6 +384,10 @@ export class Vector extends Float32Array {
         return this.copy.sub(val);
     }
 
+    /**
+     * @param {Vector|number} val
+     * @returns {this}
+     */
     div(val) {
         return this.mul(typeof val === "number" ? new this._constructor(1.0 / val) : val.copy.invert());
     }
@@ -281,22 +396,38 @@ export class Vector extends Float32Array {
         return this.copy.div(val);
     }
 
+    /**
+     * @param {Vector} vec
+     * @returns {number}
+     */
     dot(vec) {
         return this.multiplied(vec).sum();
     }
 
+    /**
+     * @returns {number}
+     */
     magnitudeSquared() {
         return this.multiplied(this).sum();
     }
 
+    /**
+     * @returns {number}
+     */
     magnitude() {
         return Math.hypot(...this);
     }
 
+    /**
+     * @returns {Vector}
+     */
     zeros() {
         return this.apply(() => 0);
     }
 
+    /**
+     * @returns {Vector}
+     */
     ones() {
         return this.apply(() => 1);
     }
@@ -337,16 +468,41 @@ export class Vector2 extends Vector {
         this[1] = value;
     }
 
+    /**
+     * @returns {Vector2}
+     */
     static get zeros() {
         return new Vector2();
     }
 
+    /**
+     * @returns {Vector2}
+     */
     static get ones() {
         return new Vector2(1.0);
+    }
+
+    /**
+     * @returns {Vector2}
+     */
+    static get unitX() {
+        return new Vector2(1.0, 0.0);
+    }
+
+    /**
+     * @returns {Vector2}
+     */
+    static get unitY() {
+        return new Vector2(0.0, 1.0);
     }
 }
 
 export class Vector3 extends Vector {
+    /**
+     * @param {number|Vector3|OIMO.Vec3|Vector2|Float32Array|Array} [x]
+     * @param {number} [y]
+     * @param {number} [z]
+     */
     constructor(x = undefined, y = undefined, z = undefined) {
         let xVal = 0.0, yVal = 0.0, zVal = 0.0;
         if (typeof x === "number") {
@@ -394,6 +550,19 @@ export class Vector3 extends Vector {
         this[2] = value;
     }
 
+    /**
+     * @param {(x: number, i: number, vec: Vector3) => number} f
+     * @returns {Vector3}
+     */
+    map(f) {
+        return super.map(f);
+    }
+
+    /**
+     * @param {number} yawRad
+     * @param {number} pitchRad
+     * @returns {Vector3}
+     */
     direction(yawRad, pitchRad) {
         const sinYaw = Math.sin(yawRad), cosYaw = Math.cos(yawRad);
         const sinPitch = Math.sin(pitchRad), cosPitch = Math.cos(pitchRad);
@@ -409,6 +578,10 @@ export class Vector3 extends Vector {
         return Vector3.zeros.direction(yawRad, pitchRad);
     }
 
+    /**
+     * @param {OIMO.Quat} quaternion
+     * @returns {Vector3}
+     */
     static directionFromQuaternion(quaternion) {
         const x = 2 * (quaternion.x * quaternion.z - quaternion.w * quaternion.y);
         const y = 2 * (quaternion.y * quaternion.z + quaternion.w * quaternion.x);
@@ -416,6 +589,10 @@ export class Vector3 extends Vector {
         return new Vector3(x, y, z);
     }
 
+    /**
+     * @param {OIMO.Quat} quaternion
+     * @returns {Vector3}
+     */
     static orientationFromQuaternion(quaternion) {
         const { w, x, y, z } = quaternion;
 
@@ -447,51 +624,93 @@ export class Vector3 extends Vector {
         return new Vector3(yaw, pitch, roll);
     }
 
+    /**
+     * @returns {Vector3}
+     */
     static get zeros() {
         return new Vector3();
     }
 
+    /**
+     * @returns {Vector3}
+     */
     static get ones() {
         return new Vector3(1.0);
+    }
+
+    /**
+     * @returns {Vector3}
+     */
+    static get unitX() {
+        return new Vector3(1.0, 0.0, 0.0);
+    }
+
+    /**
+     * @returns {Vector3}
+     */
+    static get unitY() {
+        return new Vector3(0.0, 1.0, 0.0);
+    }
+
+    /**
+     * @returns {Vector3}
+     */
+    static get unitZ() {
+        return new Vector3(0.0, 0.0, 1.0);
     }
 }
 
 export class Vector4 {
+    /**
+     * @param {number|Vector4|Vector3|Vector2|Float32Array|Array} [x]
+     * @param {number|Vector2} [y]
+     * @param {number} [z]
+     * @param {number} [w]
+     */
     constructor(x = undefined, y = undefined, z = undefined, w = undefined) {
-        this.x = this.y = this.z = 0.0;
-        this.w = 1.0;
+        let xVal = 0.0, yVal = 0.0, zVal = 0.0, wVal = 1.0;
         if (typeof x === "number") {
-            this.x = x;
-            this.y = typeof y === "number" ? y : this.x;
-            this.z = typeof z === "number" ? z : this.y;
-            this.w = typeof w === "number" ? w : 1.0;
+            xVal = x;
+            yVal = typeof y === "number" ? y : xVal;
+            zVal = typeof z === "number" ? z : yVal;
+            wVal = typeof w === "number" ? w : 1.0;
         } else if (x instanceof Vector4) {
-            this.x = x.x;
-            this.y = x.y;
-            this.z = x.z;
-            this.w = x.w;
+            xVal = x.x;
+            yVal = x.y;
+            zVal = x.z;
+            wVal = x.w;
         } else if (x instanceof Vector3) {
-            this.x = x.x;
-            this.y = x.y;
-            this.z = typeof y == "number" ? y : 0.0;
+            xVal = x.x;
+            yVal = x.y;
+            zVal = x.z;
+            wVal = typeof y == "number" ? y : 1.0;
         } else if (x instanceof Vector2) {
-            this.x = x.x;
-            this.y = x.y;
+            xVal = x.x;
+            yVal = x.y;
             if (y instanceof Vector2) {
-                this.z = y.x;
-                this.w = y.y;
+                zVal = y.x;
+                wVal = y.y;
             } else if (typeof y === "number") {
-                this.z = y;
-                this.w = typeof z === "number" ? z : 1.0;
+                zVal = y;
+                wVal = typeof z === "number" ? z : 1.0;
             }
-        } else if (x instanceof Float32Array || x instanceof Array)
-            this.elements = x;
+        } else if (x instanceof Float32Array || x instanceof Array) {
+            xVal = x[0];
+            yVal = x[1];
+            zVal = x[2];
+            wVal = x[3];
+        }
+
+        this.elements = [xVal, yVal, zVal, wVal];
     }
 
     get copy() {
         return new Vector4(this);
     }
 
+    /**
+     * @returns {number}
+     */
     get sum() {
         return this.x + this.y + this.z;
     }
@@ -510,6 +729,11 @@ export class Vector4 {
         this.elements = elements;
     }
 
+    /**
+     * @param {(x: number) => number} f
+     * @param {boolean} [includeW=false]
+     * @returns {Vector4}
+     */
     map(f, includeW = false) {
         this.x = f(this.x);
         this.y = f(this.y);
@@ -519,6 +743,10 @@ export class Vector4 {
         return this;
     }
 
+    /**
+     * @param {boolean} [includeW=false]
+     * @returns {Vector4}
+     */
     negate(includeW = false) {
         this.x *= -1;
         this.y *= -1;
@@ -528,6 +756,10 @@ export class Vector4 {
         return this;
     }
 
+    /**
+     * @param {boolean} [includeW=false]
+     * @returns {Vector4}
+     */
     invert(includeW = false) {
         this.x = 1 / this.x;
         this.y = 1 / this.y;
@@ -537,6 +769,11 @@ export class Vector4 {
         return this;
     }
 
+    /**
+     * @param {Vector4|number} val
+     * @param {boolean} [includeW=false]
+     * @returns {Vector4}
+     */
     add(val, includeW = false) {
         if (val instanceof Vector4) {
             this.x += val.x;
@@ -549,6 +786,11 @@ export class Vector4 {
         return this;
     }
 
+    /**
+     * @param {Vector4|number} val
+     * @param {boolean} [includeW=false]
+     * @returns {Vector4}
+     */
     mul(val, includeW = false) {
         if (val instanceof Vector4) {
             this.x *= val.x;
@@ -561,32 +803,61 @@ export class Vector4 {
         return this;
     }
 
+    /**
+     * @param {Vector4|number} val
+     * @param {boolean} [includeW=false]
+     * @returns {Vector4}
+     */
     sub(val, includeW = false) {
         this.add(val instanceof Vector4 ? val.copy.negate() : new Vector4(-val), includeW);
         return this;
     }
 
+    /**
+     * @param {Vector4|number} val
+     * @param {boolean} [includeW=false]
+     * @returns {Vector4}
+     */
     div(val, includeW = false) {
         this.mul(val instanceof Vector4 ? val.copy.invert() : new Vector4(1.0 / val), includeW);
         return this;
     }
 
+    /**
+     * @param {Vector4} vec
+     * @param {boolean} [includeW=false]
+     * @returns {number}
+     */
     dot(vec, includeW = false) {
         return (this.x * vec.x) + (this.y * vec.y) + (this.z * vec.z) + (includeW ? this.w * vec.w : 0);
     }
 
+    /**
+     * @param {boolean} [includeW=false]
+     * @returns {number}
+     */
     magnitudeSquared(includeW) {
         return (this.x * this.x) + (this.y * this.y) + (this.z * this.z) + (includeW ? this.w * this.w : 0);
     }
 
+    /**
+     * @param {boolean} [includeW=false]
+     * @returns {number}
+     */
     magnitude(includeW) {
         return Math.hypot(this.x, this.y, this.z, includeW ? this.w : 0);
     }
 
+    /**
+     * @returns {Vector4}
+     */
     static get zeros() {
         return new Vector4();
     }
 
+    /**
+     * @returns {Vector4}
+     */
     static get ones() {
         return new Vector4(1.0);
     }

@@ -23,17 +23,13 @@ class Program {
         };
         resize();
 
-        const enableControlsCheckbox = document.getElementById("enableControlsCheckbox");
-        enableControlsCheckbox.addEventListener("change", () =>
-            document.getElementById("controls").className = enableControlsCheckbox.checked ? "" : "d-none", false);
-
-        const lightCheckbox = document.getElementById("lightCheckbox");
-        lightCheckbox.addEventListener("change", () => app.lightColour = lightCheckbox.checked ? Colour.white : Colour.black, false);
-
-        const lightSwingCheckbox = document.getElementById("lightSwingCheckbox");
-        lightSwingCheckbox.addEventListener("change", () => app.lightSwing = lightSwingCheckbox.checked, false);
-
         window.addEventListener("resize", resize, false);
+
+        const enableDebugCheckbox = document.getElementById("enableDebugCheckbox");
+        enableDebugCheckbox.addEventListener("change", () => {
+            document.getElementById("controls").className = enableDebugCheckbox.checked ? "" : "d-none";
+            app.debugEnabled = enableDebugCheckbox.checked;
+        }, false);
 
         const body = document.querySelector("body");
         body.addEventListener("keydown", e => app.keyDown(e.key), false);
@@ -61,5 +57,3 @@ class Program {
 }
 
 window.onload = Program.main;
-
-export {};

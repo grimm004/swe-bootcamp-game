@@ -11,8 +11,10 @@ A basic 3D WebGL-based game to demonstrate use of algorithms, datastructures, an
 - Wavefront .obj mesh parser
 - Primitive meshes
 - Texture mapping
-- Hierarchical structure
+- Hierarchical scene node structure
 - Multiple shaders
+- Entity-Component-System (ECS) architecture
+- OIMO.js physics engine integration
 - Animation (with fixed time-step for consistent speed)
 
 ## Setup
@@ -29,10 +31,14 @@ If using a different server (e.g. a python simple HTTP server), host the files i
 As mentioned in the features, it is possible to move the virtual camera around the world.
 Use `W`/`S` to move forwards/backwards and `A`/`D` to move left/right.
 Double-click the canvas and use the mouse to re-orient the camera (press escape to return the cursor).
+When in focus, point and click on the physics objects to apply an impulse.
 
-Various properties of the scene can be altered using the on-screen controls. 
+Pressing `R` will reset the camera position.
+Pressing `E` will create an outward impulse on the chairs.
+Pressing `I` will create an inward impulse on the chairs.
+Pressing `Space` will create an upward impulse on the chairs.
 
-Pressing `R` will reset the scene transformation and camera position.
+Pressing the debug toggle button will display the physics debug information, as well as the bounding boxes of the objects.
 
 ## Resources
 
@@ -48,14 +54,22 @@ The texture images are free from online. All models are custom-made using either
 |  +--/meshes: Model meshes
 |  +--/shaders: Vertex and fragment shader pairs
 +--/lib: External JavaScript resources
-|  +--/gl-matrix.js: gl-matrix maths library
+|  +--/gl-matrix: gl-matrix maths library
+|  +--/ape-ecs.module.js: APE ECS library
+|  +--/oimo.module.js: OIMO.js physics engine
 +--/css
 |  +--/bootstrap.css: Bootstrap 4
 |  +--/style.css: Custom CSS stylesheet
 +--/js: Internal JavaScript resources
+   +--/components: ECS components
+   +--/entities: ECS entity factories
+   +--/systems: ECS systems
+   +--/constants.js: Application constants
+   +--/debug.js: Debugging utilities for 3D graphics
    +--/index.js: Create, run and manage tha application
    +--/objects.js: Application object classes
    +--/meshes.js: Application mesh classes
    +--/graphics.js: Object-oriented abstract WebGL wrapper
    +--/math.js: Object-oriented gl-matrix wrapper, JS Math extensions and utilities
+   +--/util.js: General utility functions
 ```

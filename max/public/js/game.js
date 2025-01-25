@@ -1,66 +1,110 @@
-import {Application, Camera, Renderer, SceneNode, Shader, VertexBufferLayout} from "./graphics.js";
-import {Colour, FrameCounter, Matrix4, Vector2, Vector3} from "./math.js";
+import {Application, SceneNode, Shader, VertexBufferLayout} from "./graphics.js";
+import {Colour, FrameCounter, Vector2, Vector3} from "./math.js";
 import {LitSceneNode, UnlitSceneNode} from "./objects.js";
 import {TexCubeMesh, TexPlaneMesh} from "./meshes.js";
-import * as OIMO from "../lib/oimo.module.js";
 import {fetchMesh, fetchShaderSource, fetchTexture} from "./util.js";
-import {GRAVITY} from "./constants.js";
-
+import {
+    CameraEntityId,
+    EveryDrawGroup,
+    EveryUpdateGroup,
+    FrameInfoEntityId, KeyboardInputEntityId, MouseInputEntityId,
+    SceneRootEntityId,
+    WindowInfoEntityId
+} from "./constants.js";
+import {World} from "../lib/ape-ecs.module.js";
+import FrameInfoComponent from "./components/FrameInfoComponent.js";
+import PhysicsSystem from "./systems/PhysicsSystem.js";
+import RenderingSystem from "./systems/RenderingSystem.js";
+import PhysicsComponent from "./components/PhysicsComponent.js";
+import PositionComponent from "./components/PositionComponent.js";
+import OrientationComponent from "./components/OrientationComponent.js";
+import DrawComponent from "./components/DrawComponent.js";
+import PositioningSystem from "./systems/PositioningSystem.js";
+import GraphicsSystem from "./systems/GraphicsSystem.js";
+import LightComponent from "./components/LightComponent.js";
+import EntityFactory from "./entities/EntityFactory.js";
+import CameraSystem from "./systems/CameraSystem.js";
+import CameraComponent from "./components/CameraComponent.js";
+import WindowInfoComponent from "./components/WindowInfoComponent.js";
+import MouseInputComponent from "./components/MouseInputComponent.js";
+import KeyboardInputComponent from "./components/KeyboardInputComponent.js";
+import InputSystem from "./systems/InputSystem.js";
+import {toRadian} from "../lib/gl-matrix/common.js";
+import AnchorComponent from "./components/AnchorComponent.js";
+import CyclicalAnimationComponent from "./components/CyclicalAnimationComponent.js";
+import AnimationSystem from "./systems/AnimationSystem.js";
+import {Debug} from "./debug.js";
 
 export class SweBootcampGame extends Application {
+    /**
+     * @param {WebGL2RenderingContext} gl
+     */
     constructor(gl) {
         super(gl);
 
         this.frameCounter = new FrameCounter();
+        this.debugEnabled = false;
 
-        this.renderer = new Renderer(this.gl, Colour.white);
+        this.ecsWorld = new World();
+        this.entityFactory = new EntityFactory(this.ecsWorld);
 
-        this.lightBulb = null;
-        this.roomLight = null;
-        this.lightBulbAnimation = 0.0;
-        this.lightColour = Colour.white;
-        this.lightSwing = true;
+        this.ecsWorld.registerComponent(WindowInfoComponent);
+        this.ecsWorld.registerComponent(FrameInfoComponent);
+        this.ecsWorld.registerComponent(MouseInputComponent);
+        this.ecsWorld.registerComponent(KeyboardInputComponent);
+        this.ecsWorld.registerComponent(CameraComponent);
+        this.ecsWorld.registerComponent(PhysicsComponent);
+        this.ecsWorld.registerComponent(DrawComponent);
+        this.ecsWorld.registerComponent(LightComponent);
+        this.ecsWorld.registerComponent(CyclicalAnimationComponent);
+        this.ecsWorld.registerComponent(PositionComponent);
+        this.ecsWorld.registerComponent(OrientationComponent);
+        this.ecsWorld.registerComponent(AnchorComponent);
 
-        this.table = null;
-        this.chair = null;
-        this.chairTarget = -1.9;
+        this.windowInfoEntity = this.entityFactory.createWindowEntity(WindowInfoEntityId, gl.canvas.clientWidth, gl.canvas.clientHeight);
+        this.frameInfoEntity = this.entityFactory.createTimingEntity(FrameInfoEntityId);
+        this.entityFactory.createMouseInputEntity(MouseInputEntityId);
+        this.entityFactory.createKeyboardInputEntity(KeyboardInputEntityId);
 
-        this.sceneGraph = null;
+        this.ecsWorld.registerSystem(EveryUpdateGroup, CameraSystem);
+        this.entityFactory.createCameraEntity(
+            CameraEntityId, toRadian(90.0), 0.1, 1000.0, new Vector3(2.0), new Vector3(-45.0, 30.0, 0.0).map(x => Math.radians(x)), 20);
 
-        this.mouseSensitivity = 20;
-
-        this.camera = new Camera(Math.radians(90.0), gl.canvas.clientWidth / gl.canvas.clientHeight, 0.1, 1000,
-            new Vector3(2.0), new Vector3(-45.0, 30.0, 0.0).apply(x => Math.radians(x)));
-
-        this.physicsWorld = new OIMO.World({
-            timestep: 0,
-            iterations: 8,
-            broadphase: 2,
-            worldscale: 1,
-            random: true,
-            info: false,
-            gravity: [0, GRAVITY, 0],
-        });
+        this.inputSystem = this.ecsWorld.registerSystem(EveryUpdateGroup, InputSystem);
+        this.ecsWorld.registerSystem(EveryUpdateGroup, AnimationSystem);
+        this.physicsSystem = this.ecsWorld.registerSystem(EveryUpdateGroup, PhysicsSystem);
+        this.ecsWorld.registerSystem(EveryUpdateGroup, PositioningSystem);
+        this.ecsWorld.registerSystem(EveryUpdateGroup, GraphicsSystem);
+        this.ecsWorld.registerSystem(EveryDrawGroup, RenderingSystem, [gl]);
     }
 
     async loadShaders() {
+        const shaderNames = ["col", "tex", "colLit", "texLit"];
+        const shaderFetchPromises = shaderNames.map((name) => fetchShaderSource(name));
+        const resolvedShaders = await Promise.all(shaderFetchPromises);
+
+        const shaders = shaderNames.reduce((acc, name, i) => {
+            acc[name] = resolvedShaders[i];
+            return acc;
+        }, {});
+
         let vertSource, fragSource, shader;
 
-        ({vertex: vertSource, fragment: fragSource} = await fetchShaderSource("col"));
+        ({vertex: vertSource, fragment: fragSource} = shaders.col);
         shader = new Shader(this.gl, vertSource, fragSource);
         this.addShader("col", shader);
         shader.addLayout("default", new VertexBufferLayout(this.gl)
             .addAttribute(shader.getAttrib("aVertexPosition"), 3)
             .addAttribute(shader.getAttrib("aVertexColour"), 3));
 
-        ({vertex: vertSource, fragment: fragSource} = await fetchShaderSource("tex"));
+        ({vertex: vertSource, fragment: fragSource} = shaders.tex);
         shader = new Shader(this.gl, vertSource, fragSource);
         this.addShader("tex", shader);
         shader.addLayout("default", new VertexBufferLayout(this.gl)
             .addAttribute(shader.getAttrib("aVertexPosition"), 3)
             .addAttribute(shader.getAttrib("aTextureCoords"), 2));
 
-        ({vertex: vertSource, fragment: fragSource} = await fetchShaderSource("colLit"));
+        ({vertex: vertSource, fragment: fragSource} = shaders.colLit);
         shader = new Shader(this.gl, vertSource, fragSource);
         this.addShader("colLit", shader);
         shader.addLayout("default", new VertexBufferLayout(this.gl)
@@ -68,7 +112,7 @@ export class SweBootcampGame extends Application {
             .addAttribute(shader.getAttrib("aVertexNormal"), 3)
             .addAttribute(shader.getAttrib("aVertexColour"), 3));
 
-        ({vertex: vertSource, fragment: fragSource} = await fetchShaderSource("texLit"));
+        ({vertex: vertSource, fragment: fragSource} = shaders.texLit);
         shader = new Shader(this.gl, vertSource, fragSource);
         this.addShader("texLit", shader);
         shader.addLayout("default", new VertexBufferLayout(this.gl)
@@ -77,39 +121,38 @@ export class SweBootcampGame extends Application {
             .addAttribute(shader.getAttrib("aTextureCoords"), 2));
     }
 
-    async loadLightBulb() {
-        const bulbMesh = await fetchMesh(this.gl, "lightbulb_b", null, Colour.white, "col");
+    loadLightBulb(bulbMesh, bulbHolderMesh) {
         const bulb = new UnlitSceneNode(bulbMesh);
-
-        const bulbHolderMesh = await fetchMesh(this.gl, "lightbulb_h");
         const bulbHolder = new LitSceneNode(bulbHolderMesh, new Vector3(0.0, -0.3, 0.0), Vector3.zeros, new Vector3(2.0), [bulb]);
 
         return [bulb, new SceneNode(Vector3.zeros, Vector3.zeros, Vector3.ones, [bulbHolder])];
     }
 
-    async loadChairs(count, texture) {
+    loadChairs(count, texture) {
         const chairSeatMesh = new TexCubeMesh(this.gl, texture, new Vector3(0.40, 0.07, 0.45), new Vector2(1.0));
         const chairRestMesh = new TexCubeMesh(this.gl, texture, new Vector3(0.325, 0.45, 0.025), new Vector2(1.0));
         const frontLegMesh = new TexCubeMesh(this.gl, texture, new Vector3(0.025, 0.45, 0.025), new Vector2(1.0));
         const backLegMesh = new TexCubeMesh(this.gl, texture, new Vector3(0.025, 1.05, 0.025), new Vector2(1.0));
+
         const chairs = [];
         for (let i = 0; i < count; i++)
             chairs.push(new SceneNode(Vector3.zeros).addChild(
-                new LitSceneNode(chairSeatMesh, new Vector3(0.0, 0.435, 0.0))
+                new LitSceneNode(chairSeatMesh, new Vector3(0.0, -0.09, 0.0), new Vector3(Math.radians(90), 0.0, 0.0))
                     .addChild(new LitSceneNode(chairRestMesh, new Vector3(0.0, 0.325, -0.20)))
                     .addChild(new LitSceneNode(backLegMesh, new Vector3(0.175, 0.09, -0.20)))
                     .addChild(new LitSceneNode(backLegMesh, new Vector3(-0.175, 0.09, -0.20)))
                     .addChild(new LitSceneNode(frontLegMesh, new Vector3(0.175, -0.20, 0.20)))
                     .addChild(new LitSceneNode(frontLegMesh, new Vector3(-0.175, -0.20, 0.20)))
             ));
+
         return chairs;
     }
 
-    async loadTable(texture) {
+    loadTable(texture) {
         const tableTopMesh = new TexCubeMesh(this.gl, texture, new Vector3(0.90, 0.05, 1.80), new Vector2(1.0));
         const legMesh = new TexCubeMesh(this.gl, texture, new Vector3(0.10, 0.80, 0.10), new Vector2(1.0));
         const posX = 0.375, pozY = -0.425, posZ = 0.825;
-        return new SceneNode(new Vector3(0.0, -0.425, 0.0)).addChild(
+        return new SceneNode(new Vector3(0.0, -0.425, 0.0), new Vector3(toRadian(90.0), 0.0, 0.0)).addChild(
             new LitSceneNode(tableTopMesh, new Vector3(0.0, 0.825, 0.0))
                 .addChild(new LitSceneNode(legMesh, new Vector3(posX, pozY, -posZ)))
                 .addChild(new LitSceneNode(legMesh, new Vector3(-posX, pozY, -posZ)))
@@ -118,84 +161,49 @@ export class SweBootcampGame extends Application {
         );
     }
 
-    async loadEntities(physicsWorld, floorNode, tableNode) {
-        const testFloorEntity = {
-            // sceneNode: floorNode,
-            physicsBody: physicsWorld.add({
-                type: "box",
-                size: [2.5, 1, 2.5],
-                pos: [0.0, 0.0, 0.0],
-                posShape: [0.0, -0.5, 0.0],
-                rot: [0, 0, 0],
-                move: false,
-                density: 1,
-                friction: 0.2,
-                restitution: 0.2,
-            })
-        };
-
-        const testPhysicsEntity = {
-            sceneNode: tableNode,
-            physicsBody: physicsWorld.add({
-                type: "box",
-                size: [1.8, 0.85, 0.9],
-                pos: [0.0, 2.5, 0.0],
-                posShape: [0.0, 0.0, 0.0],
-                rot: [0, 0, 10],
-                move: true,
-                density: 1,
-                friction: 0.2,
-                restitution: 0.2,
-            })
-        };
-
-        return [testFloorEntity, testPhysicsEntity];
-    }
-
     async initialise() {
         await this.loadShaders();
 
-        [this.lightBulb, this.roomLight] = await this.loadLightBulb();
+        const [
+            woodTexture,
+            woodDirtyTexture,
+            carpetTexture,
+            paintTexture,
+            woodPlanksTexture,
+        ] = await Promise.all([
+            fetchTexture(this.gl, "wood.png", this.gl.MIRRORED_REPEAT),
+            fetchTexture(this.gl, "wood_dirty.jpg", this.gl.MIRRORED_REPEAT),
+            fetchTexture(this.gl, "carpet.jpg", this.gl.MIRRORED_REPEAT),
+            fetchTexture(this.gl, "paint.jpg", this.gl.MIRRORED_REPEAT),
+            fetchTexture(this.gl, "wood_planks.jpg", this.gl.MIRRORED_REPEAT),
+        ]);
 
-        const woodTexture = await fetchTexture(this.gl, "wood.png", this.gl.MIRRORED_REPEAT);
-        const woodDirtyTexture = await fetchTexture(this.gl, "wood_dirty.jpg", this.gl.MIRRORED_REPEAT);
-        const carpetTexture = await fetchTexture(this.gl, "carpet.jpg", this.gl.MIRRORED_REPEAT);
-        const paintTexture = await fetchTexture(this.gl, "paint.jpg", this.gl.MIRRORED_REPEAT);
-        const woodPlanksTexture = await fetchTexture(this.gl, "wood_planks.jpg", this.gl.MIRRORED_REPEAT);
+        const [
+            shelfMesh,
+            bulbMesh,
+            bulbHolderMesh,
+        ] = await Promise.all([
+            fetchMesh(this.gl, "shelf", woodDirtyTexture),
+            fetchMesh(this.gl, "lightbulb_b", null, Colour.white, "col"),
+            fetchMesh(this.gl, "lightbulb_h"),
+        ]);
 
-        const chairs = await this.loadChairs(6, woodTexture);
-        this.chair = chairs[0];
-        chairs[0].position = new Vector3(0, 0, -0.9);
-        chairs[0].orientation = new Vector3(0, 0, 0);
+        Debug.init(this.gl);
+        Debug.setPoint("origin", Vector3.zeros);
+        Debug.setPoint("unitX", Vector3.unitX);
+        Debug.setPoint("unitY", Vector3.unitY);
+        Debug.setPoint("unitZ", Vector3.unitZ);
 
-        chairs[1].position = new Vector3(0, 0, 0.9);
-        chairs[1].orientation = new Vector3(Math.radians(180), 0.0, 0.0);
+        const chairNodes = this.loadChairs(6, woodTexture);
 
-        chairs[2].position = new Vector3(-0.45, 0.0, 0.40);
-        chairs[2].orientation = new Vector3(Math.radians(90), 0.0, 0.0);
+        const tableNode = new SceneNode(Vector3.zeros, Vector3.zeros, Vector3.ones, [this.loadTable(woodTexture)]);
 
-        chairs[3].position = new Vector3(-0.45, 0.0, -0.40);
-        chairs[3].orientation = new Vector3(Math.radians(90), 0.0, 0.0);
-
-        chairs[4].position = new Vector3(0.45, 0.0, -0.40);
-        chairs[4].orientation = new Vector3(Math.radians(-90), 0.0, 0.0);
-
-        chairs[5].position = new Vector3(0.45, 0.0, 0.40);
-        chairs[5].orientation = new Vector3(Math.radians(-90), 0.0, 0.0);
-
-        this.table = new SceneNode(Vector3.zeros, Vector3.zeros, Vector3.ones, [await this.loadTable(woodTexture)]);
-
-        const shelfMesh = await fetchMesh(this.gl, "shelf", woodDirtyTexture);
         const shelves = [];
         for (let i = 0; i < 3; i++)
             shelves.push(new LitSceneNode(shelfMesh));
 
-        shelves[0].position = new Vector3(0.25, 0, 0);
+        shelves[0].position = new Vector3(2.25, 0, 0);
         shelves[0].orientation = new Vector3(Math.radians(-90.0), 0, 0);
-
-        this.shelf = new SceneNode(new Vector2(2, 0, 0)).addChild(shelves[0]);
-
-        shelves[0] = this.shelf;
 
         shelves[1].position = new Vector3(-2.25, 0, 0);
         shelves[1].orientation = new Vector3(Math.radians(90.0, 0, 0), 0, 0);
@@ -207,147 +215,175 @@ export class SweBootcampGame extends Application {
         const ceilingMesh = new TexPlaneMesh(this.gl, woodPlanksTexture, new Vector2(2.5), new Vector3(0.0, -1.0, 0.0));
         const wallMesh = new TexPlaneMesh(this.gl, paintTexture, new Vector2(2.5, 1.15));
 
-        const staticSceneGraph = new SceneNode(Vector3.zeros, Vector3.zeros, Vector3.ones)
+        const [lightBulb, roomLight] = this.loadLightBulb(bulbMesh, bulbHolderMesh);
+
+        const staticSceneGraph = new SceneNode(Vector3.zeros, Vector3.zeros, Vector3.ones, [roomLight])
             .addChild(new LitSceneNode(floorMesh, new Vector3(0.0, 0.0, 0.0), Vector3.zeros, Vector3.ones, [...shelves])
-                .addChild(new LitSceneNode(ceilingMesh, new Vector3(0.0, 2.3, 0.0), new Vector3(), Vector3.ones, [this.roomLight]))
-                .addChild(new LitSceneNode(wallMesh, new Vector3(0.0, 1.15, 2.5), new Vector3(0.0, -90.0, 0.0).map(x => Math.radians(x))))
-                .addChild(new LitSceneNode(wallMesh, new Vector3(0.0, 1.15, -2.5), new Vector3(0.0, 90.0, 0.0).map(x => Math.radians(x))))
-                .addChild(new LitSceneNode(wallMesh, new Vector3(-2.5, 1.15, 0.0), new Vector3(0.0, 90.0, -90.0).map(x => Math.radians(x))))
-                .addChild(new LitSceneNode(wallMesh, new Vector3(2.5, 1.15, 0.0), new Vector3(0.0, 90.0, 90.0).map(x => Math.radians(x)))));
+            .addChild(new LitSceneNode(ceilingMesh, new Vector3(0.0, 2.3, 0.0), new Vector3(), Vector3.ones))
+            .addChild(new LitSceneNode(wallMesh, new Vector3(0.0, 1.15, 2.5), new Vector3(0.0, -90.0, 0.0).map(x => Math.radians(x))))
+            .addChild(new LitSceneNode(wallMesh, new Vector3(0.0, 1.15, -2.5), new Vector3(0.0, 90.0, 0.0).map(x => Math.radians(x))))
+            .addChild(new LitSceneNode(wallMesh, new Vector3(-2.5, 1.15, 0.0), new Vector3(0.0, 90.0, -90.0).map(x => Math.radians(x))))
+            .addChild(new LitSceneNode(wallMesh, new Vector3(2.5, 1.15, 0.0), new Vector3(0.0, 90.0, 90.0).map(x => Math.radians(x)))));
 
-        // Scene graph construction
-        this.sceneGraph = new SceneNode(Vector3.zeros, Vector3.zeros, Vector3.ones, [...chairs])
-            .addChild(staticSceneGraph)
-            .addChild(this.table);
+        // Scene graph root entity
+        this.entityFactory.createDrawEntity(
+            SceneRootEntityId,
+            new SceneNode()
+                .addChild(staticSceneGraph)
+                .addChild(tableNode)
+                .addChildren(chairNodes));
 
-        this.entities = await this.loadEntities(this.physicsWorld, staticSceneGraph, this.table);
+        this.ecsWorld.createEntity({
+            id: "light",
+            c: {
+                light: {
+                    type: LightComponent.name,
+                    attachedTo: lightBulb,
+                },
+                position: {
+                    type: PositionComponent.name,
+                    position: new Vector3(0.0, 2.3, 0.0),
+                },
+                orientation: {
+                    type: OrientationComponent.name,
+                    direction: new Vector3(0.0, -0.3, 0.0),
+                },
+                draw: {
+                    type: DrawComponent.name,
+                    sceneNode: roomLight,
+                },
+                animation: {
+                    type: CyclicalAnimationComponent.name,
+                    enabled: true,
+                    duration: 1.5,
+                    callback: (entity, animation) => {
+                        entity.c.orientation.update({
+                            direction: new Vector3(0.0, Math.sin(animation.progress * Math.PI * 2.0) / 2.0, 0.0),
+                        });
+                    }
+                }
+            }
+        });
+
+        const collisionBoxes = [
+            {size: new Vector3(5, 0.1, 5), position: Vector3.zeros, orientation: Vector3.zeros, offset: new Vector3(0.0, -0.05, 0.0)},
+            {size: new Vector3(0.1, 2.5, 5), position: Vector3.zeros, orientation: Vector3.zeros, offset: new Vector3(-2.55, 1.25, 0.0)},
+            {size: new Vector3(0.1, 2.5, 5), position: Vector3.zeros, orientation: Vector3.zeros, offset: new Vector3(2.55, 1.25, 0.0)},
+            {size: new Vector3(5, 2.5, 0.1), position: Vector3.zeros, orientation: Vector3.zeros, offset: new Vector3(0.0, 1.25, -2.55)},
+            {size: new Vector3(5, 2.5, 0.1), position: Vector3.zeros, orientation: Vector3.zeros, offset: new Vector3(0.0, 1.25, 2.55)},
+            {size: new Vector3(5, 0.1, 5), position: Vector3.zeros, orientation: Vector3.zeros, offset: new Vector3(0.0, 2.35, 0.0)},
+        ];
+
+        let i = 0;
+        for (const {size, position, orientation, offset} of collisionBoxes)
+            this.entityFactory.createCollisionBox(`collisionBox_${i++}`, size, position, orientation, offset);
+
+        this.entityFactory.createPhysicalObjectEntity(
+            "table",
+            tableNode,
+            new Vector3(1.8, 0.85, 0.9),
+            new Vector3(0.0, 1.25, 0.0),
+            new Vector3(0.0, -Math.PI / 2, 0.0),
+            new Vector3(0, 0.425, 0),
+        );
+
+        const chairPositions = [
+            {position: new Vector3(0.0, 0.0, -1.2), orientation: new Vector3(0.0, Math.radians(-90), 0.0)},
+            {position: new Vector3(0.0, 0.0, 1.2), orientation: new Vector3(Math.PI / 2, Math.radians(90), 0.0)},
+            {position: new Vector3(-0.75, 0.0, 0.40), orientation: new Vector3(0.0, Math.radians(0), 0.0)},
+            {position: new Vector3(-0.75, 0.0, -0.40), orientation: new Vector3(0.0, Math.radians(0), 0.0)},
+            {position: new Vector3(0.75, 0.0, -0.40), orientation: new Vector3(0.0, Math.radians(180), 0.0)},
+            {position: new Vector3(0.75, 0.0, 0.40), orientation: new Vector3(0.0, Math.radians(180), 0.0)},
+        ];
+
+        i = 0;
+        for (const {position, orientation} of chairPositions)
+            this.entityFactory.createPhysicalObjectEntity(
+                `chair_${i}`,
+                chairNodes[i++],
+                new Vector3(0.45, 1.05, 0.40),
+                position,
+                orientation,
+                new Vector3(0, 0.525, 0),
+            );
 
         return await super.initialise();
     }
 
     resize() {
-        this.camera.aspectRatio = this.gl.canvas.clientWidth / this.gl.canvas.clientHeight;
+        this.windowInfoEntity.c.window.update({
+            width: this.gl.canvas.clientWidth,
+            height: this.gl.canvas.clientHeight,
+            aspectRatio: this.gl.canvas.clientWidth / this.gl.canvas.clientHeight
+        });
     }
 
     keyDown(key) {
+        const camera = this.ecsWorld.getEntity(CameraEntityId).c.camera.camera;
         if (key === "r") {
-            SweBootcampGame.setSliderVector("PosSlider", 0.0);
-            SweBootcampGame.setSliderVector("RotSlider", 0.0, "yaw", "pitch", "roll");
-            SweBootcampGame.setSliderValue("scaleSlider", 1.0);
-            SweBootcampGame.setSliderValue("tableRotationSlider", 0.0);
-            this.camera.targetPosition = new Vector3(2.0);
-            this.camera.targetOrientation = new Vector3(-45.0, 30.0, 0.0).apply(x => Math.radians(x));
-            this.physicsWorld?.clear();
+            camera.targetPosition = new Vector3(2.0);
+            camera.targetOrientation = new Vector3(-45.0, 30.0, 0.0).apply(x => Math.radians(x));
         } else if (key === "c")
-            console.log(`[${this.camera.position.join(", ")}], [${this.camera.orientation.join(", ")}]`);
+            console.log(`[${camera.position.join(", ")}], [${camera.orientation.join(", ")}]`);
+        else if (key === " ") {
+            // todo: move out to input system
+            for (let i = 0; i < 6; i++) {
+                const chairEntity = this.ecsWorld.getEntity(`chair_${i}`);
+                chairEntity.c.physics.update({impulse: {position: chairEntity.c.position.position.subtracted(new Vector3(0, -1, 0)), force: new Vector3(0.0, 100.0, 0.0)}});
+            }
+        }
+        else if (key === "e") {
+            for (let i = 0; i < 6; i++) {
+                const chairEntity = this.ecsWorld.getEntity(`chair_${i}`);
+                chairEntity.c.physics.update({impulse: {position: chairEntity.c.position.position.multiplied(0.75), force: new Vector3(0.0, 100.0, 0.0)}});
+            }
+        }
+        else if (key === "i") {
+            for (let i = 0; i < 6; i++) {
+                const chairEntity = this.ecsWorld.getEntity(`chair_${i}`);
+                chairEntity.c.physics.update({impulse: {position: chairEntity.c.position.position.multiplied(1.25), force: new Vector3(0.0, 100.0, 0.0)}});
+            }
+        }
 
         super.keyDown(key);
+        this.inputSystem.onKeyboardUpdate(this.pressedKeys);
+    }
+
+    keyUp(key) {
+        super.keyUp(key);
+        this.inputSystem.onKeyboardUpdate(this.pressedKeys);
+    }
+
+    mouseMove(dx, dy, x, y) {
+        super.mouseMove(dx, dy, x, y);
+        this.inputSystem.onMouseMove(this.mousePos, this.mouseChange);
+    }
+
+    mouseUp(button) {
+        super.mouseUp(button);
+        this.inputSystem.onMouseButtonUpdated(this.pressedButtons);
+    }
+
+    mouseDown(button) {
+        super.mouseDown(button);
+        this.inputSystem.onMouseButtonUpdated(this.pressedButtons);
     }
 
     update(deltaTime) {
-        // Turn camera with mouse movement
-        this.camera.turn(new Vector3(this.mouseChange.x * deltaTime * this.mouseSensitivity, this.mouseChange.y * deltaTime * this.mouseSensitivity, 0.0).map(x => Math.radians(x)));
-
-        // Move camera with keyboard input
-        this.camera.move(new Vector2(
-            Number(this.pressedKeys.has("w")) - Number(this.pressedKeys.has("s")),
-            Number(this.pressedKeys.has("d")) - Number(this.pressedKeys.has("a"))
-        ).mul(2 + (2 * Number(this.pressedKeys.has("Shift")))).mul(deltaTime));
-
-        // Update camera state
-        this.camera.update(deltaTime);
-
-        // Set orientation of room light
-        this.roomLight.orientation = new Vector3(0.0, Math.sin(this.lightBulbAnimation) / 2.0, 0.0);
-        if (this.lightSwing)
-            this.lightBulbAnimation += 5 * deltaTime;
-
         SweBootcampGame.setInnerText("fpsLabel", this.frameCounter.averageFrameRate.toFixed(2));
-        SweBootcampGame.setInnerHtml("physicsStats", this.physicsWorld.getInfo());
+        SweBootcampGame.setInnerHtml("physicsStats", this.physicsSystem.physicsWorld.getInfo());
 
-        // Set table orientation
-        this.table.orientation = new Vector3(Math.radians(SweBootcampGame.getSliderValue("tableRotationSlider")), 0.0, 0.0);
-
-        // Move the chair using linear interpolation
-        this.chair.position = new Vector3(0.0, 0.0, Math.lerp(this.chair.position.z, this.chairTarget, 1 - Math.exp(-2 * deltaTime)));
-        if (this.chair.position.z < -1.89)
-            this.chairTarget = -0.9;
-        else if (this.chair.position.z > -0.91)
-            this.chairTarget = -1.9;
-
-        const worldTransform = Matrix4.positionOrientationScale(
-            SweBootcampGame.getSliderVector("PosSlider"),
-            SweBootcampGame.getSliderVector("RotSlider", "yaw", "pitch", "roll").apply(x => Math.radians(x)),
-            new Vector3(SweBootcampGame.getSliderValue("scaleSlider"))
-        );
-
-        const commonUniforms = {
-            uViewMatrix: this.camera.matrix,
-            uProjectionMatrix: this.camera.projectionMatrix,
-        }
-
-        const litUniforms = {
-            ...commonUniforms,
-            uLightPosition: this.lightBulb.transform.multiplied(this.lightBulb.position),
-            uLightColour: this.lightColour.rgb,
-            uEyePosition: this.camera.position
-        };
-
-        const unlitUniforms = {
-            ...commonUniforms,
-            uColour: this.lightColour
-        };
-
-        this.physicsWorld.timeStep = deltaTime;
-        this.physicsWorld.timerate = deltaTime * 1000;
-        this.physicsWorld.step();
-
-        for (const entity of this.entities) {
-            if (!entity.sceneNode || !entity.physicsBody) continue;
-
-            entity.sceneNode.position = new Vector3(entity.physicsBody.getPosition());
-            entity.sceneNode.orientation = Vector3.orientationFromQuaternion(entity.physicsBody.getQuaternion());
-        }
-
-        this.sceneGraph.update(deltaTime, {
-            col: unlitUniforms,
-            tex: unlitUniforms,
-            texLit: litUniforms,
-            colLit: litUniforms
-        }, worldTransform);
+        this.frameInfoEntity.c.time.update({deltaTime: deltaTime});
+        this.ecsWorld.runSystems(EveryUpdateGroup);
 
         super.update(deltaTime);
     }
 
     draw(deltaTime) {
-        this.renderer.clear();
-        this.sceneGraph.draw(this.renderer);
         this.frameCounter.tick(deltaTime);
+        this.ecsWorld.runSystems(EveryDrawGroup);
+        Debug.draw(this.debugEnabled);
         super.draw(deltaTime);
-    }
-
-    static getSliderValue(id, scale = 10.0) {
-        return Number(document.getElementById(id).value) / scale;
-    }
-
-    static getSliderVector(idSuffix, xPrefix = "x", yPrefix = "y", zPrefix = "z", scale = 10.0) {
-        return new Vector3(
-            SweBootcampGame.getSliderValue(`${xPrefix}${idSuffix}`, scale),
-            SweBootcampGame.getSliderValue(`${yPrefix}${idSuffix}`, scale),
-            SweBootcampGame.getSliderValue(`${zPrefix}${idSuffix}`, scale)
-        );
-    }
-
-    static setSliderValue(id, value, scale = 10.0) {
-        document.getElementById(id).value = `${value * scale}`;
-    }
-
-    static setSliderVector(idSuffix, value, xPrefix = "x", yPrefix = "y", zPrefix = "z", scale = 10.0) {
-        if (typeof value === "number")
-            value = new Vector3(value);
-        this.setSliderValue(`${xPrefix}${idSuffix}`, value.x, scale);
-        this.setSliderValue(`${yPrefix}${idSuffix}`, value.y, scale);
-        this.setSliderValue(`${zPrefix}${idSuffix}`, value.z, scale);
     }
 
     static setInnerText(id, text) {

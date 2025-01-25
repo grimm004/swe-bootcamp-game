@@ -1,6 +1,14 @@
+// noinspection JSUnusedGlobalSymbols
+
 import {Colour, Matrix4, Vector2, Vector3, Vector4} from "./math.js";
 
 export class Texture {
+    /**
+     * @param {WebGL2RenderingContext} gl
+     * @param {TexImageSource} image
+     * @param {number} [wrap=WebGLRenderingContext.CLAMP_TO_EDGE]
+     * @param {number} [slot=0]
+     */
     constructor(gl, image, wrap = gl.CLAMP_TO_EDGE, slot = 0) {
         this.gl = gl;
 
@@ -16,6 +24,9 @@ export class Texture {
         gl.bindTexture(gl.TEXTURE_2D, null);
     }
 
+    /**
+     * @param {string} shaderName
+     */
     bind(shaderName) {
         this.gl["shaders"][shaderName].setUniform1i("uSampler", this.slot);
         this.gl.activeTexture(this.gl.TEXTURE0 + this.slot);
@@ -24,6 +35,11 @@ export class Texture {
 }
 
 export class Shader {
+    /**
+     * @param {WebGL2RenderingContext} gl
+     * @param {string} vertexShaderSource
+     * @param {string} fragmentShaderSource
+     */
     constructor(gl, vertexShaderSource, fragmentShaderSource) {
         this.gl = gl;
 
@@ -38,6 +54,11 @@ export class Shader {
         };
     }
 
+    /**
+     * @param {string} vertexShaderSource
+     * @param {string} fragmentShaderSource
+     * @returns {number|WebGLProgram}
+     */
     createProgram(vertexShaderSource, fragmentShaderSource) {
         const glVertexShader = Shader.loadShader(this.gl, this.gl.VERTEX_SHADER, vertexShaderSource);
         if (!glVertexShader) return -1;
@@ -119,9 +140,9 @@ export class Shader {
     }
 
     bind(uniforms = undefined) {
-        if (this.gl.boundShader !== this.id) {
+        if (this.gl["boundShader"] !== this.id) {
             this.gl.useProgram(this.id);
-            this.gl.boundShader = this.id;
+            this.gl["boundShader"] = this.id;
         }
         if (typeof uniforms === "object")
             this.setUniforms(uniforms);
@@ -209,7 +230,7 @@ export class VertexArray {
     }
 
     addBuffer(buffer, shaderName, layoutName = "default") {
-        const layout = this.gl.shaders[shaderName].getLayout(layoutName);
+        const layout = this.gl["shaders"][shaderName].getLayout(layoutName);
 
         this.bind();
         buffer.bind();
@@ -230,7 +251,14 @@ export class VertexArray {
 }
 
 export class Mesh {
-    constructor(gl, vertexArray, indexBuffer, shaderName, texture) {
+    /**
+     * @param {WebGL2RenderingContext} gl
+     * @param {VertexArray} vertexArray
+     * @param {IndexBuffer} indexBuffer
+     * @param {string} shaderName
+     * @param {Texture} [texture]
+     */
+    constructor(gl, vertexArray, indexBuffer, shaderName, texture = undefined) {
         this.gl = gl;
         this.vertexArray = vertexArray;
         this.indexBuffer = indexBuffer;
@@ -239,7 +267,7 @@ export class Mesh {
     }
 
     get shader() {
-        return this.gl.shaders[this.shaderName];
+        return this.gl["shaders"][this.shaderName];
     }
 
     bind(uniforms) {
@@ -251,6 +279,10 @@ export class Mesh {
 }
 
 export class Renderer {
+    /**
+     * @param {WebGL2RenderingContext} gl
+     * @param {Colour} [clearColour=Colour.black]
+     */
     constructor(gl, clearColour = Colour.black) {
         this.gl = gl;
 
@@ -274,10 +306,17 @@ export class Renderer {
 }
 
 export class WorldObject {
+    /**
+     * @param {Vector3} [position=Vector3.zeros]
+     * @param {Vector3} [orientationRad=Vector3.zeros]
+     */
     constructor(position = Vector3.zeros, orientationRad = Vector3.zeros) {
         this._position = new Vector3(position);
         this._orientation = new Vector3(orientationRad);
 
+        /**
+         * @type {Matrix4}
+         */
         this.matrix = Matrix4.identity;
     }
 
@@ -310,10 +349,19 @@ export class WorldObject {
 }
 
 export class SceneNode extends WorldObject {
+    /**
+     * @param {Vector3} [position=Vector3.zeros]
+     * @param {Vector3} [orientationRad=Vector3.zeros]
+     * @param {Vector3} [scale=Vector3.ones]
+     * @param {SceneNode[]} [children=[]]
+     */
     constructor(position = Vector3.zeros, orientationRad = Vector3.zeros, scale = Vector3.ones, children = []) {
         super(position, orientationRad);
 
         this._scale = new Vector3(scale);
+        /**
+         * @type {Matrix4}
+         */
         this.transform = Matrix4.identity;
 
         this.updateMatrix();
@@ -325,6 +373,12 @@ export class SceneNode extends WorldObject {
                 child.parent = this;
                 this.children.push(child);
             }
+
+        this.visible = true;
+        /**
+         * @type {Boolean|null}
+         */
+        this.childrenVisible = null;
     }
 
     addChild(child) {
@@ -333,6 +387,17 @@ export class SceneNode extends WorldObject {
         return this;
     }
 
+    addChildren(children) {
+        for (const child of children)
+            this.addChild(child);
+        return this;
+    }
+
+    /**
+     * @param {number} deltaTime
+     * @param {object} uniforms
+     * @param {Matrix4} [transform=Matrix4.identity]
+     */
     update(deltaTime, uniforms, transform = Matrix4.identity) {
         this.transform = transform.copy.mul(this.matrix);
 
@@ -348,10 +413,22 @@ export class SceneNode extends WorldObject {
         return this._scale.copy;
     }
 
-    draw(renderer) {
-        for (const child of this.children)
-            child.draw(renderer);
+    get globalPosition() {
+        return this.transform.translation;
     }
+
+    /**
+     * @param {Renderer} renderer
+     */
+    draw(renderer) {
+        if (this.visible) this._drawSelf(renderer);
+
+        if (this.childrenVisible === true || (this.visible && this.childrenVisible === null))
+            for (const child of this.children)
+                child.draw(renderer);
+    }
+
+    _drawSelf() {}
 
     updateMatrix() {
         return this.matrix.positionOrientationScale(this._position, this._orientation, this._scale);
@@ -359,6 +436,13 @@ export class SceneNode extends WorldObject {
 }
 
 export class DrawableSceneNode extends SceneNode {
+    /**
+     * @param {Mesh} mesh
+     * @param {Vector3} [position=Vector3.zeros]
+     * @param {Vector3} [orientationRad=Vector3.zeros]
+     * @param {Vector3} [scale=Vector3.ones]
+     * @param {SceneNode[]} [children=[]]
+     */
     constructor(mesh, position = Vector3.zeros, orientationRad = Vector3.zeros, scale = Vector3.ones, children = []) {
         super(position, orientationRad, scale, children);
 
@@ -366,6 +450,11 @@ export class DrawableSceneNode extends SceneNode {
         this.uniforms = {};
     }
 
+    /**
+     * @param {number} deltaTime
+     * @param {object} uniforms
+     * @param {Matrix4} [transform=Matrix4.identity]
+     */
     update(deltaTime, uniforms, transform = Matrix4.identity) {
         if (typeof uniforms === "object" && Object.prototype.hasOwnProperty.call(uniforms, this.mesh.shaderName))
             this.uniforms = {...this.uniforms, ...uniforms[this.mesh.shaderName]};
@@ -373,9 +462,8 @@ export class DrawableSceneNode extends SceneNode {
         super.update(deltaTime, uniforms, transform);
     }
 
-    draw(renderer) {
+    _drawSelf(renderer) {
         renderer.draw(this);
-        super.draw(renderer);
     }
 
     bind() {
@@ -384,6 +472,14 @@ export class DrawableSceneNode extends SceneNode {
 }
 
 export class Camera extends WorldObject {
+    /**
+     * @param {number} fovRad
+     * @param {number} aspectRatio
+     * @param {number} [near=0.1]
+     * @param {number} [far=1000]
+     * @param {Vector3} [position=Vector3.zeros]
+     * @param {Vector3} [orientationRad=Vector3.zeros]
+     */
     constructor(fovRad, aspectRatio, near = 0.1, far = 1000, position = Vector3.zeros, orientationRad = Vector3.zeros) {
         super(position, orientationRad);
 
@@ -447,7 +543,8 @@ export class Camera extends WorldObject {
 
         this._orientation.elements = [
             Math.lerp(this._orientation.x, this._targetOrientation.x, 1 - Math.exp(-8 * deltaTime)),
-            Math.lerp(this._orientation.y, this._targetOrientation.y, 1 - Math.exp(-8 * deltaTime))
+            Math.lerp(this._orientation.y, this._targetOrientation.y, 1 - Math.exp(-8 * deltaTime)),
+            0.0,
         ]
 
         const lerpConstant = 1 - Math.exp(-10 * deltaTime);
@@ -496,6 +593,10 @@ export class Camera extends WorldObject {
         return this._targetOrientation.copy;
     }
 
+    get direction() {
+        return this._direction.copy;
+    }
+
     translate(vec) {
         this._targetPosition.add(vec);
         super.translate(vec);
@@ -512,17 +613,26 @@ export class Camera extends WorldObject {
     }
 
     updateMatrix() {
-        return this.matrix.lookAt(this._position, this._position.copy.add(this._direction), new Vector3(0, 1, 0));
+        return this.matrix.lookAt(this._position, this._position.copy.add(this._direction), Vector3.unitY);
     }
 }
 
 export class Application {
+    /**
+     * @param {WebGL2RenderingContext} gl
+     */
     constructor(gl) {
         this.gl = gl;
-        this.gl.shaders = {};
-        this.gl.boundShader = null;
+        this.gl["shaders"] = {};
+        this.gl["boundShader"] = null;
 
+        /**
+         * @type {Vector2}
+         */
         this.mousePos = Vector2.zeros;
+        /**
+         * @type {Vector2}
+         */
         this.mouseChange = Vector2.zeros;
 
         this.pressedButtons = new Set();
@@ -532,7 +642,7 @@ export class Application {
     }
 
     addShader(name, shader) {
-        this.gl.shaders[name] = shader;
+        this.gl["shaders"][name] = shader;
         shader.name = name;
         return this;
     }

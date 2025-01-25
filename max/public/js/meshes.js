@@ -1,6 +1,14 @@
 import {Colour, Vector2, Vector3} from "./math.js";
 import {IndexBuffer, Mesh, VertexArray, VertexBuffer} from "./graphics.js";
 
+/**
+ * @param {WebGL2RenderingContext} gl
+ * @param {string} obj
+ * @param {Texture} texture
+ * @param {Colour} [colour=Colour.white]
+ * @param {string} [shader=""]
+ * @returns {Mesh}
+ */
 export function parseObj(gl, obj, texture, colour = Colour.white, shader = "") {
     const objParts = obj.split("\n");
 
@@ -35,8 +43,8 @@ export function parseObj(gl, obj, texture, colour = Colour.white, shader = "") {
                     normIndex = Number(paramParts[2]) - 1;
                 vertices.push([posIndex, texIndex, normIndex]);
 
-                // if (posIndex === null || texIndex === null || normIndex === null)
-                //     console.log(`Null attribute: ${parameter}: ${posIndex}, ${texIndex}, ${normIndex}`);
+                if (posIndex === null || (usesTexture && texIndex === null) || (usesNormals && normIndex === null))
+                    console.warn(`Null attribute: ${parameter}: ${posIndex}, ${texIndex}, ${normIndex}`);
             }
 
             faces.push(vertices);
@@ -87,7 +95,13 @@ export function parseObj(gl, obj, texture, colour = Colour.white, shader = "") {
 }
 
 export class CubeMesh extends Mesh {
-    constructor(gl, vertexArray, shaderName, texture) {
+    /**
+     * @param {WebGL2RenderingContext} gl
+     * @param {VertexArray} vertexArray
+     * @param {string} shaderName
+     * @param {Texture} [texture]
+     */
+    constructor(gl, vertexArray, shaderName, texture = undefined) {
         const indexBuffer = new IndexBuffer(gl, [
             0, 1, 2, 0, 2, 3,    // front
             4, 5, 6, 4, 6, 7,    // back
@@ -102,6 +116,12 @@ export class CubeMesh extends Mesh {
 }
 
 export class TexCubeMesh extends CubeMesh {
+    /**
+     * @param {WebGL2RenderingContext} gl
+     * @param {Texture} texture
+     * @param {Vector3} [size=Vector3.ones]
+     * @param {Vector2} [textureSize=Vector2.ones]
+     */
     constructor(gl, texture, size = Vector3.ones, textureSize = Vector2.ones) {
         size.div(2);
         const vertexBuffer = new VertexBuffer(gl, [
@@ -148,7 +168,11 @@ export class TexCubeMesh extends CubeMesh {
 }
 
 export class ColCubeMesh extends CubeMesh {
-    constructor(gl, faceColourData) {
+    /**
+     * @param {WebGL2RenderingContext} gl
+     * @param {Colour|Colour[]} [faceColourData]
+     */
+    constructor(gl, faceColourData = undefined) {
         const vertexPositions = [
             // Front face
             [-1.0, -1.0,  1.0],
@@ -205,7 +229,13 @@ export class ColCubeMesh extends CubeMesh {
 }
 
 export class TexPlaneMesh extends Mesh {
-    constructor(gl, texture, size = Vector2.ones, normalVector = new Vector3(0.0, 1.0, 0.0)) {
+    /**
+     * @param {WebGL2RenderingContext} gl
+     * @param {Texture} texture
+     * @param {Vector2} [size=Vector2.ones]
+     * @param {Vector3} [normalVector=Vector3.unitY]
+     */
+    constructor(gl, texture, size = Vector2.ones, normalVector = Vector3.unitY) {
         const vertexBuffer = new VertexBuffer(gl, [
             -size.x,  0.0, -size.y,   normalVector.x, normalVector.y, normalVector.z,  0.0,    0.0,
              size.x,  0.0, -size.y,   normalVector.x, normalVector.y, normalVector.z,  size.x, 0.0,
