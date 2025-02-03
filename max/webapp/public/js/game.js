@@ -323,7 +323,8 @@ export class SweBootcampGame extends Application {
         if (key === "r") {
             camera.targetPosition = new Vector3(2.0);
             camera.targetOrientation = new Vector3(-45.0, 30.0, 0.0).apply(x => Math.radians(x));
-        } else if (key === "c")
+        }
+        else if (key === "c")
             console.log(`[${camera.position.join(", ")}], [${camera.orientation.join(", ")}]`);
         else if (key === " ") {
             // todo: move out to input system
