@@ -1,4 +1,3 @@
-import {Colour} from "./math.js";
 import {SweBootcampGame} from "./game.js";
 
 class Program {
