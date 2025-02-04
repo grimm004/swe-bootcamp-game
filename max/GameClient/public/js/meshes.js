@@ -89,7 +89,7 @@ export function parseObj(gl, obj, texture, colour = Colour.white, shader = "") {
         }
 
     const vertexBuffer = new VertexBuffer(gl, vertexBufferData);
-    const va = new VertexArray(gl).addBuffer(vertexBuffer, shader);
+    const va = new VertexArray(gl).setBuffer(vertexBuffer, shader);
     const indexBuffer = new IndexBuffer(gl, indexBufferData);
     return new Mesh(gl, va, indexBuffer, shader, texture);
 }
@@ -162,7 +162,7 @@ export class TexCubeMesh extends CubeMesh {
             -size.x,  size.y, -size.z,   1.0,  0.0,  0.0,  0.0,           textureSize.y,
         ]);
 
-        const vertexArray = new VertexArray(gl).addBuffer(vertexBuffer, "texLit");
+        const vertexArray = new VertexArray(gl).setBuffer(vertexBuffer, "texLit");
         super(gl, vertexArray, "texLit", texture);
     }
 }
@@ -222,9 +222,21 @@ export class ColCubeMesh extends CubeMesh {
         }
 
         const vertexBuffer = new VertexBuffer(gl, vertexData);
-        const vertexArray = new VertexArray(gl).addBuffer(vertexBuffer, "col");
+        const vertexArray = new VertexArray(gl).setBuffer(vertexBuffer, "col");
 
         super(gl, vertexArray, "col");
+
+        this.vertexCount = vertexPositions.length;
+        this.vertexData = vertexData;
+    }
+
+    setColour(faceColourData) {
+        for (let i = 0; i < this.vertexCount; i++)
+            this.vertexData.splice(i * 6 + 3, 3, ...(faceColourData instanceof Colour ? faceColourData.rgb : faceColourData[Math.floor(i / 6)].rgb));
+
+        const vertexBuffer = this.vertexArray.getBuffer("col")
+            .setData(new Float32Array(this.vertexData));
+        this.vertexArray.setBuffer(vertexBuffer, "col");
     }
 }
 
@@ -243,7 +255,7 @@ export class TexPlaneMesh extends Mesh {
             -size.x,  0.0,  size.y,   normalVector.x, normalVector.y, normalVector.z,  0.0,    size.y,
         ]);
 
-        const vertexArray = new VertexArray(gl).addBuffer(vertexBuffer,  "texLit");
+        const vertexArray = new VertexArray(gl).setBuffer(vertexBuffer,  "texLit");
 
         const indexBuffer = new IndexBuffer(gl, [
             0, 1, 2, 0, 2, 3

@@ -173,6 +173,15 @@ export class Buffer {
         gl.bufferData(type, typedData, accessType);
     }
 
+    setData(typedData) {
+        if (typedData.length !== this.length)
+            throw new Error("Data length does not match buffer length.");
+
+        this.gl.bindBuffer(this.type, this.id);
+        this.gl.bufferData(this.type, typedData, this.gl.STATIC_DRAW);
+        return this;
+    }
+
     bind() {
         this.gl.bindBuffer(this.type, this.id);
     }
@@ -227,9 +236,10 @@ export class VertexArray {
     constructor(gl) {
         this.gl = gl;
         this.id = gl.createVertexArray();
+        this.buffers = {};
     }
 
-    addBuffer(buffer, shaderName, layoutName = "default") {
+    setBuffer(buffer, shaderName, layoutName = "default") {
         const layout = this.gl["shaders"][shaderName].getLayout(layoutName);
 
         this.bind();
@@ -242,7 +252,13 @@ export class VertexArray {
             this.gl.enableVertexAttribArray(attribute.location);
             offset += attribute.offset + (attribute.count * attribute.size);
         }
+
+        this.buffers[`${shaderName}-${layoutName}`] = buffer;
         return this;
+    }
+
+    getBuffer(shaderName, layoutName = "default") {
+        return this.buffers[`${shaderName}-${layoutName}`];
     }
 
     bind() {
