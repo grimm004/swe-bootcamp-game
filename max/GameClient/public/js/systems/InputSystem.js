@@ -6,7 +6,13 @@ export default class InputSystem extends ApeEcs.System {
     // noinspection JSUnusedGlobalSymbols
     init() {
         this._mouseMoved = true;
+        /**
+         * @type {Vector2}
+         */
         this.mousePos = Vector2.zeros;
+        /**
+         * @type {Vector2}
+         */
         this.mouseChange = Vector2.zeros;
 
         this._mouseButtonsUpdated = false;
