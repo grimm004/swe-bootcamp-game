@@ -1,8 +1,9 @@
 <!DOCTYPE html>
-
 <html lang="en-GB">
 <head>
   <title>BP EC SE Game</title>
+
+  <link rel="icon" type="image/png" href="./assets/images/icon.png">
 
   <link rel="stylesheet" type="text/css" href="./css/bootstrap.css">
   <link rel="stylesheet" type="text/css" href="./css/style.css">
@@ -12,28 +13,99 @@
 
 <body>
 
+<!-- Game container -->
 <div class="game-container">
   <div id="gameContainer">
     <canvas id="glCanvas">
       Browser does not support HTML5.
     </canvas>
-    <div id="mouseCaptureInfo" class="center-screen">
+    <div id="mouseCaptureOverlay" class="center-screen d-none">
       Double click to take control
     </div>
   </div>
 
-  <div class="form-group game-ui">
-    <div><label id="fpsLabel"></label> FPS</div>
+  <div id="fpsLabel" class="fps-label">0.00 FPS</div>
 
-    <div class="custom-control custom-checkbox">
-      <input id="enableDebugCheckbox" type="checkbox" class="custom-control-input">
-      <label for="enableDebugCheckbox" class="custom-control-label">Show Debug</label>
-    </div>
+  <div class="custom-control custom-checkbox debug-checkbox">
+    <input id="enableDebugCheckbox" type="checkbox" class="custom-control-input">
+    <label for="enableDebugCheckbox" class="custom-control-label">Debug</label>
+  </div>
 
-    <div id="controls" class="d-none">
-      <div id="physicsStats"></div>
-      <label for="physicsStats">Physics Stats</label>
+  <div id="physicsStatsLabel" class="debug-stats d-none"></div>
+</div>
+
+<!-- Online UI Container: Account, Lobby, and Profile Management -->
+<div id="onlineContainer" class="online-container">
+  <!-- Navigation buttons for Lobby and Profile (hidden until login) -->
+  <div class="online-nav d-none">
+    <button class="nav-btn" data-target="lobbyPanel">Lobby</button>
+    <button class="nav-btn" data-target="profilePanel">Profile</button>
+  </div>
+
+  <!-- Auth Panel: Login / Sign-Up -->
+  <div id="authPanel" class="online-panel">
+    <h2>Account</h2>
+    <form id="authForm">
+      <div class="form-group">
+        <label for="authUsername">Username</label>
+        <input type="text" id="authUsername" name="username" placeholder="Username" autocomplete="none" required>
+      </div>
+      <div class="form-group sign-up-only collapsed">
+        <label for="authEmail">Email</label>
+        <input type="email" id="authEmail" name="email" placeholder="Email" autocomplete="none" required disabled>
+      </div>
+      <div class="form-group">
+        <label for="authPassword">Password</label>
+        <input type="password" id="authPassword" name="password" placeholder="Password" required>
+      </div>
+      <div class="form-group sign-up-only collapsed">
+        <label for="authConfirmPassword">Confirm Password</label>
+        <input type="password" id="authConfirmPassword" name="confirmPassword" placeholder="Confirm Password" required disabled>
+      </div>
+      <div class="auth-actions d-flex justify-content-between align-items-center">
+        <button type="submit" id="authSubmitButton">Log In</button>
+        <div id="toggleAuth" class="d-flex align-items-center">
+          <span id="toggleAuthText" class="toggle-auth-text">Don't have an account?</span>
+          <button type="button" id="toggleAuthButton" class="toggle-auth-btn">Sign Up</button>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Multiplayer Lobby Panel -->
+  <div id="lobbyPanel" class="online-panel d-none">
+    <h2>Multiplayer Lobby</h2>
+    <div class="lobby-actions">
+      <button id="createLobbyBtn">Create Lobby</button>
+      <div class="join-lobby">
+        <label for="lobbyJoinCode" class="d-none"></label>
+        <input type="text" id="lobbyJoinCode" placeholder="Enter Lobby Code">
+        <button id="joinLobbyBtn">Join Lobby</button>
+      </div>
     </div>
+    <div class="lobby-details">
+      <h3>Current Lobby</h3>
+      <ul id="lobbyUserList">
+        <!-- A dynamic list of lobby users will be populated here -->
+      </ul>
+      <p id="lobbyStatus"></p>
+    </div>
+  </div>
+
+  <!-- Profile Settings Panel -->
+  <div id="profilePanel" class="online-panel d-none">
+    <h2>Profile Settings</h2>
+    <form id="profileForm">
+      <div class="form-group">
+        <label for="profileDisplayName">Display Name</label>
+        <input type="text" id="profileDisplayName" name="displayName" placeholder="Display Name" autocomplete="none" required>
+      </div>
+      <div class="form-group">
+        <label for="profileEmail">Email</label>
+        <input type="email" id="profileEmail" name="email" placeholder="Email" autocomplete="none" required>
+      </div>
+      <button type="submit" id="profileSaveBtn">Save Profile</button>
+    </form>
   </div>
 </div>
 

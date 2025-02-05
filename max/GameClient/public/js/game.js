@@ -42,40 +42,65 @@ export class SweBootcampGame extends Application {
     constructor(gl) {
         super(gl);
 
-        this.frameCounter = new FrameCounter();
-        this.debugEnabled = false;
+        this._frameCounter = new FrameCounter();
+        this._debugEnabled = false;
 
-        this.ecsWorld = new World();
-        this.entityFactory = new EntityFactory(this.ecsWorld);
+        this._ecsWorld = new World();
+        this._entityFactory = new EntityFactory(this._ecsWorld);
 
-        this.ecsWorld.registerComponent(WindowInfoComponent);
-        this.ecsWorld.registerComponent(FrameInfoComponent);
-        this.ecsWorld.registerComponent(MouseInputComponent);
-        this.ecsWorld.registerComponent(KeyboardInputComponent);
-        this.ecsWorld.registerComponent(CameraComponent);
-        this.ecsWorld.registerComponent(PhysicsComponent);
-        this.ecsWorld.registerComponent(DrawComponent);
-        this.ecsWorld.registerComponent(LightComponent);
-        this.ecsWorld.registerComponent(CyclicalAnimationComponent);
-        this.ecsWorld.registerComponent(PositionComponent);
-        this.ecsWorld.registerComponent(OrientationComponent);
-        this.ecsWorld.registerComponent(AnchorComponent);
+        this._ecsWorld.registerComponent(WindowInfoComponent);
+        this._ecsWorld.registerComponent(FrameInfoComponent);
+        this._ecsWorld.registerComponent(MouseInputComponent);
+        this._ecsWorld.registerComponent(KeyboardInputComponent);
+        this._ecsWorld.registerComponent(CameraComponent);
+        this._ecsWorld.registerComponent(PhysicsComponent);
+        this._ecsWorld.registerComponent(DrawComponent);
+        this._ecsWorld.registerComponent(LightComponent);
+        this._ecsWorld.registerComponent(CyclicalAnimationComponent);
+        this._ecsWorld.registerComponent(PositionComponent);
+        this._ecsWorld.registerComponent(OrientationComponent);
+        this._ecsWorld.registerComponent(AnchorComponent);
 
-        this.windowInfoEntity = this.entityFactory.createWindowEntity(WindowInfoEntityId, gl.canvas.clientWidth, gl.canvas.clientHeight);
-        this.frameInfoEntity = this.entityFactory.createTimingEntity(FrameInfoEntityId);
-        this.entityFactory.createMouseInputEntity(MouseInputEntityId);
-        this.entityFactory.createKeyboardInputEntity(KeyboardInputEntityId);
+        this._windowInfoEntity = this._entityFactory.createWindowEntity(WindowInfoEntityId, gl.canvas.clientWidth, gl.canvas.clientHeight);
+        this._frameInfoEntity = this._entityFactory.createTimingEntity(FrameInfoEntityId);
+        this._entityFactory.createMouseInputEntity(MouseInputEntityId);
+        this._entityFactory.createKeyboardInputEntity(KeyboardInputEntityId);
 
-        this.ecsWorld.registerSystem(EveryUpdateGroup, CameraSystem);
-        this.entityFactory.createCameraEntity(
+        this._ecsWorld.registerSystem(EveryUpdateGroup, CameraSystem);
+        this._entityFactory.createCameraEntity(
             CameraEntityId, toRadian(90.0), 0.1, 1000.0, new Vector3(2.0), new Vector3(-45.0, 30.0, 0.0).map(x => Math.radians(x)), 20);
 
-        this.inputSystem = this.ecsWorld.registerSystem(EveryUpdateGroup, InputSystem);
-        this.ecsWorld.registerSystem(EveryUpdateGroup, AnimationSystem);
-        this.physicsSystem = this.ecsWorld.registerSystem(EveryUpdateGroup, PhysicsSystem);
-        this.ecsWorld.registerSystem(EveryUpdateGroup, PositioningSystem);
-        this.ecsWorld.registerSystem(EveryUpdateGroup, GraphicsSystem);
-        this.ecsWorld.registerSystem(EveryDrawGroup, RenderingSystem, [gl]);
+        this._inputSystem = this._ecsWorld.registerSystem(EveryUpdateGroup, InputSystem);
+        this._ecsWorld.registerSystem(EveryUpdateGroup, AnimationSystem);
+        this._physicsSystem = this._ecsWorld.registerSystem(EveryUpdateGroup, PhysicsSystem);
+        this._ecsWorld.registerSystem(EveryUpdateGroup, PositioningSystem);
+        this._ecsWorld.registerSystem(EveryUpdateGroup, GraphicsSystem);
+        this._ecsWorld.registerSystem(EveryDrawGroup, RenderingSystem, [gl]);
+
+        /**
+         * @type {(game: SweBootcampGame) => void}
+         */
+        this.onUpdateCompleted = null;
+        /**
+         * @type {(game: SweBootcampGame) => void}
+         */
+        this.onDrawCompleted = null;
+    }
+
+    get averageFrameRate() {
+        return this._frameCounter.averageFrameRate;
+    }
+
+    get physicsDebugStats() {
+        return this._physicsSystem.physicsWorld.getInfo();
+    }
+
+    get debugEnabled() {
+        return this._debugEnabled;
+    }
+
+    set debugEnabled(value) {
+        this._debugEnabled = value;
     }
 
     async loadShaders() {
@@ -189,10 +214,10 @@ export class SweBootcampGame extends Application {
         ]);
 
         Debug.init(this.gl);
-        Debug.setPoint("origin", Vector3.zeros);
-        Debug.setPoint("unitX", Vector3.unitX);
-        Debug.setPoint("unitY", Vector3.unitY);
-        Debug.setPoint("unitZ", Vector3.unitZ);
+        Debug.setPoint("origin", Vector3.zeros, Colour.white, true);
+        Debug.setPoint("unitX", Vector3.unitX, Colour.red, true);
+        Debug.setPoint("unitY", Vector3.unitY, Colour.green, true);
+        Debug.setPoint("unitZ", Vector3.unitZ, Colour.blue, true);
 
         const chairNodes = this.loadChairs(6, woodTexture);
 
@@ -226,14 +251,14 @@ export class SweBootcampGame extends Application {
             .addChild(new LitSceneNode(wallMesh, new Vector3(2.5, 1.15, 0.0), new Vector3(0.0, 90.0, 90.0).map(x => Math.radians(x)))));
 
         // Scene graph root entity
-        this.entityFactory.createDrawEntity(
+        this._entityFactory.createDrawEntity(
             SceneRootEntityId,
             new SceneNode()
                 .addChild(staticSceneGraph)
                 .addChild(tableNode)
                 .addChildren(chairNodes));
 
-        this.ecsWorld.createEntity({
+        this._ecsWorld.createEntity({
             id: "light",
             c: {
                 light: {
@@ -276,9 +301,9 @@ export class SweBootcampGame extends Application {
 
         let i = 0;
         for (const {size, position, orientation, offset} of collisionBoxes)
-            this.entityFactory.createCollisionBox(`collisionBox_${i++}`, size, position, orientation, offset);
+            this._entityFactory.createCollisionBox(`collisionBox_${i++}`, size, position, orientation, offset);
 
-        this.entityFactory.createPhysicalObjectEntity(
+        this._entityFactory.createPhysicalObjectEntity(
             "table",
             tableNode,
             new Vector3(1.8, 0.85, 0.9),
@@ -298,7 +323,7 @@ export class SweBootcampGame extends Application {
 
         i = 0;
         for (const {position, orientation} of chairPositions)
-            this.entityFactory.createPhysicalObjectEntity(
+            this._entityFactory.createPhysicalObjectEntity(
                 `chair_${i}`,
                 chairNodes[i++],
                 new Vector3(0.45, 1.05, 0.40),
@@ -311,7 +336,7 @@ export class SweBootcampGame extends Application {
     }
 
     resize() {
-        this.windowInfoEntity.c.window.update({
+        this._windowInfoEntity.c.window.update({
             width: this.gl.canvas.clientWidth,
             height: this.gl.canvas.clientHeight,
             aspectRatio: this.gl.canvas.clientWidth / this.gl.canvas.clientHeight
@@ -319,7 +344,7 @@ export class SweBootcampGame extends Application {
     }
 
     keyDown(key) {
-        const camera = this.ecsWorld.getEntity(CameraEntityId).c.camera.camera;
+        const camera = this._ecsWorld.getEntity(CameraEntityId).c.camera.camera;
         if (key === "r") {
             camera.targetPosition = new Vector3(2.0);
             camera.targetOrientation = new Vector3(-45.0, 30.0, 0.0).apply(x => Math.radians(x));
@@ -329,69 +354,64 @@ export class SweBootcampGame extends Application {
         else if (key === " ") {
             // todo: move out to input system
             for (let i = 0; i < 6; i++) {
-                const chairEntity = this.ecsWorld.getEntity(`chair_${i}`);
+                const chairEntity = this._ecsWorld.getEntity(`chair_${i}`);
                 chairEntity.c.physics.update({impulse: {position: chairEntity.c.position.position.subtracted(new Vector3(0, -1, 0)), force: new Vector3(0.0, 100.0, 0.0)}});
             }
         }
         else if (key === "e") {
             for (let i = 0; i < 6; i++) {
-                const chairEntity = this.ecsWorld.getEntity(`chair_${i}`);
+                const chairEntity = this._ecsWorld.getEntity(`chair_${i}`);
                 chairEntity.c.physics.update({impulse: {position: chairEntity.c.position.position.multiplied(0.75), force: new Vector3(0.0, 100.0, 0.0)}});
             }
         }
         else if (key === "i") {
             for (let i = 0; i < 6; i++) {
-                const chairEntity = this.ecsWorld.getEntity(`chair_${i}`);
+                const chairEntity = this._ecsWorld.getEntity(`chair_${i}`);
                 chairEntity.c.physics.update({impulse: {position: chairEntity.c.position.position.multiplied(1.25), force: new Vector3(0.0, 100.0, 0.0)}});
             }
         }
 
         super.keyDown(key);
-        this.inputSystem.onKeyboardUpdate(this.pressedKeys);
+        this._inputSystem.onKeyboardUpdate(this.pressedKeys);
     }
 
     keyUp(key) {
         super.keyUp(key);
-        this.inputSystem.onKeyboardUpdate(this.pressedKeys);
+        this._inputSystem.onKeyboardUpdate(this.pressedKeys);
     }
 
     mouseMove(dx, dy, x, y) {
         super.mouseMove(dx, dy, x, y);
-        this.inputSystem.onMouseMove(this.mousePos, this.mouseChange);
+        this._inputSystem.onMouseMove(this.mousePos, this.mouseChange);
     }
 
     mouseUp(button) {
         super.mouseUp(button);
-        this.inputSystem.onMouseButtonUpdated(this.pressedButtons);
+        this._inputSystem.onMouseButtonUpdated(this.pressedButtons);
     }
 
     mouseDown(button) {
         super.mouseDown(button);
-        this.inputSystem.onMouseButtonUpdated(this.pressedButtons);
+        this._inputSystem.onMouseButtonUpdated(this.pressedButtons);
     }
 
     update(deltaTime) {
-        SweBootcampGame.setInnerText("fpsLabel", this.frameCounter.averageFrameRate.toFixed(2));
-        SweBootcampGame.setInnerHtml("physicsStats", this.physicsSystem.physicsWorld.getInfo());
-
-        this.frameInfoEntity.c.time.update({deltaTime: deltaTime});
-        this.ecsWorld.runSystems(EveryUpdateGroup);
+        this._frameInfoEntity.c.time.update({deltaTime: deltaTime});
+        this._ecsWorld.runSystems(EveryUpdateGroup);
 
         super.update(deltaTime);
+        this.onUpdateCompleted?.(this);
     }
 
     draw(deltaTime) {
-        this.frameCounter.tick(deltaTime);
-        this.ecsWorld.runSystems(EveryDrawGroup);
-        Debug.draw(this.debugEnabled);
         super.draw(deltaTime);
-    }
+        this._frameCounter.tick(deltaTime);
 
-    static setInnerText(id, text) {
-        document.getElementById(id).innerText = String(text);
-    }
+        this._ecsWorld.runSystems(EveryDrawGroup);
 
-    static setInnerHtml(id, html) {
-        document.getElementById(id).innerHTML = String(html);
+        if (this._debugEnabled)
+            Debug.draw(this._debugEnabled);
+
+        this.onDrawCompleted?.(this);
     }
 }

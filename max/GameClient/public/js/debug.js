@@ -1,6 +1,7 @@
 import {Colour, Matrix4, Vector3} from "./math.js";
 import {ColCubeMesh} from "./meshes.js";
 
+// todo: convert to system with debug component
 export const Debug = {
     colourPool: [
         Colour.red,
@@ -21,6 +22,12 @@ export const Debug = {
     boxes: {},
     singleDrawBoxes: {},
 
+    /**
+     * @param {string} id
+     * @param {Vector3} pos
+     * @param {Colour} [colour=Colour.black]
+     * @param {boolean} [persistent=false]
+     */
     setPoint(id, pos, colour = Colour.black, persistent = false) {
         const pointPool = persistent ? this.points : this.singleDrawPoints;
 
@@ -30,6 +37,14 @@ export const Debug = {
         }
     },
 
+    /**
+     * @param {string} id
+     * @param {Vector3} pos
+     * @param {Vector3} dir
+     * @param {Vector3} size
+     * @param {Colour} [colour]
+     * @param {boolean} [persistent=true]
+     */
     setBox(id, pos, dir, size, colour = null, persistent = true) {
         const boxPool = persistent ? this.boxes : this.singleDrawBoxes;
 
@@ -47,9 +62,7 @@ export const Debug = {
         this.boxMesh = new ColCubeMesh(this.gl);
     },
 
-    draw(enabled) {
-        if (!enabled) return;
-
+    draw() {
         for (const point of [...Object.values(this.points), ...Object.values(this.singleDrawPoints)]) {
             const uniforms = {
                 ...this.uniforms,

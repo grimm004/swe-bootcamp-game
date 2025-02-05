@@ -1,77 +1,42 @@
-import {SweBootcampGame} from "./game.js";
+import { SweBootcampGame } from "./game.js";
+import Menu from "./menu.js";
+import GameUi from "./gameui.js";
 
-class Program {
-    static async main() {
-        const canvas = document.querySelector("#glCanvas");
-
-        const gl = canvas.getContext("webgl2");
-        if (!gl) {
-            console.warn("WebGL could not be initialised.");
-            return;
-        }
-
-        const app = new SweBootcampGame(gl);
-
-        const resize = () => {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-
-            app.resize();
-
-            gl.viewport(0, 0, canvas.width, canvas.height);
-        };
-        resize();
-
-        window.addEventListener("resize", resize, false);
-
-        const enableDebugCheckbox = document.getElementById("enableDebugCheckbox");
-        enableDebugCheckbox.addEventListener("change", () => {
-            document.getElementById("controls").className = enableDebugCheckbox.checked ? "" : "d-none";
-            app.debugEnabled = enableDebugCheckbox.checked;
-        }, false);
-
-        let inputEnabled = false;
-
-        const body = document.querySelector("body");
-        body.addEventListener("keydown", e => inputEnabled ? app.keyDown(e.key.toLowerCase()) : null, false);
-        body.addEventListener("keyup", e => inputEnabled ? app.keyUp(e.key.toLowerCase()) : null, false);
-
-        canvas.addEventListener("pointermove",
-                event => inputEnabled ? event.getCoalescedEvents()
-                    .forEach(e => app.mouseMove(e.movementX, e.movementY, e.clientX, e.clientY)) : null, false);
-        canvas.addEventListener("mousedown", e => inputEnabled ? app.mouseDown(e.button) : null, false);
-        canvas.addEventListener("mouseup", e => inputEnabled ? app.mouseUp(e.button) : null, false);
-        canvas.addEventListener("contextmenu", e => inputEnabled && e.button === 2 ? e.preventDefault() : null);
-
-        // noinspection JSUnresolvedVariable
-        canvas.requestPointerLock = canvas.requestPointerLock || canvas.mozRequestPointerLock;
-
-        const mouseCaptureInfo = document.getElementById("mouseCaptureInfo");
-        let allowPointerLock = true;
-
-        const gameContainer = document.getElementById("gameContainer");
-        gameContainer.addEventListener("dblclick", () => allowPointerLock ? canvas.requestPointerLock() : null, false);
-
-        document.addEventListener("pointerlockchange", () => {
-            // noinspection JSUnresolvedVariable
-            if ((document.pointerLockElement || document.mozPointerLockElement) !== canvas) {
-                inputEnabled = false;
-
-                allowPointerLock = false;
-                setTimeout(() => {
-                    allowPointerLock = true;
-                    mouseCaptureInfo.classList.remove("d-none");
-                }, 2000);
-                return;
-            }
-
-            inputEnabled = true;
-            mouseCaptureInfo.classList.add("d-none");
-        });
-
-        (await app.initialise())
-            .run();
+async function main() {
+    const canvas = document.querySelector("#glCanvas");
+    const gl = canvas.getContext("webgl2");
+    if (!gl) {
+        console.warn("WebGL2 context could not be initialised.");
+        return;
     }
+
+    // Create an instance of your game.
+    const app = new SweBootcampGame(gl);
+
+    // Create and set up the game UI (in-canvas events, pointer lock, resize, etc).
+    const gameUi = new GameUi(app, canvas, gl);
+    await gameUi.setup();
+
+    // Create and set up the menu UI (signin/signup, lobby, profile, etc).
+    const menu = new Menu();
+    menu.setupUI();
+
+    // When authentication succeeds, the Menu notifies us via this callback.
+    // We then hide the menu and start the game.
+    menu.onAuthSuccess = async (user) => {
+        if (user.roles?.includes("player")) {
+            menu.hide();
+            gameUi.captureEnabled = true;
+        } else {
+            // For non-players (admins, etc.), show an error (or handle appropriately).
+            menu.showError("Access Denied: You are not authorised to view the game.");
+        }
+    };
+
+    await gameUi.run();
+
+    // Optionally, you can also wire up a game-finished callback:
+    // gameUi.onGameFinish = () => { menu.show(); };
 }
 
-window.onload = Program.main;
+window.onload = main;
