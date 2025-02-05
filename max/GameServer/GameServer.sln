@@ -2,6 +2,12 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameServer.Api", "GameServer.Api\GameServer.Api.csproj", "{0E18BE5C-E082-427C-BCFC-1B37A98632FE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameServer.Data", "GameServer.Data\GameServer.Data.csproj", "{060FA9BF-63ED-4D60-BB8E-9A869E29260B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameServer.Api.Contracts", "GameServer.Api.Contracts\GameServer.Api.Contracts.csproj", "{4C851AA5-4442-45D0-AF9B-810372595C13}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameServer.Domain", "GameServer.Domain\GameServer.Domain.csproj", "{A38A6107-8950-45DA-A37A-9F8BC4180E08}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -12,5 +18,17 @@ Global
 		{0E18BE5C-E082-427C-BCFC-1B37A98632FE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0E18BE5C-E082-427C-BCFC-1B37A98632FE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{0E18BE5C-E082-427C-BCFC-1B37A98632FE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{060FA9BF-63ED-4D60-BB8E-9A869E29260B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{060FA9BF-63ED-4D60-BB8E-9A869E29260B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{060FA9BF-63ED-4D60-BB8E-9A869E29260B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{060FA9BF-63ED-4D60-BB8E-9A869E29260B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4C851AA5-4442-45D0-AF9B-810372595C13}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C851AA5-4442-45D0-AF9B-810372595C13}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C851AA5-4442-45D0-AF9B-810372595C13}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4C851AA5-4442-45D0-AF9B-810372595C13}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A38A6107-8950-45DA-A37A-9F8BC4180E08}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A38A6107-8950-45DA-A37A-9F8BC4180E08}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A38A6107-8950-45DA-A37A-9F8BC4180E08}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A38A6107-8950-45DA-A37A-9F8BC4180E08}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

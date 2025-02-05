@@ -1,44 +1,112 @@
+using System.Text;
+using GameServer.Api.Contracts.Requests;
+using GameServer.Api.Extensions;
+using GameServer.Api.Services;
+using GameServer.Data;
+using GameServer.Data.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+const string dbPath = "game-server.db";
+
+builder.Services
+    .AddEndpointsApiExplorer()
+    .AddSwaggerGen()
+    .AddGameServerData(dbContextOptions =>
+        dbContextOptions.UseSqlite($"Data Source={dbPath}"))
+    .AddSingleton<IHashService, SaltedSha512HashService>(_ =>
+        new SaltedSha512HashService("GameUserPasswordSalt"u8.ToArray()));
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+
+    await using var serviceScope = app.Services.CreateAsyncScope();
+    await using var dbContext = serviceScope.ServiceProvider.GetRequiredService<GameServerDbContext>();
+    await dbContext.Database.EnsureCreatedAsync();
 }
 
 app.UseHttpsRedirection();
+app.UseGameFileServer();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+var apiRoute = app.MapGroup("/api/v1");
 
-app.MapGet("/weatherforecast", () =>
+var usersRoute = apiRoute.MapGroup("/users");
+
+usersRoute.MapPost("",
+        async (CreateUserRequest request, GameServerDbContext dbContext, IHashService hashService,
+            CancellationToken token) =>
+        {
+            var user = new User
+            {
+                Email = request.Email,
+                PasswordHash = hashService.HashData(Encoding.UTF8.GetBytes(request.Password)),
+                Username = request.Username,
+                DisplayName = request.DisplayName
+            };
+
+            await dbContext.Users.AddAsync(user, token);
+            await dbContext.SaveChangesAsync(token);
+
+            return user;
+        })
+    .WithName("CreateUser")
+    .WithOpenApi();
+
+usersRoute.MapGet("", async (GameServerDbContext dbContext, CancellationToken token) =>
     {
-        var forecast = Enumerable.Range(1, 5).Select(index =>
-                new WeatherForecast
-                (
-                    DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-                    Random.Shared.Next(-20, 55),
-                    summaries[Random.Shared.Next(summaries.Length)]
-                ))
-            .ToArray();
-        return forecast;
+        var users = await dbContext.Users.ToListAsync(token);
+        return users;
     })
-    .WithName("GetWeatherForecast")
+    .WithName("GetUsers")
+    .WithOpenApi();
+
+usersRoute.MapGet("/{id:guid}", async (Guid id, GameServerDbContext dbContext, CancellationToken token) =>
+    {
+        var user = await dbContext.Users.FindAsync([id], token);
+        return user is null ? Results.NotFound() : Results.Ok(user);
+    })
+    .WithName("GetUserById")
+    .WithOpenApi();
+
+usersRoute.MapPut("/{id:guid}",
+        async ([FromRoute] Guid id, [FromBody] UpdateUserRequest request, GameServerDbContext dbContext,
+            CancellationToken token) =>
+        {
+            var user = await dbContext.Users.FindAsync([id], token);
+
+            if (user is null)
+                return Results.NotFound();
+
+            user.Email = request.Email;
+            user.Username = request.Username;
+            user.DisplayName = request.DisplayName;
+
+            await dbContext.SaveChangesAsync(token);
+
+            return Results.Ok(user);
+        })
+    .WithName("UpdateUser")
+    .WithOpenApi();
+
+usersRoute.MapDelete("/{id:guid}", async (Guid id, GameServerDbContext dbContext, CancellationToken token) =>
+    {
+        var user = await dbContext.Users.FindAsync([id], token);
+
+        if (user is null)
+            return Results.NotFound();
+
+        dbContext.Users.Remove(user);
+        await dbContext.SaveChangesAsync(token);
+
+        return Results.NoContent();
+    })
+    .WithName("DeleteUserById")
     .WithOpenApi();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

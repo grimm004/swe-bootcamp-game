@@ -8,7 +8,26 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.12"/>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2"/>
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\GameServer.Api.Contracts\GameServer.Api.Contracts.csproj" />
+    <ProjectReference Include="..\GameServer.Domain\GameServer.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Watch Include="..\..\GameClient\public\**\*" />
+    <PublicFiles Include="..\..\GameClient\public\**\*.*" Visible="false" />
+  </ItemGroup>
+
+  <Target Name="CopyGameClientPublicToWwwRoot" BeforeTargets="PrepareForRun">
+    <MakeDir Directories="$(ProjectDir)wwwroot" Condition="!Exists('$(ProjectDir)wwwroot')" />
+    <Copy
+        SourceFiles="@(PublicFiles)"
+        DestinationFiles="@(PublicFiles->'$(ProjectDir)wwwroot\%(RecursiveDir)%(Filename)%(Extension)')"
+        SkipUnchangedFiles="true" />
+  </Target>
 
 </Project>
