@@ -920,6 +920,10 @@ export class Colour {
         return new Colour(0.0, 1.0, 0.0, 1.0);
     }
 
+    static get forestGreen() {
+        return new Colour(0.133, 0.545, 0.133, 1.0);
+    }
+
     static get blue() {
         return new Colour(0.0, 0.0, 1.0, 1.0);
     }

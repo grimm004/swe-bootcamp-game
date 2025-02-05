@@ -12,12 +12,17 @@
 
 <body>
 
-<div>
-  <canvas id="glCanvas" width="1200" height="900">
-    Browser does not sport HTML5.
-  </canvas>
+<div class="game-container">
+  <div id="gameContainer">
+    <canvas id="glCanvas">
+      Browser does not support HTML5.
+    </canvas>
+    <div id="mouseCaptureInfo" class="center-screen">
+      Double click to take control
+    </div>
+  </div>
 
-  <div id="ui" class="form-group">
+  <div class="form-group game-ui">
     <div><label id="fpsLabel"></label> FPS</div>
 
     <div class="custom-control custom-checkbox">
@@ -26,10 +31,8 @@
     </div>
 
     <div id="controls" class="d-none">
-      <div class="custom-control custom-checkbox">
-        <div id="physicsStats"></div>
-        <label for="physicsStats">Physics Stats</label>
-      </div>
+      <div id="physicsStats"></div>
+      <label for="physicsStats">Physics Stats</label>
     </div>
   </div>
 </div>

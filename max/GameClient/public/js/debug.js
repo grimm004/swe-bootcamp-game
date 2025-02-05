@@ -5,6 +5,7 @@ export const Debug = {
     colourPool: [
         Colour.red,
         Colour.green,
+        Colour.forestGreen,
         Colour.blue,
         Colour.yellow,
         Colour.magenta,

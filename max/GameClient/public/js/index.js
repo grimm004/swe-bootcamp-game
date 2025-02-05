@@ -30,25 +30,44 @@ class Program {
             app.debugEnabled = enableDebugCheckbox.checked;
         }, false);
 
-        const body = document.querySelector("body");
-        body.addEventListener("keydown", e => app.keyDown(e.key), false);
-        body.addEventListener("keyup", e => app.keyUp(e.key), false);
+        let inputEnabled = false;
 
-        canvas.addEventListener("mousemove", e => {
-            // noinspection JSUnresolvedVariable
-            if (document.pointerLockElement === canvas ||
-                document.mozPointerLockElement === canvas)
-                app.mouseMove(e.movementX, e.movementY, e.clientX, e.clientY);
-        }, false);
-        canvas.addEventListener("mousedown", e => app.mouseDown(e.button), false);
-        canvas.addEventListener("mouseup", e => app.mouseUp(e.button), false);
-        canvas.addEventListener("contextmenu", e => {
-            if (e.button === 2) e.preventDefault();
-        });
+        const body = document.querySelector("body");
+        body.addEventListener("keydown", e => inputEnabled ? app.keyDown(e.key.toLowerCase()) : null, false);
+        body.addEventListener("keyup", e => inputEnabled ? app.keyUp(e.key.toLowerCase()) : null, false);
+
+        canvas.addEventListener("pointermove",
+                event => inputEnabled ? event.getCoalescedEvents()
+                    .forEach(e => app.mouseMove(e.movementX, e.movementY, e.clientX, e.clientY)) : null, false);
+        canvas.addEventListener("mousedown", e => inputEnabled ? app.mouseDown(e.button) : null, false);
+        canvas.addEventListener("mouseup", e => inputEnabled ? app.mouseUp(e.button) : null, false);
+        canvas.addEventListener("contextmenu", e => inputEnabled && e.button === 2 ? e.preventDefault() : null);
 
         // noinspection JSUnresolvedVariable
         canvas.requestPointerLock = canvas.requestPointerLock || canvas.mozRequestPointerLock;
-        document.addEventListener("dblclick", () => canvas.requestPointerLock(), false);
+
+        const mouseCaptureInfo = document.getElementById("mouseCaptureInfo");
+        let allowPointerLock = true;
+
+        const gameContainer = document.getElementById("gameContainer");
+        gameContainer.addEventListener("dblclick", () => allowPointerLock ? canvas.requestPointerLock() : null, false);
+
+        document.addEventListener("pointerlockchange", () => {
+            // noinspection JSUnresolvedVariable
+            if ((document.pointerLockElement || document.mozPointerLockElement) !== canvas) {
+                inputEnabled = false;
+
+                allowPointerLock = false;
+                setTimeout(() => {
+                    allowPointerLock = true;
+                    mouseCaptureInfo.classList.remove("d-none");
+                }, 2000);
+                return;
+            }
+
+            inputEnabled = true;
+            mouseCaptureInfo.classList.add("d-none");
+        });
 
         (await app.initialise())
             .run();

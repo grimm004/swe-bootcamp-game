@@ -82,7 +82,7 @@ export default class CameraSystem extends ApeEcs.System {
             camera.move(new Vector2(
                 Number(pressedKeys.has("w")) - Number(pressedKeys.has("s")),
                 Number(pressedKeys.has("d")) - Number(pressedKeys.has("a"))
-            ).mul(2 + (2 * Number(pressedKeys.has("Shift")))).mul(deltaTime));
+            ).mul(2 + (2 * Number(pressedKeys.has("shift")))).mul(deltaTime));
 
             // Update camera state
             camera.update(deltaTime);
