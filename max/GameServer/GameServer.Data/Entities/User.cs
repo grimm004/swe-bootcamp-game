@@ -12,6 +12,9 @@ internal class User
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+    public Guid? LobbyId { get; set; }
+
     public ICollection<AuthSession> Sessions { get; set; } = [];
     public ICollection<AuthRole> Roles { get; set; } = [];
+    public Lobby? Lobby { get; set; }
 }

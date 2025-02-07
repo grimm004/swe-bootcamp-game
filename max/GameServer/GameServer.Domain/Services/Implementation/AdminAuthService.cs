@@ -20,27 +20,27 @@ public class AdminAuthService(IAuthRoleRepository authRoleRepository) : IAdminAu
         return authRoles.ToList();
     }
 
-    public async Task<RoleResult> GetRoleByIdAsync(Guid roleId, CancellationToken token = default)
+    public async Task<RoleResult> GetRoleByIdAsync(string roleName, CancellationToken token = default)
     {
-        var authRole = await authRoleRepository.GetRoleByIdAsync(roleId, token);
+        var authRole = await authRoleRepository.GetRoleByNameAsync(roleName, token);
 
         return authRole is null ? new NotFound() : authRole;
     }
 
-    public async Task<RoleResult> UpdateRoleAsync(Guid roleId, AuthRoleUpdate request, CancellationToken token = default)
+    public async Task<RoleResult> UpdateRoleAsync(string roleName, AuthRoleUpdate request, CancellationToken token = default)
     {
-        var success = await authRoleRepository.UpdateRoleAsync(roleId, request, token);
+        var success = await authRoleRepository.UpdateRoleAsync(roleName, request, token);
 
         if (!success)
             return new NotFound();
 
-        var authRole = await authRoleRepository.GetRoleByIdAsync(roleId, token);
+        var authRole = await authRoleRepository.GetRoleByNameAsync(roleName, token);
         return authRole is null ? new Error<string>("Role not found after update") : authRole;
     }
 
-    public async Task<AuthRoleDeletionResult> DeleteRoleAsync(Guid roleId, CancellationToken token = default)
+    public async Task<AuthRoleDeletionResult> DeleteRoleAsync(string roleName, CancellationToken token = default)
     {
-        var success = await authRoleRepository.DeleteRoleAsync(roleId, token);
+        var success = await authRoleRepository.DeleteRoleAsync(roleName, token);
 
         return success ? new Success() : new Error<string>("Failed to delete role.");
     }
@@ -52,20 +52,20 @@ public class AdminAuthService(IAuthRoleRepository authRoleRepository) : IAdminAu
         return authRoles.ToList();
     }
 
-    public async Task<AuthRoleAssignmentResult> AddRoleToUserAsync(Guid userId, Guid roleId, CancellationToken token = default)
+    public async Task<AuthRoleAssignmentResult> AddRoleToUserAsync(Guid userId, string roleName, CancellationToken token = default)
     {
-        var authRole = await authRoleRepository.GetRoleByIdAsync(roleId, token);
+        var authRole = await authRoleRepository.GetRoleByNameAsync(roleName, token);
         if (authRole is null)
             return new NotFound();
 
-        var success = await authRoleRepository.AddRoleToUserAsync(userId, roleId, token);
+        var success = await authRoleRepository.AddRoleToUserAsync(userId, roleName, token);
 
         return success ? authRole : new AlreadyExists();
     }
 
-    public async Task<AuthRoleUnassignmentResult> RemoveRoleFromUserAsync(Guid userId, Guid roleId, CancellationToken token = default)
+    public async Task<AuthRoleUnassignmentResult> RemoveRoleFromUserAsync(Guid userId, string roleName, CancellationToken token = default)
     {
-        var success = await authRoleRepository.RemoveRoleFromUserAsync(userId, roleId, token);
+        var success = await authRoleRepository.RemoveRoleFromUserAsync(userId, roleName, token);
 
         return success ? new Success() : new NotFound();
     }

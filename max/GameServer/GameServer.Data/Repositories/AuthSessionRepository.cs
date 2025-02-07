@@ -43,6 +43,7 @@ public class AuthSessionRepository(GameServerDbContext dbContext) : IAuthSession
     {
         var entity = await dbContext.AuthSessions.AsNoTracking()
             .Include(x => x.User)
+            .ThenInclude(x => x.Roles)
             .FirstOrDefaultAsync(x => x.TokenHash == authTokenHash, token);
 
         return entity?.MapToAuthSessionInfo();

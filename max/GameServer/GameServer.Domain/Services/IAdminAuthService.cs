@@ -8,12 +8,12 @@ public interface IAdminAuthService
 {
     Task<AuthRoleCreationResult> CreateRoleAsync(NewAuthRole role, CancellationToken token = default);
     Task<RolesResult> GetRolesAsync(CancellationToken token = default);
-    Task<RoleResult> GetRoleByIdAsync(Guid roleId, CancellationToken token = default);
-    Task<RoleResult> UpdateRoleAsync(Guid roleId, AuthRoleUpdate request, CancellationToken token = default);
-    Task<AuthRoleDeletionResult> DeleteRoleAsync(Guid roleId, CancellationToken token = default);
+    Task<RoleResult> GetRoleByIdAsync(string roleName, CancellationToken token = default);
+    Task<RoleResult> UpdateRoleAsync(string roleName, AuthRoleUpdate request, CancellationToken token = default);
+    Task<AuthRoleDeletionResult> DeleteRoleAsync(string roleName, CancellationToken token = default);
     Task<RolesResult> GetRolesByUserIdAsync(Guid userId, CancellationToken token = default);
-    Task<AuthRoleAssignmentResult> AddRoleToUserAsync(Guid userId, Guid roleId, CancellationToken token = default);
-    Task<AuthRoleUnassignmentResult> RemoveRoleFromUserAsync(Guid userId, Guid roleId, CancellationToken token = default);
+    Task<AuthRoleAssignmentResult> AddRoleToUserAsync(Guid userId, string roleName, CancellationToken token = default);
+    Task<AuthRoleUnassignmentResult> RemoveRoleFromUserAsync(Guid userId, string roleName, CancellationToken token = default);
 }
 
 [GenerateOneOf]

@@ -7,7 +7,6 @@ internal static class DomainMappers
     public static Domain.Models.AuthRole MapToAuthRole(this AuthRole authRole) =>
         new()
         {
-            Id = authRole.Id,
             Name = authRole.Name,
             Description = authRole.Description
         };
@@ -28,6 +27,27 @@ internal static class DomainMappers
         {
             Id = authSession.Id,
             User = authSession.User?.MapToUser()!,
-            ExpiresAt = authSession.ExpiresAt
+            CreatedAt = authSession.CreatedAt,
+            ExpiresAt = authSession.ExpiresAt,
+            RevokedAt = authSession.RevokedAt
+        };
+
+    public static Domain.Models.Lobby MapToLobby(this Lobby lobby) =>
+        new()
+        {
+            Id = lobby.Id,
+            HostId = lobby.HostId,
+            JoinCode = lobby.JoinCode,
+            Status = lobby.Status.MapToLobbyStatus(),
+            Users = lobby.Users.Select(MapToUser).ToList()
+        };
+
+    private static Domain.Models.LobbyStatus MapToLobbyStatus(this LobbyStatus lobbyStatus) =>
+        lobbyStatus switch
+        {
+            LobbyStatus.Closed => Domain.Models.LobbyStatus.Closed,
+            LobbyStatus.Open => Domain.Models.LobbyStatus.Open,
+            LobbyStatus.InGame => Domain.Models.LobbyStatus.InGame,
+            _ => throw new ArgumentOutOfRangeException(nameof(lobbyStatus), lobbyStatus, null)
         };
 }

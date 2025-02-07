@@ -8,6 +8,7 @@ public class GameServerDbContext(DbContextOptions<GameServerDbContext> options) 
     internal DbSet<User> Users { get; set; }
     internal DbSet<AuthRole> AuthRoles { get; set; }
     internal DbSet<AuthSession> AuthSessions { get; set; }
+    internal DbSet<Lobby> Lobbies { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -57,7 +58,7 @@ public class GameServerDbContext(DbContextOptions<GameServerDbContext> options) 
         modelBuilder.Entity<AuthRole>(entity =>
         {
             entity
-                .HasKey(r => r.Id);
+                .HasKey(r => r.Name);
 
             entity
                 .Property(r => r.Name)
@@ -99,6 +100,33 @@ public class GameServerDbContext(DbContextOptions<GameServerDbContext> options) 
 
             entity
                 .Property(s => s.RevokedAt);
+        });
+
+        modelBuilder.Entity<Lobby>(entity =>
+        {
+            entity
+                .HasKey(l => l.Id);
+
+            entity
+                .HasIndex(l => l.JoinCode)
+                .IsUnique();
+
+            entity
+                .Property(l => l.JoinCode)
+                .HasMaxLength(8)
+                .IsRequired();
+
+            entity
+                .Property(l => l.Status)
+                .IsRequired();
+
+            entity
+                .HasOne(l => l.Host);
+
+            entity
+                .HasMany(l => l.Users)
+                .WithOne(u => u.Lobby)
+                .HasForeignKey(u => u.LobbyId);
         });
     }
 }

@@ -14,7 +14,7 @@ public static class AuthRoleMappers
         };
 
     public static AuthRoleResponse MapToAuthRoleResponse(this AuthRole role) =>
-        new(role.Id, role.Name, role.Description);
+        new(role.Name, role.Description);
 
     public static AuthRoleUpdate MapToAuthRoleUpdate(this UpdateAuthRoleRequest request) =>
         new()

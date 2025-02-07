@@ -6,11 +6,11 @@ namespace GameServer.Domain.Services;
 
 public interface IAuthService
 {
-    Task<RegisterResult> RegisterAsync(AuthRegistration registration, CancellationToken token = default);
+    Task<RegisterResult> RegisterAsync(AuthRegistration registration, IEnumerable<string> roles, CancellationToken token = default);
     Task<LoginResult> LoginAsync(AuthCredentials credentials, CancellationToken token = default);
-    Task<LogoutResult> LogoutAsync(string authToken, CancellationToken token = default);
-    Task<OneOf<AuthSessionInfo, NotFound, Unauthorized, Error<string>>> GetSessionAsync(string authToken, CancellationToken token = default);
-    Task<OneOf<User, NotFound, Unauthorized, Error<string>>> UpdateProfileAsync(string authToken, UserUpdate userUpdate, CancellationToken token = default);
+    Task<LogoutResult> LogoutAsync(byte[] authTokenData, CancellationToken token = default);
+    Task<OneOf<AuthSessionInfo, NotFound, Unauthorized, Error<string>>> GetSessionAsync(byte[] authTokenData, CancellationToken token = default);
+    Task<OneOf<User, NotFound, Unauthorized, Error<string>>> UpdateProfileAsync(byte[] authTokenData, UserUpdate userUpdate, CancellationToken token = default);
 }
 
 public struct Unauthorized;

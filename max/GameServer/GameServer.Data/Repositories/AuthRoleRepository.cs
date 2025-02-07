@@ -22,9 +22,9 @@ public class AuthRoleRepository(GameServerDbContext dbContext) : IAuthRoleReposi
         return rowsChanged > 0 ? entity.MapToAuthRole() : null;
     }
 
-    public async Task<Domain.Models.AuthRole?> GetRoleByIdAsync(Guid id, CancellationToken token = default)
+    public async Task<Domain.Models.AuthRole?> GetRoleByNameAsync(string name, CancellationToken token = default)
     {
-        var entity = await dbContext.AuthRoles.FindAsync([id], token);
+        var entity = await dbContext.AuthRoles.FindAsync([name], token);
 
         return entity?.MapToAuthRole();
     }
@@ -36,9 +36,9 @@ public class AuthRoleRepository(GameServerDbContext dbContext) : IAuthRoleReposi
         return entities.Select(DomainMappers.MapToAuthRole);
     }
 
-    public async Task<bool> UpdateRoleAsync(Guid id, AuthRoleUpdate role, CancellationToken token = default)
+    public async Task<bool> UpdateRoleAsync(string name, AuthRoleUpdate role, CancellationToken token = default)
     {
-        var entity = await dbContext.AuthRoles.FindAsync([id], token);
+        var entity = await dbContext.AuthRoles.FindAsync([name], token);
 
         if (entity is null)
             return false;
@@ -55,9 +55,9 @@ public class AuthRoleRepository(GameServerDbContext dbContext) : IAuthRoleReposi
         return rowsChanged > 0;
     }
 
-    public async Task<bool> DeleteRoleAsync(Guid id, CancellationToken token = default)
+    public async Task<bool> DeleteRoleAsync(string name, CancellationToken token = default)
     {
-        var entity = await dbContext.AuthRoles.FindAsync([id], token);
+        var entity = await dbContext.AuthRoles.FindAsync([name], token);
 
         if (entity is null)
             return false;
@@ -79,10 +79,10 @@ public class AuthRoleRepository(GameServerDbContext dbContext) : IAuthRoleReposi
         return entities.Select(DomainMappers.MapToAuthRole);
     }
 
-    public async Task<bool> AddRoleToUserAsync(Guid userId, Guid roleId, CancellationToken token = default)
+    public async Task<bool> AddRoleToUserAsync(Guid userId, string roleName, CancellationToken token = default)
     {
         var user = await dbContext.Users.FindAsync([userId], token);
-        var role = await dbContext.AuthRoles.FindAsync([roleId], token);
+        var role = await dbContext.AuthRoles.FindAsync([roleName], token);
 
         if (user is null || role is null)
             return false;
@@ -93,10 +93,10 @@ public class AuthRoleRepository(GameServerDbContext dbContext) : IAuthRoleReposi
         return rowsChanged > 0;
     }
 
-    public async Task<bool> RemoveRoleFromUserAsync(Guid userId, Guid roleId, CancellationToken token = default)
+    public async Task<bool> RemoveRoleFromUserAsync(Guid userId, string roleName, CancellationToken token = default)
     {
         var user = await dbContext.Users.FindAsync([userId], token);
-        var role = await dbContext.AuthRoles.FindAsync([roleId], token);
+        var role = await dbContext.AuthRoles.FindAsync([roleName], token);
 
         if (user is null || role is null)
             return false;

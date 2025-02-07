@@ -9,5 +9,6 @@ public static class DependencyInjectionModule
     public static IServiceCollection AddDomain(this IServiceCollection services) =>
         services
             .AddScoped<IAdminAuthService, AdminAuthService>()
-            .AddScoped<IAuthService, AuthService>();
+            .AddScoped<IAuthService, AuthService>()
+            .AddScoped<ILobbyService, LobbyService>();
 }

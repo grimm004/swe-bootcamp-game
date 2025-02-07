@@ -28,7 +28,7 @@ public static class AuthMappers
         new(user.Id, user.Username, user.DisplayName, user.Roles);
 
     public static AuthSessionResponse MapToResponse(this AuthSession session) =>
-        new(session.User.MapToResponse(), session.Token, session.ExpiresAt);
+        new(session.User.MapToResponse(), Convert.ToBase64String(session.TokenData), session.ExpiresAt);
 
     public static AuthSessionInfoResponse MapToResponse(this AuthSessionInfo sessionInfo) =>
         new(sessionInfo.User.MapToResponse(), sessionInfo.ExpiresAt);

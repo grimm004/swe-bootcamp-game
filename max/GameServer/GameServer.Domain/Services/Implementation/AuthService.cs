@@ -7,9 +7,9 @@ using OneOf.Types;
 namespace GameServer.Domain.Services.Implementation;
 
 public class AuthService(
-    IUserRepository userRepository, IAuthSessionRepository sessionRepository, ISaltedHashService saltedHashService) : IAuthService
+    IUserRepository userRepository, IAuthSessionRepository sessionRepository, IAuthRoleRepository roleRepository, ISaltedHashService saltedHashService) : IAuthService
 {
-    public async Task<RegisterResult> RegisterAsync(AuthRegistration registration, CancellationToken token = default)
+    public async Task<RegisterResult> RegisterAsync(AuthRegistration registration, IEnumerable<string> roles, CancellationToken token = default)
     {
         var existingUser = await userRepository.GetUserByUsernameAsync(registration.Username, token);
         if (existingUser is not null)
@@ -23,9 +23,18 @@ public class AuthService(
             registration.Username,
             passwordSalt,
             passwordHash,
-            registration.DisplayName, token);
+            registration.DisplayName,
+            token);
 
-        return user == null ? new AlreadyExists() : user;
+        if (user is null)
+            return new Error<string>("Failed to create user.");
+
+        var addedRoles = new List<string>();
+        foreach (var role in roles)
+            if (await roleRepository.AddRoleToUserAsync(user.Id, role, token))
+                addedRoles.Add(role);
+
+        return user with { Roles = addedRoles };
     }
 
     public async Task<LoginResult> LoginAsync(AuthCredentials credentials, CancellationToken token = default)
@@ -61,14 +70,15 @@ public class AuthService(
         {
             Id = authSession.Id,
             User = user,
-            Token = Convert.ToBase64String(authTokenData),
+            TokenData = authTokenData,
+            CreatedAt = authSession.CreatedAt,
             ExpiresAt = authSession.ExpiresAt
         };
     }
 
-    public async Task<LogoutResult> LogoutAsync(string authToken, CancellationToken token = default)
+    public async Task<LogoutResult> LogoutAsync(byte[] authTokenData, CancellationToken token = default)
     {
-        var authTokenHash = saltedHashService.HashData(Convert.FromBase64String(authToken));
+        var authTokenHash = saltedHashService.HashData(authTokenData);
 
         var session = await sessionRepository.GetSessionByTokenHashAsync(authTokenHash, token);
         if (session is null)
@@ -78,21 +88,21 @@ public class AuthService(
         return result ? new Success() : new Error<string>("Failed to delete session.");
     }
 
-    public async Task<OneOf<AuthSessionInfo, NotFound, Unauthorized, Error<string>>> GetSessionAsync(string authToken, CancellationToken token = default)
+    public async Task<OneOf<AuthSessionInfo, NotFound, Unauthorized, Error<string>>> GetSessionAsync(byte[] authTokenData, CancellationToken token = default)
     {
-        var authTokenHash = saltedHashService.HashData(Convert.FromBase64String(authToken));
+        var authTokenHash = saltedHashService.HashData(authTokenData);
 
         var session = await sessionRepository.GetSessionByTokenHashAsync(authTokenHash, token);
 
         if (session is null)
             return new NotFound();
 
-        return session.ExpiresAt < DateTime.UtcNow ? new Unauthorized() : session;
+        return session.RevokedAt.HasValue || session.ExpiresAt < DateTime.UtcNow ? new Unauthorized() : session;
     }
 
-    public async Task<OneOf<User, NotFound, Unauthorized, Error<string>>> UpdateProfileAsync(string authToken, UserUpdate userUpdate, CancellationToken token = default)
+    public async Task<OneOf<User, NotFound, Unauthorized, Error<string>>> UpdateProfileAsync(byte[] authTokenData, UserUpdate userUpdate, CancellationToken token = default)
     {
-        var authTokenHash = saltedHashService.HashData(Convert.FromBase64String(authToken));
+        var authTokenHash = saltedHashService.HashData(authTokenData);
 
         var session = await sessionRepository.GetSessionByTokenHashAsync(authTokenHash, token);
         if (session is null)
