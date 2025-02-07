@@ -12,7 +12,7 @@ public class AuthService(
     public async Task<RegisterResult> RegisterAsync(AuthRegistration registration, CancellationToken token = default)
     {
         var existingUser = await userRepository.GetUserByUsernameAsync(registration.Username, token);
-        if (existingUser != null)
+        if (existingUser is not null)
             return new AlreadyExists();
 
         var passwordData = Encoding.UTF8.GetBytes(registration.Password);
@@ -31,7 +31,7 @@ public class AuthService(
     public async Task<LoginResult> LoginAsync(AuthCredentials credentials, CancellationToken token = default)
     {
         var user = await userRepository.GetUserByUsernameAsync(credentials.Username, token);
-        if (user == null)
+        if (user is null)
             return new NotFound();
 
         var passwordData = Encoding.UTF8.GetBytes(credentials.Password);
@@ -54,7 +54,7 @@ public class AuthService(
 
         var authSession = await sessionRepository.CreateSessionAsync(user.Id, authTokenHash, token);
 
-        if (authSession == null)
+        if (authSession is null)
             return new Error<string>("Failed to create session.");
 
         return new AuthSession
@@ -71,14 +71,14 @@ public class AuthService(
         var authTokenHash = saltedHashService.HashData(Convert.FromBase64String(authToken));
 
         var session = await sessionRepository.GetSessionByTokenHashAsync(authTokenHash, token);
-        if (session == null)
+        if (session is null)
             return new NotFound();
 
         var result = await sessionRepository.RevokeSessionAsync(session.Id, token);
         return result ? new Success() : new Error<string>("Failed to delete session.");
     }
 
-    public async Task<OneOf<AuthSessionInfo, NotFound, SessionExpired, Error<string>>> GetSessionAsync(string authToken, CancellationToken token = default)
+    public async Task<OneOf<AuthSessionInfo, NotFound, Unauthorized, Error<string>>> GetSessionAsync(string authToken, CancellationToken token = default)
     {
         var authTokenHash = saltedHashService.HashData(Convert.FromBase64String(authToken));
 
@@ -87,6 +87,21 @@ public class AuthService(
         if (session is null)
             return new NotFound();
 
-        return session.ExpiresAt < DateTime.UtcNow ? new SessionExpired() : session;
+        return session.ExpiresAt < DateTime.UtcNow ? new Unauthorized() : session;
+    }
+
+    public async Task<OneOf<User, NotFound, Unauthorized, Error<string>>> UpdateProfileAsync(string authToken, UserUpdate userUpdate, CancellationToken token = default)
+    {
+        var authTokenHash = saltedHashService.HashData(Convert.FromBase64String(authToken));
+
+        var session = await sessionRepository.GetSessionByTokenHashAsync(authTokenHash, token);
+        if (session is null)
+            return new NotFound();
+
+        var user = await userRepository.UpdateUserAsync(session.User.Id, userUpdate.DisplayName, token);
+        if (user is null)
+            return new NotFound();
+
+        return user;
     }
 }

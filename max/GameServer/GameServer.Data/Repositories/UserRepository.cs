@@ -50,13 +50,15 @@ public class UserRepository(GameServerDbContext dbContext) : IUserRepository
         return user?.MapToUser();
     }
 
-    public async Task<User?> UpdateUserAsync(string displayName, CancellationToken token = default)
+    public async Task<User?> UpdateUserAsync(Guid userId, string? displayName, CancellationToken token = default)
     {
-        var user = await dbContext.Users.FirstOrDefaultAsync(u => u.DisplayName == displayName, token);
+        var user = await dbContext.Users.FindAsync([userId], token);
         if (user == null)
             return null;
 
-        user.DisplayName = displayName;
+        if (displayName != null)
+            user.DisplayName = displayName;
+
         dbContext.Users.Update(user);
 
         var updatedRows = await dbContext.SaveChangesAsync(token);

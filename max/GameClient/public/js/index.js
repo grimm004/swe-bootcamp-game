@@ -10,27 +10,17 @@ async function main() {
         return;
     }
 
-    // Create an instance of your game.
     const app = new SweBootcampGame(gl);
 
-    // Create and set up the game UI (in-canvas events, pointer lock, resize, etc).
     const gameUi = new GameUi(app, canvas, gl);
     await gameUi.setup();
 
-    // Create and set up the menu UI (signin/signup, lobby, profile, etc).
     const menu = new Menu();
     menu.setupUI();
 
-    // When authentication succeeds, the Menu notifies us via this callback.
-    // We then hide the menu and start the game.
-    menu.onAuthSuccess = async (user) => {
-        if (user.roles?.includes("player")) {
-            menu.hide();
-            gameUi.captureEnabled = true;
-        } else {
-            // For non-players (admins, etc.), show an error (or handle appropriately).
-            menu.showError("Access Denied: You are not authorised to view the game.");
-        }
+    menu.onGameStart = async () => {
+        menu.hide();
+        gameUi.captureEnabled = true;
     };
 
     await gameUi.run();
@@ -40,3 +30,4 @@ async function main() {
 }
 
 window.onload = main;
+

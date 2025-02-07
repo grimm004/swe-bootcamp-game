@@ -7,21 +7,28 @@ namespace GameServer.Api.Endpoints.UserEndpoints;
 
 public static class AuthEndpoints
 {
+    private const string AuthRoute = "/auth";
+    private const string LoggerCategory = "AuthEndpoints";
+
     public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder builder)
     {
-        var authRoute = builder.MapGroup("/auth");
+        var authRoute = builder.MapGroup(AuthRoute);
 
         authRoute.MapAuthRegister();
         authRoute.MapAuthLogin();
         authRoute.MapAuthLogout();
         authRoute.MapAuthMe();
+        authRoute.MapAuthUpdateMe();
 
         return builder;
     }
 
     private static RouteHandlerBuilder MapAuthRegister(this IEndpointRouteBuilder builder) => builder
-        .MapPost("/register", async (RegisterRequest request, IAuthService authService, CancellationToken token) =>
+        .MapPost("/register", async (RegisterRequest request, IAuthService authService, ILoggerFactory loggerFactory, CancellationToken token) =>
         {
+            var logger = loggerFactory.CreateLogger(LoggerCategory);
+            logger.LogInformation("Request to register user: {Username}, {DisplayName}", request.Username, request.DisplayName);
+
             var registerResult = await authService.RegisterAsync(request.MapToAuthRegistration(), token);
 
             return registerResult.Match<IResult>(
@@ -63,6 +70,20 @@ public static class AuthEndpoints
 
             return authSession.Match<IResult>(
                 session => Results.Ok(session.MapToResponse()),
+                _ => Results.NotFound(),
+                _ => Results.Unauthorized(),
+                Results.BadRequest);
+        });
+
+    private static RouteHandlerBuilder MapAuthUpdateMe(this IEndpointRouteBuilder builder) => builder
+        .MapPut("/me", async (UpdateUserRequest request, [FromHeader(Name = "Authorization")] string authHeader, IAuthService authService, CancellationToken token) =>
+        {
+            var authToken = authHeader["Bearer ".Length..].Trim();
+
+            var authSession = await authService.UpdateProfileAsync(authToken, request.MapToUserUpdate(), token);
+
+            return authSession.Match<IResult>(
+                user => Results.Ok(user.MapToResponse()),
                 _ => Results.NotFound(),
                 _ => Results.Unauthorized(),
                 Results.BadRequest);

@@ -15,7 +15,9 @@ builder.Services
     .AddEndpointsApiExplorer()
     .AddSwaggerGen()
     .AddGameServerData(dbContextOptions =>
-        dbContextOptions.UseSqlite($"Data Source={dbPath}"))
+        dbContextOptions
+            .UseSqlite($"Data Source={dbPath}")
+            .EnableSensitiveDataLogging())
     .AddSingleton<ISaltedHashService, Sha512SaltedHashService>(_ =>
         new Sha512SaltedHashService("GameUserPasswordSalt"u8.ToArray()))
     .AddDomain();

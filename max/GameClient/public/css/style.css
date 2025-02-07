@@ -54,6 +54,8 @@ html, body {
 
 .online-nav {
     display: flex;
+    justify-content: space-between;
+    align-items: center;
     gap: 10px;
     margin-bottom: 20px;
 }
@@ -68,6 +70,24 @@ html, body {
 }
 
 .online-nav .nav-btn:hover {
+    background-color: #666;
+}
+
+.nav-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.logout-btn {
+    background-color: #444;
+    color: #fff;
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.logout-btn:hover {
     background-color: #666;
 }
 
@@ -119,6 +139,43 @@ button:hover {
 
 .join-lobby input {
     flex: 1;
+}
+
+/* --- Lobby Panel Specific Styles --- */
+
+/* Remove bullet points and add spacing for player list */
+.player-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.player-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Lobby code container: a label and a disabled text box */
+.lobby-code {
+    margin-bottom: 10px;
+}
+.lobby-code label {
+    margin-right: 5px;
+}
+.lobby-code input {
+    background-color: #222;
+    border: none;
+    color: #fff;
+    padding: 5px;
+    border-radius: 4px;
+}
+
+/* Container for the in-lobby buttons */
+.lobby-buttons {
+    display: flex;
+    gap: 10px;
 }
 
 .toggle-auth-text {
@@ -181,4 +238,44 @@ button:hover {
     color: white;
     padding: 5px 5px 5px 8px;
     border-radius: 10px 0 0 10px;
+}
+
+/* Notification Container: fixed at the bottom right of the viewport */
+.message-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    z-index: 200;
+}
+
+/* Base styles for each message popup */
+.message-popup {
+    padding: 10px 20px;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 1em;
+    opacity: 1;
+    transition: opacity 0.5s ease, transform 0.5s ease;
+    min-width: 200px;
+}
+
+/* Styles for different message types */
+.message-popup.info {
+    background-color: rgba(0, 123, 255, 0.9); /* blue */
+}
+
+.message-popup.success {
+    background-color: rgba(40, 167, 69, 0.9); /* green */
+}
+
+.message-popup.warning {
+    background-color: rgba(255, 193, 7, 0.9);  /* yellow/orange */
+}
+
+.message-popup.error {
+    background-color: rgba(220, 53, 69, 0.9);  /* red */
 }

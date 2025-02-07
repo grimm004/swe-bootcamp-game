@@ -38,8 +38,11 @@
 <div id="onlineContainer" class="online-container">
   <!-- Navigation buttons for Lobby and Profile (hidden until login) -->
   <div class="online-nav d-none">
-    <button class="nav-btn" data-target="lobbyPanel">Lobby</button>
-    <button class="nav-btn" data-target="profilePanel">Profile</button>
+    <div class="nav-buttons">
+      <button class="nav-btn" data-target="lobbyPanel">Lobby</button>
+      <button class="nav-btn" data-target="profilePanel">Profile</button>
+    </div>
+    <button id="logoutButton" class="nav-btn logout-btn">Log Out</button>
   </div>
 
   <!-- Auth Panel: Login / Sign-Up -->
@@ -51,8 +54,8 @@
         <input type="text" id="authUsername" name="username" placeholder="Username" autocomplete="none" required>
       </div>
       <div class="form-group sign-up-only collapsed">
-        <label for="authEmail">Email</label>
-        <input type="email" id="authEmail" name="email" placeholder="Email" autocomplete="none" required disabled>
+        <label for="signupDisplayName">Display Name</label>
+        <input type="text" id="signupDisplayName" name="displayNameSignup" placeholder="Display Name" autocomplete="none" required disabled>
       </div>
       <div class="form-group">
         <label for="authPassword">Password</label>
@@ -75,20 +78,34 @@
   <!-- Multiplayer Lobby Panel -->
   <div id="lobbyPanel" class="online-panel d-none">
     <h2>Multiplayer Lobby</h2>
-    <div class="lobby-actions">
+
+    <!-- Pre-join Section: Create / Join -->
+    <div id="lobbyPreJoin" class="lobby-actions">
       <button id="createLobbyBtn">Create Lobby</button>
       <div class="join-lobby">
-        <label for="lobbyJoinCode" class="d-none"></label>
         <input type="text" id="lobbyJoinCode" placeholder="Enter Lobby Code">
         <button id="joinLobbyBtn">Join Lobby</button>
       </div>
     </div>
+
+    <!-- In-Lobby Section: Lobby code display and control buttons -->
+    <div id="lobbyInGame" class="lobby-actions d-none">
+      <div class="lobby-code">
+        <label for="lobbyCodeDisplay">Lobby Code:</label>
+        <input type="text" id="lobbyCodeDisplay" disabled>
+      </div>
+      <div class="lobby-buttons">
+        <button id="leaveLobbyBtn">Leave Lobby</button>
+        <button id="startGameBtn" class="d-none">Start Game</button>
+      </div>
+    </div>
+
+    <!-- Lobby Details: Player List -->
     <div class="lobby-details">
       <h3>Current Lobby</h3>
-      <ul id="lobbyUserList">
-        <!-- A dynamic list of lobby users will be populated here -->
+      <ul id="lobbyUserList" class="player-list">
+        <!-- Dynamic player list will be inserted here -->
       </ul>
-      <p id="lobbyStatus"></p>
     </div>
   </div>
 
@@ -100,14 +117,12 @@
         <label for="profileDisplayName">Display Name</label>
         <input type="text" id="profileDisplayName" name="displayName" placeholder="Display Name" autocomplete="none" required>
       </div>
-      <div class="form-group">
-        <label for="profileEmail">Email</label>
-        <input type="email" id="profileEmail" name="email" placeholder="Email" autocomplete="none" required>
-      </div>
       <button type="submit" id="profileSaveBtn">Save Profile</button>
     </form>
   </div>
 </div>
+
+<div id="messageContainer" class="message-container"></div>
 
 </body>
 </html>

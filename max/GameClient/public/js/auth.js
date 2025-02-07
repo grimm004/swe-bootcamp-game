@@ -1,26 +1,98 @@
-import {parseJwt} from "./util.js";
-
-const tempJwt =
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5NTBGQjFDNC1EMDdDLTRGQ0YtOTMyMi1BQzlBODRFMTVEMUIiLCJkaXNwbGF5TmFtZSI6IkFkbWluIFVzZXIiLCJ1c2VybmFtZSI6IkFkbWluIiwiZW1haWwiOiJhZG1pbkBleGFtcGxlLmRvbWFpbi5jb20iLCJyb2xlcyI6WyJhZG1pbiIsInBsYXllciJdLCJpYXQiOjE1MTYyMzkwMjJ9.eDG4gEab29dGOzhePuyDGYbfNZBsc3akyrt7i1pr-To";
+const baseUrl = "/api/v1";
+const authBaseUrl = `${baseUrl}/auth`;
 
 export const loginUser = async ({username, password}) => {
-    return User.fromJwt(tempJwt);
+    try{
+        const response = await fetch(`${authBaseUrl}/login`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ username, password }),
+        });
+
+        if (!response.ok) return null;
+
+        const {
+            user,
+            token,
+            expiresAt,
+        } = await response.json();
+
+        return new User(user.id, user.username, user.displayName, user.roles, token, expiresAt);
+    }
+    catch (error) {
+        console.error(error);
+        return null;
+    }
 };
 
-export const signupUser = async ({username, email, password}) => {
-    return User.fromJwt(tempJwt);
+export const logoutUser = async (user) => {
+    try{
+        const response = await fetch(`${authBaseUrl}/logout`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${user.token}`,
+            },
+        });
+
+        return response.ok;
+    }
+    catch (error) {
+        console.error(error);
+        return false;
+    }
+};
+
+export const signupUser = async ({username, password, displayName}) => {
+    const response = await fetch(`${authBaseUrl}/register`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password, displayName }),
+    });
+
+    if (!response.ok)
+        switch (response.status) {
+            case 400:
+                return {success: false, error: "Invalid request."};
+            case 409:
+                return {success: false, error: "Username already exists."};
+            default:
+                return {success: false, error: "An unknown error occurred."};
+        }
+
+    return { success: true };
 }
 
+export const updateProfile = async (user) => {
+    try {
+        const response = await fetch(`${authBaseUrl}/me`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${user.token}`,
+            },
+            body: JSON.stringify({ displayName: user.displayName }),
+        });
+
+        return response.ok;
+    }
+    catch (error) {
+        console.error(error);
+        return false;
+    }
+};
+
 export class User {
-    constructor(id, username, email, roles) {
+    constructor(id, username, displayName, roles, token, expiresAt) {
         this.id = id;
         this.username = username;
-        this.email = email;
+        this.displayName = displayName;
         this.roles = roles;
-    }
-
-    static fromJwt(token) {
-        const { payload } = parseJwt(token);
-        return new User(payload.sub, payload.username, payload.email, payload.roles);
+        this.token = token;
+        this.expiresAt = expiresAt;
     }
 }

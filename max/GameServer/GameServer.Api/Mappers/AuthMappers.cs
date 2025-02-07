@@ -19,6 +19,11 @@ public static class AuthMappers
         Password = request.Password
     };
 
+    public static UserUpdate MapToUserUpdate(this UpdateUserRequest request) => new()
+    {
+        DisplayName = request.DisplayName
+    };
+
     public static UserResponse MapToResponse(this User user) =>
         new(user.Id, user.Username, user.DisplayName, user.Roles);
 
