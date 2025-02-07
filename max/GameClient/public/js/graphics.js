@@ -503,6 +503,8 @@ export class Camera extends WorldObject {
         this._aspectRatio = aspectRatio;
         this._near = near;
         this._far = far;
+        this.maxPitch = Math.PI / 2 - Math.radians(1);
+        this.minPitch = -this.maxPitch;
 
         this._targetPosition = this._position.copy;
         this._targetOrientation = this._orientation.copy;
@@ -555,13 +557,13 @@ export class Camera extends WorldObject {
     }
 
     update(deltaTime) {
-        this._targetOrientation.y = Math.clamp(this._targetOrientation.y, -Math.PI / 2, Math.PI / 2);
+        this._targetOrientation.y = Math.clamp(this._targetOrientation.y, this.minPitch, this.maxPitch);
 
         this._orientation.elements = [
             Math.lerp(this._orientation.x, this._targetOrientation.x, 1 - Math.exp(-8 * deltaTime)),
             Math.lerp(this._orientation.y, this._targetOrientation.y, 1 - Math.exp(-8 * deltaTime)),
             0.0,
-        ]
+        ];
 
         const lerpConstant = 1 - Math.exp(-10 * deltaTime);
         this._position.elements = [
@@ -618,10 +620,26 @@ export class Camera extends WorldObject {
         super.translate(vec);
     }
 
+    /**
+     * Moves the camera along its forward and right directions.
+     * The forward/backward movement follows the camera's full 3D direction,
+     * but the sideways movement is computed using the x–z projection so that
+     * its speed remains constant regardless of the camera’s pitch.
+     *
+     * @param {Vector2} vec - x component for forward/backward and y for sideways.
+     */
     move(vec) {
-        this._targetPosition
-            .add(new Vector3(this._direction.copy.mul(vec.x))) // forward/backward component
-            .add(new Vector3(-this._direction.z * vec.y, 0, this._direction.x * vec.y)); // left/right component
+        const forwardComponent = this._direction.copy.mul(vec.x);
+
+        let forwardXZ = new Vector3(this._direction.x, 0, this._direction.z);
+        if (forwardXZ.magnitudeSquared() < 1e-6) forwardXZ = new Vector3(0, 0, -1);
+        else forwardXZ.normalise();
+
+        const right = new Vector3(-forwardXZ.z, 0, forwardXZ.x);
+        const sidewaysComponent = right.mul(vec.y);
+
+        // Add both components to the target position.
+        this._targetPosition.add(forwardComponent).add(sidewaysComponent);
     }
 
     turn(vecRad) {

@@ -3,35 +3,33 @@ import { loginUser, signupUser } from "./auth.js";
 
 class Menu {
     constructor() {
-        // Cache references to the DOM elements that comprise your online UI.
-        this.onlineContainer = document.getElementById("onlineContainer");
+        this._onlineContainer = document.getElementById("onlineContainer");
 
         // --- Auth Panel Elements ---
-        this.authPanel = document.getElementById("authPanel");
-        this.authForm = document.getElementById("authForm");
-        this.authSubmitButton = document.getElementById("authSubmitButton");
-        this.toggleAuthButton = document.getElementById("toggleAuthButton");
-        this.toggleAuthText = document.getElementById("toggleAuthText");
-        // Keep the sign-up only fields in place (do not remove them from the DOM)
-        this.signUpOnlyFields = document.querySelectorAll(".sign-up-only");
+        this._authPanel = document.getElementById("authPanel");
+        this._authForm = document.getElementById("authForm");
+        this._authPageTitle = document.getElementById("authPageTitle");
+        this._authSubmitButton = document.getElementById("authSubmitButton");
+        this._toggleAuthButton = document.getElementById("toggleAuthButton");
+        this._toggleAuthText = document.getElementById("toggleAuthText");
+        this._signUpOnlyFields = document.querySelectorAll(".sign-up-only");
 
         // --- Navigation & Panels ---
-        // Note: Online navigation (lobby/profile) is hidden until login.
-        this.navButtons = document.querySelectorAll(".online-nav .nav-btn");
-        this.lobbyPanel = document.getElementById("lobbyPanel");
-        this.profilePanel = document.getElementById("profilePanel");
+        this._navButtons = document.querySelectorAll(".online-nav .nav-btn");
+        this._lobbyPanel = document.getElementById("lobbyPanel");
+        this._profilePanel = document.getElementById("profilePanel");
 
         // --- Lobby Sub-Elements ---
-        this.lobbyUserList = document.getElementById("lobbyUserList");
-        this.lobbyStatus = document.getElementById("lobbyStatus");
-        this.createLobbyBtn = document.getElementById("createLobbyBtn");
-        this.joinLobbyBtn = document.getElementById("joinLobbyBtn");
-        this.lobbyJoinCode = document.getElementById("lobbyJoinCode");
+        this._lobbyUserList = document.getElementById("lobbyUserList");
+        this._lobbyStatus = document.getElementById("lobbyStatus");
+        this._createLobbyBtn = document.getElementById("createLobbyBtn");
+        this._joinLobbyBtn = document.getElementById("joinLobbyBtn");
+        this._lobbyJoinCode = document.getElementById("lobbyJoinCode");
 
         // --- Profile Panel ---
-        this.profileForm = document.getElementById("profileForm");
+        this._profileForm = document.getElementById("profileForm");
 
-        this.isSignUpMode = false; // start in login mode
+        this._isSignUpMode = false;
 
         // A callback that the main module can assign for auth success.
         /**
@@ -41,14 +39,15 @@ class Menu {
     }
 
     setupUI() {
-        this.toggleAuthButton.addEventListener("click", (e) => {
+        this._toggleAuthButton.addEventListener("click", (e) => {
             e.preventDefault();
-            this.isSignUpMode = !this.isSignUpMode;
-            if (this.isSignUpMode) {
-                this.toggleAuthText.innerText = "Already have an account?";
-                this.authSubmitButton.innerText = "Sign Up";
-                this.toggleAuthButton.innerText = "Log In";
-                this.signUpOnlyFields.forEach((el) => {
+            this._isSignUpMode = !this._isSignUpMode;
+            if (this._isSignUpMode) {
+                this._authPageTitle.innerText = "Sign Up";
+                this._authSubmitButton.innerText = "Sign Up";
+                this._toggleAuthButton.innerText = "Log In";
+                this._toggleAuthText.innerText = "Already have an account?";
+                this._signUpOnlyFields.forEach((el) => {
                     el.classList.remove("collapsed");
                     el.classList.add("expanded");
                     const input = el.querySelector("input");
@@ -57,10 +56,11 @@ class Menu {
                     }
                 });
             } else {
-                this.toggleAuthText.innerText = "Don't have an account?";
-                this.authSubmitButton.innerText = "Log In";
-                this.toggleAuthButton.innerText = "Sign Up";
-                this.signUpOnlyFields.forEach((el) => {
+                this._authPageTitle.innerText = "Log In";
+                this._authSubmitButton.innerText = "Log In";
+                this._toggleAuthButton.innerText = "Sign Up";
+                this._toggleAuthText.innerText = "Don't have an account?";
+                this._signUpOnlyFields.forEach((el) => {
                     el.classList.remove("expanded");
                     el.classList.add("collapsed");
                     const input = el.querySelector("input");
@@ -72,15 +72,15 @@ class Menu {
         });
 
 
-        this.authForm.addEventListener("submit", async (e) => {
+        this._authForm.addEventListener("submit", async (e) => {
             e.preventDefault();
-            const formData = new FormData(this.authForm);
+            const formData = new FormData(this._authForm);
             const username = formData.get("username");
             const email = formData.get("email");
             const password = formData.get("password");
             let signInResult = null;
             try {
-                if (this.isSignUpMode) {
+                if (this._isSignUpMode) {
                     const confirmPassword = formData.get("confirmPassword");
                     if (password !== confirmPassword) {
                         this.showError("Passwords do not match.");
@@ -92,12 +92,12 @@ class Menu {
                 }
 
                 if (signInResult) {
-                    this.authPanel.classList.add("d-none");
+                    this._authPanel.classList.add("d-none");
                     const nav = document.querySelector(".online-nav");
                     if (nav) {
                         nav.classList.remove("d-none");
                     }
-                    this.lobbyPanel.classList.remove("d-none");
+                    this._lobbyPanel.classList.remove("d-none");
 
                     if (this.onAuthSuccess) {
                         this.onAuthSuccess(signInResult);
@@ -108,24 +108,24 @@ class Menu {
             }
         });
 
-        this.navButtons.forEach((btn) => {
+        this._navButtons.forEach((btn) => {
             btn.addEventListener("click", () => {
                 const targetPanel = btn.getAttribute("data-target");
-                this.lobbyPanel.classList.add("d-none");
-                this.profilePanel.classList.add("d-none");
+                this._lobbyPanel.classList.add("d-none");
+                this._profilePanel.classList.add("d-none");
                 document.getElementById(targetPanel).classList.remove("d-none");
             });
         });
 
-        this.createLobbyBtn.addEventListener("click", async () => await this.createLobby());
-        this.joinLobbyBtn.addEventListener("click", async () => {
-            const code = this.lobbyJoinCode.value.trim();
+        this._createLobbyBtn.addEventListener("click", async () => await this.createLobby());
+        this._joinLobbyBtn.addEventListener("click", async () => {
+            const code = this._lobbyJoinCode.value.trim();
             await this.joinLobby(code);
         });
 
-        this.profileForm.addEventListener("submit", async (e) => {
+        this._profileForm.addEventListener("submit", async (e) => {
             e.preventDefault();
-            await this.updateProfile(new FormData(this.profileForm));
+            await this.updateProfile(new FormData(this._profileForm));
         });
     }
 
@@ -180,7 +180,7 @@ class Menu {
     }
 
     updateLobbyUI(lobbyData) {
-        this.lobbyUserList.innerHTML = "";
+        this._lobbyUserList.innerHTML = "";
         lobbyData.players.forEach((player) => {
             const li = document.createElement("li");
             li.innerText = player.username;
@@ -188,9 +188,9 @@ class Menu {
             removeBtn.innerText = "Remove";
             removeBtn.addEventListener("click", async () => await this.removePlayerFromLobby(player.username));
             li.appendChild(removeBtn);
-            this.lobbyUserList.appendChild(li);
+            this._lobbyUserList.appendChild(li);
         });
-        this.lobbyStatus.innerText = "Lobby Code: " + lobbyData.joinCode;
+        this._lobbyStatus.innerText = "Lobby Code: " + lobbyData.joinCode;
     }
 
     async removePlayerFromLobby(username) {
@@ -206,11 +206,11 @@ class Menu {
     }
 
     hide() {
-        this.onlineContainer.classList.add("d-none");
+        this._onlineContainer.classList.add("d-none");
     }
 
     show() {
-        this.onlineContainer.classList.remove("d-none");
+        this._onlineContainer.classList.remove("d-none");
     }
 }
 

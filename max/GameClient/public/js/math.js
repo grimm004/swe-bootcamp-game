@@ -401,14 +401,14 @@ export class Vector extends Float32Array {
      * @returns {number}
      */
     dot(vec) {
-        return this.multiplied(vec).sum();
+        return this.multiplied(vec).sum;
     }
 
     /**
      * @returns {number}
      */
     magnitudeSquared() {
-        return this.multiplied(this).sum();
+        return this.multiplied(this).sum;
     }
 
     /**

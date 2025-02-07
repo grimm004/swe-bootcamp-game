@@ -76,7 +76,10 @@ export default class CameraSystem extends ApeEcs.System {
             camera.aspectRatio = windowInfo.aspectRatio;
 
             // Turn camera with mouse movement
-            camera.turn(new Vector2(mouseInputComponent.dx * deltaTime * cameraComponent.mouseSensitivity, mouseInputComponent.dy * deltaTime * cameraComponent.mouseSensitivity).map(x => Math.radians(x)));
+            camera.turn(new Vector2(
+                mouseInputComponent.dx * deltaTime * cameraComponent.mouseSensitivity,
+                mouseInputComponent.dy * deltaTime * cameraComponent.mouseSensitivity)
+                .map(x => Math.radians(x)));
 
             // Move camera with keyboard input
             camera.move(new Vector2(
