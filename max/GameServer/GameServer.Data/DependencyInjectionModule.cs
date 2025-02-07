@@ -1,4 +1,5 @@
 using GameServer.Data.Repositories;
+using GameServer.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,5 +14,8 @@ public static class DependencyInjectionModule
             .AddRepositories();
 
     private static IServiceCollection AddRepositories(this IServiceCollection services) =>
-        services.AddScoped<IUserRepository, UserRepository>();
+        services
+            .AddScoped<IUserRepository, UserRepository>()
+            .AddScoped<IAuthRoleRepository, AuthRoleRepository>()
+            .AddScoped<IAuthSessionRepository, AuthSessionRepository>();
 }

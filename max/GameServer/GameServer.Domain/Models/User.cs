@@ -1,9 +1,12 @@
 namespace GameServer.Domain.Models;
 
-public class User
+public record User
 {
-    public Guid Id { get; set; }
-    public required string Username { get; set; }
-    public required string Email { get; set; }
-    public required string DisplayName { get; set; }
+    public Guid Id { get; init; }
+    public string Username { get; init; } = null!;
+    public string DisplayName { get; init; } = null!;
+    public IEnumerable<string> Roles { get; init; } = new List<string>();
+
+    public byte[] PasswordSalt { get; init; } = null!;
+    public byte[] PasswordHash { get; init; } = null!;
 }

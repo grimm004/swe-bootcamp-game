@@ -7,7 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\GameServer.Data\GameServer.Data.csproj" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="9.0.1" />
+    <PackageReference Include="OneOf" Version="3.0.271" />
+    <PackageReference Include="OneOf.SourceGenerator" Version="3.0.271" />
   </ItemGroup>
 
 </Project>

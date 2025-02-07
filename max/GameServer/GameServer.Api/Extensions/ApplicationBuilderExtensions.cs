@@ -4,7 +4,7 @@ namespace GameServer.Api.Extensions;
 
 public static class ApplicationBuilderExtensions
 {
-    public static IApplicationBuilder UseGameFileServer(this IApplicationBuilder applicationBuilder) =>
+    public static IApplicationBuilder UseGameClientFileServer(this IApplicationBuilder applicationBuilder) =>
         applicationBuilder.UseFileServer(new FileServerOptions
         {
             StaticFileOptions =
