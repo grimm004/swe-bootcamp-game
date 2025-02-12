@@ -126,7 +126,8 @@ public class GameServerDbContext(DbContextOptions<GameServerDbContext> options) 
             entity
                 .HasMany(l => l.Users)
                 .WithOne(u => u.Lobby)
-                .HasForeignKey(u => u.LobbyId);
+                .HasForeignKey(u => u.LobbyId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

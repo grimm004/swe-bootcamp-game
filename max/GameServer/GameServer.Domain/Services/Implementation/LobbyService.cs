@@ -16,13 +16,19 @@ public class LobbyService(ILobbyRepository lobbyRepository) : ILobbyService
     public async Task<CreateLobbyResult> CreateLobbyAsync(Guid hostId, CancellationToken token = default)
     {
         var existingLobby = await lobbyRepository.GetLobbyByHostIdAsync(hostId, token);
-        if (existingLobby != null)
-            return new AlreadyExists();
+        if (existingLobby != null && !await lobbyRepository.DeleteLobbyAsync(existingLobby.Id, token))
+            return new Error<string>("Failed to delete existing lobby");
 
         var joinCode = RandomString(LobbyJoinCodeLength, LobbyJoinCodeChars);
         var lobby = await lobbyRepository.CreateLobbyAsync(hostId, joinCode, token);
 
         return lobby is null ? new Error<string>("Failed to create lobby") : lobby;
+    }
+
+    public async Task<LobbyResult> GetLobbyByJoinCodeAsync(string joinCode, CancellationToken token = default)
+    {
+        var lobby = await lobbyRepository.GetLobbyByJoinCodeAsync(joinCode, token);
+        return lobby is null ? new NotFound() : lobby;
     }
 
     public async Task<LobbyResult> GetLobbyByIdAsync(Guid lobbyId, CancellationToken token = default)
@@ -43,8 +49,8 @@ public class LobbyService(ILobbyRepository lobbyRepository) : ILobbyService
 
     public async Task<JoinLobbyResult> JoinLobbyAsync(Guid userId, string joinCode, CancellationToken token = default)
     {
-        if (await lobbyRepository.UserIsInLobbyAsync(userId, token))
-            return new AlreadyExists();
+        if (await lobbyRepository.UserIsInLobbyAsync(userId, token) && !(await LeaveLobbyAsync(userId, token)).IsT0)
+            return new Error<string>("Failed to leave existing lobby");
 
         var lobby = await lobbyRepository.GetLobbyByJoinCodeAsync(joinCode, token);
         if (lobby is null)

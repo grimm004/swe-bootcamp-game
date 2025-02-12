@@ -157,6 +157,16 @@ button:hover {
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+.player-list li.host {
+    font-weight: bold;
+    color: #ff0000;
+}
+
+.lobby-details h3 {
+    margin-top: 10px;
+    text-align: center;
+}
+
 /* Lobby code container: a label and a disabled text box */
 .lobby-code {
     margin-bottom: 10px;

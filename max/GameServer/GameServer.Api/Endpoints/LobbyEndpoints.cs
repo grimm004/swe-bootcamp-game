@@ -3,6 +3,7 @@ using GameServer.Api.Contracts.Responses;
 using GameServer.Api.Mappers;
 using GameServer.Domain.Models;
 using GameServer.Domain.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace GameServer.Api.Endpoints;
 
@@ -17,6 +18,7 @@ public static class LobbyEndpoints
             .RequireAuthorization(AuthPolicies.Player);
 
         lobbyRoute.MapPost("", CreateLobby);
+        lobbyRoute.MapGet("", GetLobbies);
         lobbyRoute.MapGet("/{id:guid}", GetLobby);
         lobbyRoute.MapDelete("/{id:guid}", DeleteLobby);
         lobbyRoute.MapPost("/{id:guid}/users", JoinLobby);
@@ -37,7 +39,19 @@ public static class LobbyEndpoints
 
         return lobbyResult.Match<IResult>(
             lobby => Results.Created($"/lobbies/{lobby.Id}", lobby.MapToResponse()),
-            _ => Results.Conflict(),
+            Results.BadRequest);
+    }
+
+    private static async Task<IResult> GetLobbies([FromQuery(Name = "code")] string joinCode, ILobbyService lobbyService, CancellationToken token)
+    {
+        if (string.IsNullOrWhiteSpace(joinCode))
+            return Results.BadRequest("Invalid join code");
+
+        var lobbyResult = await lobbyService.GetLobbyByJoinCodeAsync(joinCode, token);
+
+        return lobbyResult.Match<IResult>(
+            lobby => Results.Ok(new[] { lobby.MapToResponse() }),
+            _ => Results.Ok(Array.Empty<LobbyResponse>()),
             Results.BadRequest);
     }
 
@@ -73,7 +87,6 @@ public static class LobbyEndpoints
         return lobbyResult.Match<IResult>(
             lobby => Results.Ok(lobby.MapToResponse()),
             _ => Results.NotFound(),
-            _ => Results.Conflict(),
             _ => Results.BadRequest(),
             error => Results.BadRequest(error.Value));
     }
@@ -82,14 +95,20 @@ public static class LobbyEndpoints
         Guid id, Guid userId, ILobbyService lobbyService, HttpContext context, CancellationToken token)
     {
         var user = (User)context.Items["User"]!;
+        var lobbyResult = await lobbyService.GetLobbyByIdAsync(id, token);
 
-        if (user.Id != userId || user.Roles.Contains("admin"))
+        if (!lobbyResult.TryPickT0(out var lobby, out var error))
+            return error.Match(
+                _ => Results.NotFound(),
+                _ => Results.BadRequest());
+
+        if (user.Id != userId && user.Id != lobby.HostId && !user.Roles.Contains("admin"))
             return Results.Forbid();
 
-        var lobbyResult = await lobbyService.LeaveLobbyAsync(userId, token);
+        var lobbyDeleteResult = await lobbyService.LeaveLobbyAsync(userId, token);
 
-        return lobbyResult.Match<IResult>(
-            lobby => Results.Ok(lobby.MapToResponse()),
+        return lobbyDeleteResult.Match<IResult>(
+            updatedLobby => Results.Ok(updatedLobby.MapToResponse()),
             _ => Results.NotFound(),
             Results.BadRequest);
     }

@@ -18,14 +18,15 @@ public class LobbyRepository(GameServerDbContext dbContext) : ILobbyRepository
         {
             HostId = hostId,
             JoinCode = joinCode,
-            Users = new List<User>(),
+            Users = [host],
+            Status = LobbyStatus.Open,
             Host = host
         };
 
         dbContext.Lobbies.Add(lobby);
 
         var updatedRows = await dbContext.SaveChangesAsync(token);
-        return updatedRows == 1 ? lobby.MapToLobby() : null;
+        return updatedRows > 0 ? lobby.MapToLobby() : null;
     }
 
     public async Task<Domain.Models.Lobby?> GetLobbyByIdAsync(Guid lobbyId, CancellationToken token = default)
@@ -74,7 +75,7 @@ public class LobbyRepository(GameServerDbContext dbContext) : ILobbyRepository
         dbContext.Lobbies.Remove(lobby);
 
         var updatedRows = await dbContext.SaveChangesAsync(token);
-        return updatedRows == 1;
+        return updatedRows > 0;
     }
 
     public async Task<bool> UserIsInLobbyAsync(Guid userId, CancellationToken token = default)
@@ -99,7 +100,7 @@ public class LobbyRepository(GameServerDbContext dbContext) : ILobbyRepository
         lobby.Users.Add(user);
 
         var updatedRows = await dbContext.SaveChangesAsync(token);
-        return updatedRows == 1 ? lobby.MapToLobby() : null;
+        return updatedRows > 0 ? lobby.MapToLobby() : null;
     }
 
     public async Task<Domain.Models.Lobby?> RemoveUserFromLobbyAsync(Guid lobbyId, Guid userId, CancellationToken token = default)
@@ -116,6 +117,6 @@ public class LobbyRepository(GameServerDbContext dbContext) : ILobbyRepository
         lobby.Users.Remove(user);
 
         var updatedRows = await dbContext.SaveChangesAsync(token);
-        return updatedRows == 1 ? lobby.MapToLobby() : null;
+        return updatedRows > 0 ? lobby.MapToLobby() : null;
     }
 }
