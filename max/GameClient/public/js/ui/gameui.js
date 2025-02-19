@@ -1,21 +1,52 @@
+import {HubConnectionBuilder, LogLevel} from "../../lib/signalr.module.js";
+import {showMessage} from "./message-popup.js";
+import {Vector3} from "../graphics/maths.js";
+
 class GameUi {
+    /**
+     * @param {SweBootcampGame} app
+     * @param {HTMLCanvasElement} canvas
+     * @param {WebGL2RenderingContext} gl
+     */
     constructor(app, canvas, gl) {
         this.app = app;
         this.canvas = canvas;
         this.gl = gl;
+
         this._inputEnabled = false;
         this._allowCaptureAttempts = true;
         this._captureEnabled = false;
+
         this._mouseCaptureOverlay = document.getElementById("mouseCaptureOverlay");
         this._enableDebugCheckbox = document.getElementById("enableDebugCheckbox");
         this._fpsLabel = document.getElementById("fpsLabel");
+        this._playerPositionLabel = document.getElementById("playerPositionLabel");
         this._physicsStatsLabel = document.getElementById("physicsStatsLabel");
+
+        /**
+         * @type {User|null}
+         * @private
+         */
+        this._currentUser = null;
+
+        /**
+         * @type {Lobby|null}
+         */
+        this._currentLobby = null;
+
+        /**
+         * @type {HubConnection|null}
+         */
+        this._gameHubConnection = null;
     }
 
     get captureEnabled() {
         return this._captureEnabled;
     }
 
+    /**
+     * @param {boolean} value
+     */
     set captureEnabled(value) {
         this._captureEnabled = value;
         this._mouseCaptureOverlay.classList.toggle("d-none", !value);
@@ -94,7 +125,7 @@ class GameUi {
     }
 
     setupPointerLock() {
-        // Support for pointer lock.
+        // noinspection JSUnresolvedReference
         this.canvas.requestPointerLock =
             this.canvas.requestPointerLock || this.canvas.mozRequestPointerLock;
         const gameContainer = document.getElementById("gameContainer");
@@ -105,6 +136,7 @@ class GameUi {
         );
 
         document.addEventListener("pointerlockchange", () => {
+            // noinspection JSUnresolvedReference
             if (
                 (document.pointerLockElement || document.mozPointerLockElement) !==
                 this.canvas
@@ -127,19 +159,102 @@ class GameUi {
         this.app.run();
     }
 
-    // Optionally, a method to finish the game.
+    /**
+     * Joins the specified lobby and starts the game hub connection.
+     * @param {User} user - The user joining the game.
+     * @param {Lobby} lobby - The lobby to join.
+     * @returns {Promise<void>}
+     */
+    async joinGame(user, lobby) {
+        this._currentUser = user;
+        this._currentLobby = lobby;
+
+        this.captureEnabled = await this.startGameHubConnection(lobby.id);
+    }
+
+    /**
+     * Starts the game hub connection for the specified lobby.
+     * @param {string} lobbyId - The lobby ID to connect to.
+     * @returns {Promise<boolean>}
+     */
+    async startGameHubConnection(lobbyId) {
+        if (this._gameHubConnection)
+            await this.stopGameHubConnection();
+
+        /**
+         * @type {HubConnection|null}
+         */
+        const gameHubConnection = new HubConnectionBuilder()
+            .withUrl("/hubs/v1/game")
+            .withAutomaticReconnect()
+            .configureLogging(LogLevel.Information)
+            .build();
+
+        try {
+            await gameHubConnection?.start();
+            await gameHubConnection?.invoke("AddToGameGroup", lobbyId);
+        } catch {
+            showMessage("Failed to connect to game hub.", "error");
+            return false;
+        }
+
+        gameHubConnection?.on("PlayerStateUpdate", (playerId, state, deltaTime) => {
+            if (playerId === this._currentUser.id) return;
+
+            const {
+                position,
+                direction,
+            } = JSON.parse(state);
+            this.app.tempPlayerStates[playerId] = {
+                position: new Vector3(position),
+                direction: new Vector3(direction),
+                deltaTime
+            };
+        });
+
+        this._gameHubConnection = gameHubConnection;
+        return true;
+    }
+
+    /**
+     * Stops the game hub connection.
+     * @returns {Promise<void>}
+     */
+    async stopGameHubConnection() {
+        if (!this._gameHubConnection) return;
+
+        try {
+            await this._gameHubConnection?.stop();
+        } catch {
+            // Ignore errors.
+        }
+
+        this._gameHubConnection = null;
+    }
+
     finishGame() {
         this._inputEnabled = false;
-        // Additional cleanup or UI changes as needed.
+        this.captureEnabled = false;
+        this._currentUser = null;
+        this._currentLobby = null;
     }
 
     setupDebug() {
         this._enableDebugCheckbox.addEventListener("change", e => {
             this.app.debugEnabled = !!e.target.checked;
+            this._playerPositionLabel.classList.toggle("d-none", !this.app.debugEnabled);
             this._physicsStatsLabel.classList.toggle("d-none", !this.app.debugEnabled);
         });
-        this.app.onUpdateCompleted = () => this._physicsStatsLabel.innerHTML = this.app.physicsDebugStats.replace("Time in milliseconds<br><br>", "");
-        this.app.onDrawCompleted = () => this._fpsLabel.textContent = `${this.app.averageFrameRate.toFixed(2)} FPS`;
+
+        this.app.onUpdateCompleted = async (app, deltaTime) => {
+            // public async Task PlayerStateUpdate(string lobbyId, string playerId, string state, float deltaTime)
+            await this._gameHubConnection?.invoke("PlayerStateUpdate", this._currentLobby.id, this._currentUser.id, JSON.stringify(app.playerState), deltaTime);
+            const {position: [x, y, z], direction: [a, b, c]} = app.playerState;
+            this._playerPositionLabel.innerHTML = `Pos: ${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}<br>Dir: ${a.toFixed(2)}, ${b.toFixed(2)}, ${c.toFixed(2)}`;
+            this._physicsStatsLabel.innerHTML = app.physicsDebugStats.replace("Time in milliseconds<br><br>", "");
+        };
+
+        this.app.onDrawCompleted = (app) => this._fpsLabel.textContent = `${app.averageFrameRate.toFixed(2)} FPS`;
     }
 }
 

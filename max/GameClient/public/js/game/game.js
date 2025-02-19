@@ -83,13 +83,27 @@ export class SweBootcampGame extends Application {
         this._ecsWorld.registerSystem(EveryDrawGroup, RenderingSystem, [gl]);
 
         /**
-         * @type {(game: SweBootcampGame) => void}
+         * @type {{[playerId: string]: {position: Vector3, direction: Vector3, deltaTime: number}}}
+         */
+        this.tempPlayerStates = {};
+
+        /**
+         * @type {(game: SweBootcampGame, deltaTime: number) => void}
          */
         this.onUpdateCompleted = null;
+
         /**
-         * @type {(game: SweBootcampGame) => void}
+         * @type {(game: SweBootcampGame, deltaTime: number) => void}
          */
         this.onDrawCompleted = null;
+    }
+
+    get playerState() {
+        const playerEntity = this._ecsWorld.getEntity(CameraEntityId);
+        return {
+            position: Array.from(playerEntity.c.position.position.elements),
+            direction: Array.from(playerEntity.c.orientation.direction.elements)
+        };
     }
 
     get averageFrameRate() {
@@ -446,8 +460,13 @@ export class SweBootcampGame extends Application {
         this._frameInfoEntity.c.time.update({deltaTime: deltaTime});
         this._ecsWorld.runSystems(EveryUpdateGroup);
 
+        // todo remove after testing
+        for (const [playerId, {position, direction: {x, y, z}}] of Object.entries(this.tempPlayerStates)) {
+            Debug.setBox(playerId, position, new Vector3(-x, -y, z), new Vector3(0.2), Colour.black, false);
+        }
+
         super.update(deltaTime);
-        this.onUpdateCompleted?.(this);
+        this.onUpdateCompleted?.(this, deltaTime);
     }
 
     draw(deltaTime) {
@@ -459,6 +478,6 @@ export class SweBootcampGame extends Application {
         if (this._debugEnabled)
             Debug.draw(this._debugEnabled);
 
-        this.onDrawCompleted?.(this);
+        this.onDrawCompleted?.(this, deltaTime);
     }
 }

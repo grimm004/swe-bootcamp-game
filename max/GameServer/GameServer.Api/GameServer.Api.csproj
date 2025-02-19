@@ -28,7 +28,8 @@
   </ItemGroup>
 
   <Target Name="CopyGameClientPublicToWwwRoot" BeforeTargets="PrepareForRun">
-    <MakeDir Directories="$(ProjectDir)wwwroot" Condition="!Exists('$(ProjectDir)wwwroot')" />
+    <RemoveDir Directories="$(ProjectDir)wwwroot" Condition="Exists('$(ProjectDir)wwwroot')" />
+    <MakeDir Directories="$(ProjectDir)wwwroot" />
     <Copy
         SourceFiles="@(PublicFiles)"
         DestinationFiles="@(PublicFiles->'$(ProjectDir)wwwroot\%(RecursiveDir)%(Filename)%(Extension)')"

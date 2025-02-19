@@ -19,9 +19,9 @@ async function main() {
     const menu = new Menu();
     menu.setupUi();
 
-    menu.onGameStart = async () => {
+    menu.onGameStart = async (user, lobby) => {
         menu.hide();
-        gameUi.captureEnabled = true;
+        await gameUi.joinGame(user, lobby);
     };
 
     await gameUi.run();

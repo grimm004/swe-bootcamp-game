@@ -26,7 +26,7 @@ public class GameHub(ILogger<LobbyHub> logger) : Hub
     {
         // todo: infer group from user identity context
         // for now, forward state to all players in the game. todo: maintain global state and send interpolated state on a fixed interval
-        await Clients.Group(lobbyId).SendAsync("PlayerStateUpdate");
+        await Clients.Group(lobbyId).SendAsync("PlayerStateUpdate", playerId, state, deltaTime);
     }
 
     // Optionally, override OnConnectedAsync/OnDisconnectedAsync to add/remove users to/from groups.

@@ -22,20 +22,20 @@ class Menu {
 
         /**
          * Callback that the main module can assign to start the game.
-         * @type {(user: User) => void}
+         * @type {(user: User, lobby: Lobby) => void}
          */
         this.onGameStart = null;
 
-        this.lobbyPanel.onGameStart = (user) => this.onGameStart?.(user);
+        this.lobbyPanel.onGameStart = (user, lobby) => this.onGameStart?.(user, lobby);
 
         this.authPanel.onLoginSuccess = (user) => {
             this.currentUser = user;
             this.authPanel.hide();
             const nav = document.querySelector(".online-nav");
             if (nav) nav.classList.remove("d-none");
+            this.lobbyPanel.onLoginSuccess(user);
+            this.profilePanel.onLoginSuccess(user);
             this.lobbyPanel.show();
-            this.lobbyPanel.currentUser = user;
-            this.profilePanel.setProfile(user);
         };
     }
 

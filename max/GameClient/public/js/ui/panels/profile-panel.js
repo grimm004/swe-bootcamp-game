@@ -12,7 +12,7 @@ class ProfilePanel {
          * The current user. This should be updated by Menu.
          * @type {User|null}
          */
-        this.currentUser = null;
+        this._currentUser = null;
     }
 
     /**
@@ -22,11 +22,11 @@ class ProfilePanel {
         this._profileForm.addEventListener("submit", async (e) => {
             e.preventDefault();
 
-            if (!this.currentUser) return;
+            if (!this._currentUser) return;
 
-            this.currentUser.displayName = this._displayNameInput.value;
+            this._currentUser.displayName = this._displayNameInput.value;
 
-            const success = await updateProfile(this.currentUser);
+            const success = await updateProfile(this._currentUser);
             if (!success) {
                 showMessage("Failed to update profile.", "error");
                 return;
@@ -40,8 +40,8 @@ class ProfilePanel {
      * Set the profile UI values based on the current user.
      * @param {User} user
      */
-    setProfile(user) {
-        this.currentUser = user;
+    onLoginSuccess(user) {
+        this._currentUser = user;
         if (this._displayNameInput) {
             this._displayNameInput.value = user.displayName;
         }

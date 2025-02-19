@@ -35,8 +35,7 @@ class LobbyPanel {
 
         /**
          * Callback to be invoked when the game should start.
-         * Expected to be set by Menu.
-         * @type {(user: User) => void}
+         * @type {(user: User, lobby: Lobby) => void}
          */
         this.onGameStart = null;
 
@@ -44,7 +43,11 @@ class LobbyPanel {
          * The current user. Set by Menu when the user logs in.
          * @type {User|null}
          */
-        this.currentUser = null;
+        this._currentUser = null;
+    }
+
+    onLoginSuccess(user) {
+        this._currentUser = user;
     }
 
     /**
@@ -62,7 +65,7 @@ class LobbyPanel {
 
         this._startGameBtn.addEventListener("click", async () => {
             if (this._lobbyHubConnection && this._currentLobby) {
-                await this._lobbyHubConnection.invoke("StartGame", this._currentLobby.id);
+                await this._lobbyHubConnection?.invoke("StartGame", this._currentLobby.id);
             }
         });
     }
@@ -72,9 +75,9 @@ class LobbyPanel {
      * @returns {Promise<void>}
      */
     async createLobby() {
-        if (!this.currentUser) return;
+        if (!this._currentUser) return;
 
-        const lobbyData = await createLobby(this.currentUser.token);
+        const lobbyData = await createLobby(this._currentUser.token);
         if (!lobbyData) {
             showMessage("Failed to create lobby.", "error");
             return;
@@ -84,6 +87,8 @@ class LobbyPanel {
         this.updateLobbyUi(lobbyData);
 
         await this.startLobbyHubConnection(lobbyData.id);
+
+        this._lobbyJoinCode.value = "";
     }
 
     /**
@@ -92,9 +97,9 @@ class LobbyPanel {
      * @returns {Promise<void>}
      */
     async joinLobby(joinCode) {
-        if (!this.currentUser) return;
+        if (!this._currentUser) return;
 
-        const lobbyData = await joinLobby(joinCode, this.currentUser.token);
+        const lobbyData = await joinLobby(joinCode, this._currentUser.token);
         if (!lobbyData) {
             showMessage(`Could not find lobby with code "${joinCode}".`, "error");
             return;
@@ -104,8 +109,15 @@ class LobbyPanel {
         this.updateLobbyUi(lobbyData);
 
         await this.startLobbyHubConnection(lobbyData.id);
+
+        this._lobbyJoinCode.value = "";
     }
 
+    /**
+     * Starts the lobby hub connection for the provided lobby ID.
+     * @param {string} lobbyId - The lobby ID to connect to.
+     * @returns {Promise<void>}
+     */
     async startLobbyHubConnection(lobbyId) {
         if (this._lobbyHubConnection)
             await this.stopLobbyHubConnection();
@@ -117,53 +129,57 @@ class LobbyPanel {
             .build();
 
         try {
-            await this._lobbyHubConnection.start();
-            await this._lobbyHubConnection.invoke("AddToLobbyGroup", lobbyId);
+            await this._lobbyHubConnection?.start();
+            await this._lobbyHubConnection?.invoke("AddToLobbyGroup", lobbyId);
         } catch {
             showMessage("Failed to connect to lobby hub.", "error");
             this._lobbyHubConnection = null;
             return;
         }
 
-        this._lobbyHubConnection.on("PlayerJoined", async () => {
-            const lobbyData = await getLobbyById(lobbyId, this.currentUser.token);
+        this._lobbyHubConnection?.on("PlayerJoined", async () => {
+            const lobbyData = await getLobbyById(lobbyId, this._currentUser.token);
             if (!lobbyData) return;
 
             this._currentLobby = lobbyData;
             this.updateLobbyUi(lobbyData);
         });
 
-        this._lobbyHubConnection.on("PlayerLeft", async (userId) => {
-            if (userId === this.currentUser.id) {
+        this._lobbyHubConnection?.on("PlayerLeft", async (userId) => {
+            if (userId === this._currentUser.id) {
                 this._currentLobby = null;
                 await this.stopLobbyHubConnection();
                 this.updateLobbyUi(null);
                 return;
             }
 
-            const lobbyData = await getLobbyById(lobbyId, this.currentUser.token);
+            const lobbyData = await getLobbyById(lobbyId, this._currentUser.token);
             if (!lobbyData) return;
 
             this._currentLobby = lobbyData;
             this.updateLobbyUi(lobbyData);
         });
 
-        this._lobbyHubConnection.on("LobbyDisbanded", async () => {
+        this._lobbyHubConnection?.on("LobbyDisbanded", async () => {
             this._currentLobby = null;
             await this.stopLobbyHubConnection();
             this.updateLobbyUi(null);
         });
 
-        this._lobbyHubConnection.on("GameStarted", () => {
-            this.onGameStart?.(this.currentUser);
+        this._lobbyHubConnection?.on("GameStarted", () => {
+            this.onGameStart?.(this._currentUser, this._currentLobby);
         });
     }
 
+    /**
+     * Stops the current lobby hub connection.
+     * @returns {Promise<void>}
+     */
     async stopLobbyHubConnection() {
         if (!this._lobbyHubConnection) return;
 
         try {
-            await this._lobbyHubConnection.stop();
+            await this._lobbyHubConnection?.stop();
         } catch {
             // Ignore errors.
         }
@@ -181,7 +197,7 @@ class LobbyPanel {
             this._lobbyPreJoin.classList.remove("d-none");
             this._lobbyCodeDisplay.value = "";
             this._lobbyDetails.classList.add("d-none");
-            this._lobbyUserList.innerHTML = "";
+            this._lobbyUserList.replaceChildren();
             return;
         }
 
@@ -190,29 +206,43 @@ class LobbyPanel {
         this._lobbyInGame.classList.remove("d-none");
 
         this._lobbyCodeDisplay.value = lobbyData.joinCode;
-        this._lobbyUserList.innerHTML = "";
-        for (let user of lobbyData.users) {
+
+        /**
+         * @param {LobbyUser} user
+         * @returns {HTMLLIElement}
+         */
+        const createPlayerRow = (user) => {
             const li = document.createElement("li");
             li.textContent = user.displayName || user.username;
 
             if (user.id === lobbyData.hostId) {
                 li.classList.add("host");
-                li.textContent += " (Host)";
-            } else if (this.currentUser && this.currentUser.id === lobbyData.hostId) {
-                const removeBtn = document.createElement("button");
-                removeBtn.innerText = "Remove";
-                removeBtn.style.marginLeft = "auto";
-                removeBtn.addEventListener("click", async () => await this.removePlayerFromLobby(user.id));
-                li.appendChild(removeBtn);
+                li.textContent += " [Host]";
+                return li;
             }
 
-            this._lobbyUserList.appendChild(li);
-        }
+            if (!this._currentUser || this._currentUser.id !== lobbyData.hostId)
+                return li;
 
-        if (this.currentUser && this.currentUser.id === lobbyData.hostId && lobbyData.users.length >= 2)
-            this._startGameBtn.classList.remove("d-none");
-        else
-            this._startGameBtn.classList.add("d-none");
+            const removeBtn = document.createElement("button");
+            removeBtn.innerText = "Remove";
+            removeBtn.style.marginLeft = "auto";
+            removeBtn.addEventListener("click", async () => await this.removePlayerFromLobby(user.id));
+
+            return li;
+        };
+
+        this._lobbyUserList.replaceChildren(
+            createPlayerRow(lobbyData.users.find(u => u.id === lobbyData.hostId)),
+            ...lobbyData.users
+                .filter(u => u.id !== lobbyData.hostId)
+                .map(createPlayerRow)
+        );
+
+        this._startGameBtn.classList.toggle(
+            "d-none",
+            !this._currentUser || this._currentUser.id !== lobbyData.hostId || lobbyData.users.length < 2
+        );
     }
 
     /**
@@ -222,7 +252,7 @@ class LobbyPanel {
     async leaveLobby() {
         if (!this._currentLobby) return;
 
-        await leaveLobby(this._currentLobby.id, this.currentUser.id, this.currentUser.token);
+        await leaveLobby(this._currentLobby.id, this._currentUser.id, this._currentUser.token);
         this._currentLobby = null;
         await this.stopLobbyHubConnection();
         this.updateLobbyUi(null);
@@ -236,7 +266,7 @@ class LobbyPanel {
     async removePlayerFromLobby(userId) {
         if (!this._currentLobby) return;
 
-        const result = await removePlayerFromLobby(this._currentLobby.id, userId, this.currentUser.token);
+        const result = await removePlayerFromLobby(this._currentLobby.id, userId, this._currentUser.token);
         if (result) {
             showMessage("Player removed from lobby.", "info");
             this._currentLobby = result;

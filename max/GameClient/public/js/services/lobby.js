@@ -1,3 +1,5 @@
+import {Lobby, LobbyUser} from "../models/lobby.js";
+
 const baseUrl = "/api/v1";
 const lobbyBaseUrl = `${baseUrl}/lobbies`;
 
@@ -28,7 +30,7 @@ export const createLobby = async (token) => {
             users,
         } = await response.json();
 
-        return new Lobby(id, joinCode, hostId, users);
+        return new Lobby(id, joinCode, hostId, users.map(u => new LobbyUser(u.id, u.username, u.displayName)));
     } catch (error) {
         console.error(error);
         return null;
@@ -68,7 +70,7 @@ export const getLobbyByCode = async (joinCode, token) => {
             users,
         } = lobbyData[0];
 
-        return new Lobby(id, joinCode, hostId, users);
+        return new Lobby(id, joinCode, hostId, users.map(u => new LobbyUser(u.id, u.username, u.displayName)));
     } catch (error) {
         console.error(error);
         return null;
@@ -102,7 +104,7 @@ export const getLobbyById = async (id, token) => {
             users,
         } = await response.json();
 
-        return new Lobby(id, joinCode, hostId, users);
+        return new Lobby(id, joinCode, hostId, users.map(u => new LobbyUser(u.id, u.username, u.displayName)));
     } catch (error) {
         console.error(error);
         return null;
@@ -143,7 +145,7 @@ export const joinLobby = async (joinCode, token) => {
             users,
         } = await response.json();
 
-        return new Lobby(id, joinCode, hostId, users);
+        return new Lobby(id, joinCode, hostId, users.map(u => new LobbyUser(u.id, u.username, u.displayName)));
     } catch (error) {
         console.error(error);
         return null;
@@ -203,25 +205,9 @@ export const removePlayerFromLobby = async (lobbyId, userId, token) => {
             users,
         } = await response.json();
 
-        return new Lobby(id, joinCode, hostId, users);
+        return new Lobby(id, joinCode, hostId, users.map(u => new LobbyUser(u.id, u.username, u.displayName)));
     } catch (error) {
         console.error(error);
         return null;
     }
 };
-
-export class Lobby {
-    /**
-     * Creates a new lobby.
-     * @param {string} id
-     * @param {string} joinCode
-     * @param {string} hostId
-     * @param {{id: string, username: string, displayName: string}[]} users
-     */
-    constructor(id, joinCode, hostId, users) {
-        this.id = id;
-        this.joinCode = joinCode;
-        this.hostId = hostId;
-        this.users = users;
-    }
-}
