@@ -1,6 +1,7 @@
-import { SweBootcampGame } from "./game.js";
+import { SweBootcampGame } from "./game/game.js";
 import Menu from "./ui/menu.js";
 import GameUi from "./ui/gameui.js";
+
 
 async function main() {
     const canvas = document.querySelector("#glCanvas");

@@ -57,19 +57,14 @@ The texture images are free from online. All models are custom-made using either
 |  +--/gl-matrix: gl-matrix maths library
 |  +--/ape-ecs.module.js: APE ECS library
 |  +--/oimo.module.js: OIMO.js physics engine
+|  +--/signalr.module.js: SignalR client library
 +--/css
 |  +--/bootstrap.css: Bootstrap 4
 |  +--/style.css: Custom CSS stylesheet
 +--/js: Internal JavaScript resources
-   +--/components: ECS components
-   +--/entities: ECS entity factories
-   +--/systems: ECS systems
-   +--/constants.js: Application constants
-   +--/debug.js: Debugging utilities for 3D graphics
-   +--/index.js: Create, run and manage tha application
-   +--/objects.js: Application object classes
-   +--/meshes.js: Application mesh classes
-   +--/graphics.js: Object-oriented abstract WebGL wrapper
-   +--/math.js: Object-oriented gl-matrix wrapper, JS Math extensions and utilities
-   +--/util.js: General utility functions
+   +--/game: Game-specific code
+   +--/graphics: Object-oriented abstraction wrapping WebGL
+   +--/services: Wrappers around external services
+   +--/ui: User interface components
+   +--/index.js: Client application entry point
 ```

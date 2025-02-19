@@ -1,4 +1,4 @@
-class GameUI {
+class GameUi {
     constructor(app, canvas, gl) {
         this.app = app;
         this.canvas = canvas;
@@ -143,4 +143,4 @@ class GameUI {
     }
 }
 
-export default GameUI;
+export default GameUi;
