@@ -37,7 +37,7 @@ html, body {
     z-index: 1;
 }
 
-.online-container {
+.menu-container {
     position: absolute;
     width: 400px;
     max-height: 500px;

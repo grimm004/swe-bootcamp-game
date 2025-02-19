@@ -11,7 +11,7 @@ public interface IAdminAuthService
     Task<RoleResult> GetRoleByIdAsync(string roleName, CancellationToken token = default);
     Task<RoleResult> UpdateRoleAsync(string roleName, AuthRoleUpdate request, CancellationToken token = default);
     Task<AuthRoleDeletionResult> DeleteRoleAsync(string roleName, CancellationToken token = default);
-    Task<RolesResult> GetRolesByUserIdAsync(Guid userId, CancellationToken token = default);
+    Task<UserRolesResult> GetRolesByUserIdAsync(Guid userId, CancellationToken token = default);
     Task<AuthRoleAssignmentResult> AddRoleToUserAsync(Guid userId, string roleName, CancellationToken token = default);
     Task<AuthRoleUnassignmentResult> RemoveRoleFromUserAsync(Guid userId, string roleName, CancellationToken token = default);
 }
@@ -32,4 +32,7 @@ public partial class AuthRoleUnassignmentResult : OneOfBase<Success, NotFound, E
 public partial class RoleResult : OneOfBase<AuthRole, NotFound, Error<string>>;
 
 [GenerateOneOf]
-public partial class RolesResult : OneOfBase<List<AuthRole>, NotFound, Error<string>>;
+public partial class RolesResult : OneOfBase<List<AuthRole>, Error<string>>;
+
+[GenerateOneOf]
+public partial class UserRolesResult : OneOfBase<List<AuthRole>, NotFound, Error<string>>;

@@ -15,6 +15,7 @@ public interface ILobbyService
 }
 
 public struct LobbyClosed;
+public struct InvalidJoinCode;
 
 [GenerateOneOf]
 public partial class CreateLobbyResult : OneOfBase<Lobby, Error<string>>;
@@ -26,7 +27,7 @@ public partial class LobbyResult : OneOfBase<Lobby, NotFound, Error<string>>;
 public partial class DisbandLobbyResult : OneOfBase<Success, NotFound, Error<string>>;
 
 [GenerateOneOf]
-public partial class JoinLobbyResult : OneOfBase<Lobby, NotFound, LobbyClosed, Error<string>>;
+public partial class JoinLobbyResult : OneOfBase<Lobby, NotFound, LobbyClosed, InvalidJoinCode, Error<string>>;
 
 [GenerateOneOf]
 public partial class LeaveLobbyResult : OneOfBase<Lobby, NotFound, Error<string>>;

@@ -5,10 +5,10 @@ namespace GameServer.Data;
 
 public class GameServerDbContext(DbContextOptions<GameServerDbContext> options) : DbContext(options)
 {
-    internal DbSet<User> Users { get; set; }
-    internal DbSet<AuthRole> AuthRoles { get; set; }
-    internal DbSet<AuthSession> AuthSessions { get; set; }
-    internal DbSet<Lobby> Lobbies { get; set; }
+    internal DbSet<User> Users => Set<User>();
+    internal DbSet<AuthRole> AuthRoles => Set<AuthRole>();
+    internal DbSet<AuthSession> AuthSessions => Set<AuthSession>();
+    internal DbSet<Lobby> Lobbies => Set<Lobby>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

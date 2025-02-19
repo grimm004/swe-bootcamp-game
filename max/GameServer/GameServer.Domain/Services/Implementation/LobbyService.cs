@@ -43,8 +43,9 @@ public class LobbyService(ILobbyRepository lobbyRepository) : ILobbyService
         if (lobby is null)
             return new NotFound();
 
-        await lobbyRepository.DeleteLobbyAsync(lobbyId, token);
-        return new Success();
+        return await lobbyRepository.DeleteLobbyAsync(lobbyId, token)
+            ? new Success()
+            : new Error<string>("Failed to disband lobby");
     }
 
     public async Task<JoinLobbyResult> JoinLobbyAsync(Guid userId, string joinCode, CancellationToken token = default)
@@ -54,13 +55,13 @@ public class LobbyService(ILobbyRepository lobbyRepository) : ILobbyService
 
         var lobby = await lobbyRepository.GetLobbyByJoinCodeAsync(joinCode, token);
         if (lobby is null)
-            return new NotFound();
+            return new InvalidJoinCode();
 
         if (lobby.Status != LobbyStatus.Open)
             return new LobbyClosed();
 
         lobby = await lobbyRepository.AddUserToLobbyAsync(lobby.Id, userId, token);
-        return lobby is null ? new Error<string>("Failed to join lobby") : lobby;
+        return lobby is null ? new NotFound() : lobby;
     }
 
     public async Task<LeaveLobbyResult> LeaveLobbyAsync(Guid userId, CancellationToken token = default)

@@ -1,8 +1,10 @@
 using GameServer.Api.Constants;
 using GameServer.Api.Contracts.Requests;
+using GameServer.Api.Contracts.Responses;
 using GameServer.Api.Mappers;
 using GameServer.Domain.Models;
 using GameServer.Domain.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace GameServer.Api.Endpoints;
 
@@ -16,23 +18,45 @@ public static class AuthEndpoints
         var authRoute = builder.MapGroup(Route);
 
         authRoute.MapPost("/register", Register)
-            .AllowAnonymous();
+            .WithName(nameof(Register))
+            .AllowAnonymous()
+            .Accepts<RegisterRequest>(ContentTypes.ApplicationJson)
+            .Produces<UserResponse>(StatusCodes.Status201Created)
+            .Produces(StatusCodes.Status409Conflict)
+            .Produces<ProblemDetails>(StatusCodes.Status500InternalServerError);
+
         authRoute.MapPost("/login", Login)
-            .AllowAnonymous();
+            .WithName(nameof(Login))
+            .AllowAnonymous()
+            .Accepts<LoginRequest>(ContentTypes.ApplicationJson)
+            .Produces<AuthSessionResponse>()
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces<ProblemDetails>(StatusCodes.Status500InternalServerError);
 
         authRoute.MapPost("/logout", Logout)
-            .RequireAuthorization(AuthPolicies.AllAuthenticated);
+            .WithName(nameof(Logout))
+            .RequireAuthorization(AuthPolicies.AllAuthenticated)
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces<ProblemDetails>(StatusCodes.Status500InternalServerError);
 
         authRoute.MapGet("/me", GetMe)
-            .RequireAuthorization(AuthPolicies.AllAuthenticated);
+            .WithName(nameof(GetMe))
+            .RequireAuthorization(AuthPolicies.AllAuthenticated)
+            .Produces<AuthSessionInfoResponse>()
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces<ProblemDetails>(StatusCodes.Status500InternalServerError);
 
         authRoute.MapPut("/me", UpdateMe)
-            .RequireAuthorization(AuthPolicies.AllAuthenticated);
+            .WithName(nameof(UpdateMe))
+            .RequireAuthorization(AuthPolicies.AllAuthenticated)
+            .Produces<UserResponse>()
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces<ProblemDetails>(StatusCodes.Status500InternalServerError);
 
         return builder;
     }
-
-    // Handlers
 
     private static async Task<IResult> Register(RegisterRequest request, IAuthService authService, ILoggerFactory loggerFactory, CancellationToken token)
     {
@@ -42,9 +66,9 @@ public static class AuthEndpoints
         var registerResult = await authService.RegisterAsync(request.MapToAuthRegistration(), [AuthRoles.Player], token);
 
         return registerResult.Match<IResult>(
-            user => Results.Created("/auth/me", user.MapToResponse()),
+            user => Results.CreatedAtRoute(nameof(GetMe), null, user.MapToResponse()),
             _ => Results.Conflict(),
-            Results.BadRequest);
+            error => Results.Problem(error.Value, statusCode: StatusCodes.Status500InternalServerError));
     }
 
     private static async Task<IResult> Login(LoginRequest request, IAuthService authService, CancellationToken token)
@@ -54,7 +78,7 @@ public static class AuthEndpoints
         return loginResult.Match<IResult>(
             authSession => Results.Ok(authSession.MapToResponse()),
             _ => Results.NotFound(),
-            Results.BadRequest);
+            error => Results.Problem(error.Value, statusCode: StatusCodes.Status500InternalServerError));
     }
 
     private static async Task<IResult> Logout(HttpContext context, IAuthService authService, CancellationToken token)
@@ -67,7 +91,7 @@ public static class AuthEndpoints
         return logoutResult.Match<IResult>(
             _ => Results.NoContent(),
             _ => Results.NotFound(),
-            Results.BadRequest);
+            error => Results.Problem(error.Value, statusCode: StatusCodes.Status500InternalServerError));
     }
 
     private static Task<IResult> GetMe(HttpContext context, CancellationToken token)
@@ -87,7 +111,7 @@ public static class AuthEndpoints
             user => Results.Ok(user.MapToResponse()),
             _ => Results.NotFound(),
             _ => Results.Unauthorized(),
-            Results.BadRequest);
+            error => Results.Problem(error.Value, statusCode: StatusCodes.Status500InternalServerError));
     }
 
     private static AuthSessionInfo? GetUserSession(HttpContext context) =>

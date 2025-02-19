@@ -1,10 +1,17 @@
-import { loginUser, logoutUser, signupUser, updateProfile } from "./auth.js";
-import { showMessage } from "./message-popup.js";
-import { createLobby, joinLobby, leaveLobby, removePlayerFromLobby, getLobbyByCode } from "./lobby.js";
+import { loginUser, logoutUser, signupUser, updateProfile } from "../services/auth.js";
+import { showMessage } from "../message-popup.js";
+import {
+    createLobby,
+    getLobbyById,
+    joinLobby,
+    leaveLobby,
+    removePlayerFromLobby
+} from "../services/lobby.js";
+import {HubConnectionBuilder, LogLevel} from "../../lib/signalr.module.js";
 
 class Menu {
     constructor() {
-        this._onlineContainer = document.getElementById("onlineContainer");
+        this._menuContainer = document.getElementById("menuContainer");
 
         // --- Auth Panel Elements ---
         this._authPanel = document.getElementById("authPanel");
@@ -32,11 +39,23 @@ class Menu {
         this._profileForm = document.getElementById("profileForm");
 
         this._isSignUpMode = false;
-        this.currentUser = null;
-        this.currentLobby = null;
 
-        // Store the polling interval ID so we can clear it later.
-        this._lobbyPollInterval = null;
+        /**
+         * @type {User|null}
+         * @private
+         */
+        this._currentUser = null;
+        /**
+         * @type {Lobby|null}
+         * @private
+         */
+        this._currentLobby = null;
+
+        /**
+         * @type {HubConnection|null}
+         * @private
+         */
+        this._lobbyHubConnection = null;
 
         /**
          * Callback that the main module can assign to start the game.
@@ -45,6 +64,10 @@ class Menu {
         this.onGameStart = null;
     }
 
+    /**
+     * Sets the sign-up mode for the authentication form.
+     * @param {boolean} isSignUpMode - True to show the sign-up form; false to show the login form.
+     */
     setSignUpMode(isSignUpMode) {
         if (isSignUpMode) {
             this._authPageTitle.innerText = "Sign Up";
@@ -77,24 +100,24 @@ class Menu {
         this._isSignUpMode = isSignUpMode;
     }
 
-    setupUI() {
+    /**
+     * Sets up the UI event handlers.
+     */
+    setupUi() {
         this._toggleAuthButton.addEventListener("click", (e) => {
             e.preventDefault();
             this.setSignUpMode(!this._isSignUpMode);
         });
 
-        document.getElementById("startGameBtn").addEventListener("click", async () => {
-            if (this.onGameStart) {
-                this.onGameStart(this.currentUser);
-            }
-        });
+        document.getElementById("startGameBtn").addEventListener(
+            "click", async () => await this._lobbyHubConnection?.invoke("StartGame", this._currentLobby.id));
 
-        document.getElementById("leaveLobbyBtn").addEventListener("click", async () => {
-            await this.leaveLobby();
-        });
+        document.getElementById("leaveLobbyBtn").addEventListener(
+            "click", async () => await this.leaveLobby());
 
         this._authForm.addEventListener("submit", async (e) => {
             e.preventDefault();
+
             const formData = new FormData(this._authForm);
             const username = formData.get("username");
             const displayName = formData.get("displayNameSignup");
@@ -107,33 +130,36 @@ class Menu {
                         showMessage("Passwords do not match.", "error");
                         return;
                     }
-                    const signUpResult = await signupUser({ username, password, displayName });
+
+                    const signUpResult = await signupUser(username, password, displayName);
                     if (!signUpResult.success) {
                         showMessage(`Failed to register: ${signUpResult.error}`, "error");
                         return;
                     }
+
                     this.setSignUpMode(false);
                     return;
                 }
 
-                const user = await loginUser({ username, password });
+                const user = await loginUser(username, password);
+
                 if (!user) {
                     showMessage("Invalid username or password.", "error");
                     return;
                 }
+
                 if (!user.roles?.includes("player")) {
                     showMessage("Access Denied: You are not authorised to view the game.", "error");
                     return;
                 }
 
-                this.currentUser = user;
+                this._currentUser = user;
                 this._authPanel.classList.add("d-none");
                 const nav = document.querySelector(".online-nav");
                 if (nav) nav.classList.remove("d-none");
                 this._lobbyPanel.classList.remove("d-none");
                 this._profileForm.querySelector("input[name='displayName']").value = user.displayName;
             } catch (err) {
-                console.log(err);
                 showMessage(err.message || "Authentication failed.", "error");
             }
         });
@@ -149,16 +175,19 @@ class Menu {
         });
 
         this._logoutButton.addEventListener("click", async () => {
-            this.stopLobbyPolling();
-            if (this.currentLobby) {
+            await this.stopLobbyHubConnection();
+
+            if (this._currentLobby) {
                 await this.leaveLobby();
-                this.currentLobby = null;
+                this._currentLobby = null;
                 this.updateLobbyUI(null);
             }
-            if (this.currentUser) {
-                await logoutUser(this.currentUser);
-                this.currentUser = null;
+
+            if (this._currentUser) {
+                await logoutUser(this._currentUser);
+                this._currentUser = null;
             }
+
             this._lobbyPanel.classList.add("d-none");
             this._profilePanel.classList.add("d-none");
             this._authPanel.classList.remove("d-none");
@@ -178,60 +207,111 @@ class Menu {
         });
     }
 
+    /**
+     * Creates a new lobby.
+     * @returns {Promise<void>}
+     */
     async createLobby() {
-        console.log("Creating lobby...");
-        const lobbyData = await createLobby(this.currentUser.token);
+        const lobbyData = await createLobby(this._currentUser.token);
         if (!lobbyData) {
             showMessage("Failed to create lobby.", "error");
             return;
         }
-        this.currentLobby = lobbyData;
+
+        this._currentLobby = lobbyData;
         this.updateLobbyUI(lobbyData);
-        // Start polling for updates using the join code.
-        this.startLobbyPolling(lobbyData.joinCode);
+
+        // Start SignalR connection to lobby hub.
+        await this.startLobbyHubConnection(lobbyData.id);
     }
 
+    /**
+     * Joins an existing lobby.
+     * @param {string} joinCode - The join code provided by the user.
+     * @returns {Promise<void>}
+     */
     async joinLobby(joinCode) {
-        console.log("Joining lobby with code:", joinCode);
-        const lobbyData = await joinLobby(joinCode, this.currentUser.token);
+        const lobbyData = await joinLobby(joinCode, this._currentUser.token);
         if (!lobbyData) {
-            showMessage("Failed to join lobby.", "error");
+            showMessage(`Could not find lobby with code "${joinCode}".`, "error");
             return;
         }
-        this.currentLobby = lobbyData;
+
+        this._currentLobby = lobbyData;
         this.updateLobbyUI(lobbyData);
-        // Start polling for updates using the join code.
-        this.startLobbyPolling(lobbyData.joinCode);
+
+        // Connect to the lobby hub.
+        await this.startLobbyHubConnection(lobbyData.id);
     }
 
-    startLobbyPolling(joinCode) {
-        // Clear any existing polling interval
-        if (this._lobbyPollInterval) {
-            clearInterval(this._lobbyPollInterval);
-        }
-        // Poll every 1000ms (1 second)
-        this._lobbyPollInterval = setInterval(async () => {
-            const updatedLobby = await getLobbyByCode(joinCode, this.currentUser.token);
+    async startLobbyHubConnection(lobbyId) {
+        if (this._lobbyHubConnection)
+            await this.stopLobbyHubConnection();
 
-            if (updatedLobby?.users?.filter(u => u.id === this.currentUser.id)?.length) {
-                this.currentLobby = updatedLobby;
-                this.updateLobbyUI(updatedLobby);
+        this._lobbyHubConnection = new HubConnectionBuilder()
+            .withUrl("/hubs/v1/lobby")
+            .withAutomaticReconnect()
+            .configureLogging(LogLevel.Information)
+            .build();
+
+        try {
+            await this._lobbyHubConnection?.start();
+            await this._lobbyHubConnection?.invoke("AddToLobbyGroup", lobbyId);
+        } catch {
+            this._lobbyHubConnection = null;
+            return;
+        }
+
+        this._lobbyHubConnection?.on("PlayerJoined", async () => {
+            const lobbyData = await getLobbyById(lobbyId, this._currentUser.token);
+            if (!lobbyData) return;
+
+            this._currentLobby = lobbyData;
+            this.updateLobbyUI(lobbyData);
+        });
+
+        this._lobbyHubConnection?.on("PlayerLeft", async (userId) => {
+            if (userId === this._currentUser.id) {
+                this._currentLobby = null;
+                await this.stopLobbyHubConnection();
+                this.updateLobbyUI(null);
                 return;
             }
 
-            this.stopLobbyPolling();
-            this.currentLobby = null;
+            const lobbyData = await getLobbyById(lobbyId, this._currentUser.token);
+            if (!lobbyData) return;
+
+            this._currentLobby = lobbyData;
+            this.updateLobbyUI(lobbyData);
+        });
+
+        this._lobbyHubConnection?.on("LobbyDisbanded", async () => {
+            this._currentLobby = null;
+            await this.stopLobbyHubConnection();
             this.updateLobbyUI(null);
-        }, 1000);
+        });
+
+        this._lobbyHubConnection?.on("GameStarted", () => {
+            this.onGameStart?.(this._currentUser);
+        });
     }
 
-    stopLobbyPolling() {
-        if (!this._lobbyPollInterval) return;
+    async stopLobbyHubConnection() {
+        if (!this._lobbyHubConnection) return;
 
-        clearInterval(this._lobbyPollInterval);
-        this._lobbyPollInterval = null;
+        try {
+            await this._lobbyHubConnection?.stop();
+        } catch {
+            // Ignore errors.
+        }
+
+        this._lobbyHubConnection = null;
     }
 
+    /**
+     * Updates the lobby UI with the provided lobby data.
+     * @param {Lobby|null} lobbyData - The lobby data to display.
+     */
     updateLobbyUI(lobbyData) {
         if (!lobbyData) {
             document.getElementById("lobbyInGame").classList.add("d-none");
@@ -242,15 +322,12 @@ class Menu {
             return;
         }
 
-        // Hide the pre-join controls and show the in-lobby section.
         document.getElementById("lobbyPreJoin").classList.add("d-none");
         this._lobbyDetails.classList.remove("d-none");
         document.getElementById("lobbyInGame").classList.remove("d-none");
 
-        // Set the lobby code in the disabled textbox.
         document.getElementById("lobbyCodeDisplay").value = lobbyData.joinCode;
 
-        // Clear and update the user list.
         this._lobbyUserList.innerHTML = "";
         for (let user of lobbyData.users) {
             const li = document.createElement("li");
@@ -261,7 +338,7 @@ class Menu {
                 li.classList.add("host");
                 li.textContent += " (Host)";
             }
-            else if (this.currentUser && this.currentUser.id === lobbyData.hostId) {
+            else if (this._currentUser && this._currentUser.id === lobbyData.hostId) {
                 const removeBtn = document.createElement("button");
                 removeBtn.innerText = "Remove";
                 removeBtn.style.marginLeft = "auto";
@@ -272,38 +349,51 @@ class Menu {
             this._lobbyUserList.appendChild(li);
         }
 
-        // Show the Start Game button only if the current user is the host and there are at least 2 users.
-        if (this.currentUser && this.currentUser.id === lobbyData.hostId && lobbyData.users.length >= 2) {
+        if (this._currentUser && this._currentUser.id === lobbyData.hostId && lobbyData.users.length >= 2) {
             document.getElementById("startGameBtn").classList.remove("d-none");
         } else {
             document.getElementById("startGameBtn").classList.add("d-none");
         }
     }
 
+    /**
+     * Leaves the current lobby
+     * @returns {Promise<void>}
+     */
     async leaveLobby() {
-        if (!this.currentLobby) return;
+        if (!this._currentLobby) return;
 
-        await leaveLobby(this.currentLobby.id, this.currentUser.id, this.currentUser.token);
+        await leaveLobby(this._currentLobby.id, this._currentUser.id, this._currentUser.token);
 
-        this.currentLobby = null;
-        this.stopLobbyPolling();
+        this._currentLobby = null;
+        await this.stopLobbyHubConnection();
         this.updateLobbyUI(null);
     }
 
+    /**
+     * Removes a player from the current lobby.
+     * @param {string} userId - The user ID to remove.
+     * @returns {Promise<void>}
+     */
     async removePlayerFromLobby(userId) {
-        const result = await removePlayerFromLobby(this.currentLobby.id, userId, this.currentUser.token);
+        const result = await removePlayerFromLobby(this._currentLobby.id, userId, this._currentUser.token);
         if (result) {
             showMessage("Player removed from lobby.", "info");
-            this.currentLobby = result;
+            this._currentLobby = result;
             this.updateLobbyUI(result);
         } else {
             showMessage("Failed to remove player.", "error");
         }
     }
 
+    /**
+     * Updates the current user's profile.
+     * @param {FormData} formData - The form data to update the profile with.
+     * @returns {Promise<void>}
+     */
     async updateProfile(formData) {
-        this.currentUser.displayName = formData.get("displayName");
-        const success = await updateProfile(this.currentUser);
+        this._currentUser.displayName = formData.get("displayName");
+        const success = await updateProfile(this._currentUser);
         if (!success) {
             showMessage("Failed to update profile.", "error");
             return;
@@ -311,12 +401,18 @@ class Menu {
         showMessage("Profile updated successfully.", "success");
     }
 
+    /**
+     * Hides the online container.
+     */
     hide() {
-        this._onlineContainer.classList.add("d-none");
+        this._menuContainer.classList.add("d-none");
     }
 
+    /**
+     * Shows the online container.
+     */
     show() {
-        this._onlineContainer.classList.remove("d-none");
+        this._menuContainer.classList.remove("d-none");
     }
 }
 

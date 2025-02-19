@@ -1,6 +1,6 @@
 import { SweBootcampGame } from "./game.js";
-import Menu from "./menu.js";
-import GameUi from "./gameui.js";
+import Menu from "./ui/menu.js";
+import GameUi from "./ui/gameui.js";
 
 async function main() {
     const canvas = document.querySelector("#glCanvas");
@@ -16,7 +16,7 @@ async function main() {
     await gameUi.setup();
 
     const menu = new Menu();
-    menu.setupUI();
+    menu.setupUi();
 
     menu.onGameStart = async () => {
         menu.hide();
@@ -25,7 +25,6 @@ async function main() {
 
     await gameUi.run();
 
-    // Optionally, you can also wire up a game-finished callback:
     // gameUi.onGameFinish = () => { menu.show(); };
 }
 

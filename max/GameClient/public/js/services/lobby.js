@@ -1,11 +1,10 @@
-// lobby.js
 const baseUrl = "/api/v1";
 const lobbyBaseUrl = `${baseUrl}/lobbies`;
 
 /**
  * Creates a new lobby.
  * @param {string} token - The current user's auth token.
- * @returns {Promise<object|null>} - The lobby data on success; otherwise null.
+ * @returns {Promise<Lobby|null>} - The lobby data on success; otherwise null.
  */
 export const createLobby = async (token) => {
     try {
@@ -16,12 +15,20 @@ export const createLobby = async (token) => {
                 "Authorization": `Bearer ${token}`,
             },
         });
+
         if (!response.ok) {
             console.error("Failed to create lobby:", response.status);
             return null;
         }
-        const lobbyData = await response.json();
-        return lobbyData;
+
+        const {
+            id,
+            joinCode,
+            hostId,
+            users,
+        } = await response.json();
+
+        return new Lobby(id, joinCode, hostId, users);
     } catch (error) {
         console.error(error);
         return null;
@@ -32,7 +39,7 @@ export const createLobby = async (token) => {
  * Retrieves a lobby by its join code.
  * @param {string} joinCode - The join code to search for.
  * @param {string} token - The current user's auth token.
- * @returns {Promise<object|null>} - The lobby data on success; otherwise null.
+ * @returns {Promise<Lobby|null>} - The lobby data on success; otherwise null.
  */
 export const getLobbyByCode = async (joinCode, token) => {
     try {
@@ -43,12 +50,59 @@ export const getLobbyByCode = async (joinCode, token) => {
                 "Authorization": `Bearer ${token}`,
             },
         });
+
         if (!response.ok) {
             console.error("Failed to get lobby by code:", response.status);
             return null;
         }
+
         const lobbyData = await response.json();
-        return lobbyData?.[0];
+        if (!lobbyData || !lobbyData.length) {
+            console.error("Lobby not found for code:", joinCode);
+            return null;
+        }
+
+        const {
+            id,
+            hostId,
+            users,
+        } = lobbyData[0];
+
+        return new Lobby(id, joinCode, hostId, users);
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+};
+
+/**
+ * Retrieves a lobby by its ID.
+ * @param {string} id - The ID of the lobby to retrieve.
+ * @param {string} token - The current user's auth token.
+ * @returns {Promise<Lobby|null>} - The lobby data on success; otherwise null.
+ */
+export const getLobbyById = async (id, token) => {
+    try {
+        const response = await fetch(`${lobbyBaseUrl}/${id}`, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+            },
+        });
+
+        if (!response.ok) {
+            console.error("Failed to get lobby by ID:", response.status);
+            return null;
+        }
+
+        const {
+            joinCode,
+            hostId,
+            users,
+        } = await response.json();
+
+        return new Lobby(id, joinCode, hostId, users);
     } catch (error) {
         console.error(error);
         return null;
@@ -59,32 +113,37 @@ export const getLobbyByCode = async (joinCode, token) => {
  * Joins an existing lobby using its join code.
  * @param {string} joinCode - The join code provided by the user.
  * @param {string} token - The current user's auth token.
- * @returns {Promise<object|null>} - The updated lobby data on success; otherwise null.
+ * @returns {Promise<Lobby|null>} - The updated lobby data on success; otherwise null.
  */
 export const joinLobby = async (joinCode, token) => {
     try {
-        // First, find the lobby by join code.
         const lobbyData = await getLobbyByCode(joinCode, token);
         if (!lobbyData || !lobbyData.id) {
             console.error("Lobby not found for code:", joinCode);
             return null;
         }
-        // Then, join the lobby by sending a POST to /lobbies/{id}/users.
+
         const response = await fetch(`${lobbyBaseUrl}/${lobbyData.id}/users`, {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 "Authorization": `Bearer ${token}`,
             },
-            // The request body follows your JoinLobbyRequest schema.
             body: JSON.stringify({ joinCode }),
         });
+
         if (!response.ok) {
             console.error("Failed to join lobby:", response.status);
             return null;
         }
-        const updatedLobbyData = await response.json();
-        return updatedLobbyData;
+
+        const {
+            id,
+            hostId,
+            users,
+        } = await response.json();
+
+        return new Lobby(id, joinCode, hostId, users);
     } catch (error) {
         console.error(error);
         return null;
@@ -107,6 +166,7 @@ export const leaveLobby = async (lobbyId, userId, token) => {
                 "Authorization": `Bearer ${token}`,
             },
         });
+
         return response.ok;
     } catch (error) {
         console.error(error);
@@ -119,7 +179,7 @@ export const leaveLobby = async (lobbyId, userId, token) => {
  * @param {string} lobbyId - The lobby's ID.
  * @param {string} userId - The user ID of the player to remove.
  * @param {string} token - The current user's auth token.
- * @returns {Promise<object|null>} - True on success; otherwise false.
+ * @returns {Promise<Lobby|null>} - The updated lobby data on success; otherwise null.
  */
 export const removePlayerFromLobby = async (lobbyId, userId, token) => {
     try {
@@ -130,14 +190,38 @@ export const removePlayerFromLobby = async (lobbyId, userId, token) => {
                 "Authorization": `Bearer ${token}`,
             },
         });
+
         if (!response.ok) {
             console.error("Failed to remove player from lobby:", response.status);
             return null;
         }
-        const updatedLobbyData = await response.json();
-        return updatedLobbyData;
+
+        const {
+            id,
+            joinCode,
+            hostId,
+            users,
+        } = await response.json();
+
+        return new Lobby(id, joinCode, hostId, users);
     } catch (error) {
         console.error(error);
         return null;
     }
 };
+
+export class Lobby {
+    /**
+     * Creates a new lobby.
+     * @param {string} id
+     * @param {string} joinCode
+     * @param {string} hostId
+     * @param {{id: string, username: string, displayName: string}[]} users
+     */
+    constructor(id, joinCode, hostId, users) {
+        this.id = id;
+        this.joinCode = joinCode;
+        this.hostId = hostId;
+        this.users = users;
+    }
+}

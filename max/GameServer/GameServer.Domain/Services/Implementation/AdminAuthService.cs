@@ -4,7 +4,7 @@ using OneOf.Types;
 
 namespace GameServer.Domain.Services.Implementation;
 
-public class AdminAuthService(IAuthRoleRepository authRoleRepository) : IAdminAuthService
+public class AdminAuthService(IUserRepository userRepository, IAuthRoleRepository authRoleRepository) : IAdminAuthService
 {
     public async Task<AuthRoleCreationResult> CreateRoleAsync(NewAuthRole role, CancellationToken token = default)
     {
@@ -45,8 +45,13 @@ public class AdminAuthService(IAuthRoleRepository authRoleRepository) : IAdminAu
         return success ? new Success() : new Error<string>("Failed to delete role.");
     }
 
-    public async Task<RolesResult> GetRolesByUserIdAsync(Guid userId, CancellationToken token = default)
+    public async Task<UserRolesResult> GetRolesByUserIdAsync(Guid userId, CancellationToken token = default)
     {
+        var user = await userRepository.GetUserByIdAsync(userId, token);
+
+        if (user is null)
+            return new NotFound();
+
         var authRoles = await authRoleRepository.GetRolesByUserIdAsync(userId, token);
 
         return authRoles.ToList();

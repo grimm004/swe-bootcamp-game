@@ -2,6 +2,7 @@ using GameServer.Api.Auth;
 using GameServer.Api.Constants;
 using GameServer.Api.Endpoints;
 using GameServer.Api.Extensions;
+using GameServer.Api.Hubs;
 using GameServer.Api.Services;
 using GameServer.Data;
 using GameServer.Domain;
@@ -29,6 +30,8 @@ builder.Services
     .AddSingleton<ISaltedHashService, Sha512SaltedHashService>(_ =>
         new Sha512SaltedHashService("GameUserPasswordSalt"u8.ToArray()))
     .AddDomain();
+
+builder.Services.AddSignalR();
 
 builder.Services.AddAuthentication("GameServerScheme")
     .AddScheme<AuthenticationSchemeOptions, SessionAuthenticationHandler>(
@@ -61,5 +64,8 @@ app.MapGroup("/api/v1")
     .MapAuthEndpoints()
     .MapAdminAuthEndpoints()
     .MapLobbyEndpoints();
+
+app.MapHub<LobbyHub>("/hubs/v1/lobby");
+app.MapHub<GameHub>("/hubs/v1/game");
 
 app.Run();

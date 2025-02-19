@@ -5,13 +5,14 @@
   "main": "server.js",
   "type": "module",
   "dependencies": {
-    "express": "^4.17.1"
+    "express": "^4.17.1",
+    "express-http-proxy": "^2.1.1",
+    "http-proxy": "^1.18.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.18.0",
     "@stylistic/eslint-plugin": "^2.13.0",
     "eslint": "^9.18.0",
-    "express-http-proxy": "^2.1.1",
     "globals": "^15.14.0",
     "nodemon": "^3.1.9"
   },

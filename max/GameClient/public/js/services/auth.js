@@ -1,7 +1,12 @@
 const baseUrl = "/api/v1";
 const authBaseUrl = `${baseUrl}/auth`;
 
-export const loginUser = async ({username, password}) => {
+/**
+ * @param {string} username
+ * @param {string} password
+ * @returns {Promise<User|null>}
+ */
+export const loginUser = async (username, password) => {
     try{
         const response = await fetch(`${authBaseUrl}/login`, {
             method: "POST",
@@ -19,7 +24,7 @@ export const loginUser = async ({username, password}) => {
             expiresAt,
         } = await response.json();
 
-        return new User(user.id, user.username, user.displayName, user.roles, token, expiresAt);
+        return new User(user.id, user.username, user.displayName, user.roles, token, new Date(expiresAt));
     }
     catch (error) {
         console.error(error);
@@ -27,6 +32,10 @@ export const loginUser = async ({username, password}) => {
     }
 };
 
+/**
+ * @param {User} user
+ * @returns {Promise<boolean>}
+ */
 export const logoutUser = async (user) => {
     try{
         const response = await fetch(`${authBaseUrl}/logout`, {
@@ -45,7 +54,13 @@ export const logoutUser = async (user) => {
     }
 };
 
-export const signupUser = async ({username, password, displayName}) => {
+/**
+ * @param {string} username
+ * @param {string} password
+ * @param {string} displayName
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+export const signupUser = async (username, password, displayName) => {
     const response = await fetch(`${authBaseUrl}/register`, {
         method: "POST",
         headers: {
@@ -67,6 +82,10 @@ export const signupUser = async ({username, password, displayName}) => {
     return { success: true };
 }
 
+/**
+ * @param {User} user
+ * @returns {Promise<boolean>}
+ */
 export const updateProfile = async (user) => {
     try {
         const response = await fetch(`${authBaseUrl}/me`, {
@@ -87,6 +106,14 @@ export const updateProfile = async (user) => {
 };
 
 export class User {
+    /**
+     * @param {string} id
+     * @param {string} username
+     * @param {string} displayName
+     * @param {string[]} roles
+     * @param {string} token
+     * @param {Date} expiresAt
+     */
     constructor(id, username, displayName, roles, token, expiresAt) {
         this.id = id;
         this.username = username;
