@@ -18,6 +18,7 @@ class LobbyPanel {
     #lobbyCodeDisplay;
     #lobbyDetails;
     #lobbyUserList;
+    #singlePlayerStartBtn;
     #createLobbyBtn;
     #joinLobbyBtn;
     #lobbyJoinCode;
@@ -51,6 +52,7 @@ class LobbyPanel {
         this.#lobbyCodeDisplay = document.getElementById("lobbyCodeDisplay");
         this.#lobbyDetails = document.getElementById("lobbyDetails");
         this.#lobbyUserList = document.getElementById("lobbyUserList");
+        this.#singlePlayerStartBtn = document.getElementById("singlePlayerStartBtn");
         this.#createLobbyBtn = document.getElementById("createLobbyBtn");
         this.#joinLobbyBtn = document.getElementById("joinLobbyBtn");
         this.#lobbyJoinCode = document.getElementById("lobbyJoinCode");
@@ -59,7 +61,7 @@ class LobbyPanel {
 
         /**
          * Callback to be invoked when the game should start.
-         * @type {(user: User, lobby: Lobby) => void}
+         * @type {(user: User, lobby: Lobby|null) => void}
          */
         this.onGameStart = null;
     }
@@ -69,21 +71,11 @@ class LobbyPanel {
      * @returns {this}
      */
     setup() {
-        this.#createLobbyBtn.addEventListener("click", this.#createLobby.bind(this));
-
-        this.#joinLobbyBtn.addEventListener("click", async () => {
-            const code = this.#lobbyJoinCode.value.trim();
-            await this.#joinLobby(code);
-        });
-
-        this.#leaveLobbyBtn.addEventListener("click", this.leaveLobby.bind(this));
-
-        this.#startGameBtn.addEventListener("click", async () => {
-            if (this.#lobbyHubConnection && this.#currentLobby) {
-                // noinspection JSCheckFunctionSignatures
-                await this.#lobbyHubConnection?.invoke("StartGame", this.#currentLobby.id);
-            }
-        });
+        this.#singlePlayerStartBtn.addEventListener("click", this.#onSinglePlayerStartClicked.bind(this));
+        this.#createLobbyBtn.addEventListener("click", this.#onCreateLobbyClicked.bind(this));
+        this.#joinLobbyBtn.addEventListener("click", this.#onJoinLobbyClicked.bind(this));
+        this.#leaveLobbyBtn.addEventListener("click", this.#onLeaveLobbyClicked.bind(this));
+        this.#startGameBtn.addEventListener("click", this.#onStartGameClicked.bind(this));
 
         return this;
     }
@@ -97,10 +89,17 @@ class LobbyPanel {
     }
 
     /**
+     * Handler for the single player start button click.
+     */
+    #onSinglePlayerStartClicked() {
+        this.onGameStart?.(this.#currentUser, null);
+    }
+
+    /**
      * Creates a new lobby.
      * @returns {Promise<void>}
      */
-    async #createLobby() {
+    async #onCreateLobbyClicked() {
         if (!this.#currentUser) return;
 
         const lobbyData = await createLobby(this.#currentUser.token);
@@ -115,6 +114,45 @@ class LobbyPanel {
         await this.#startLobbyHubConnection(lobbyData.id);
 
         this.#lobbyJoinCode.value = "";
+    }
+
+    /**
+     * Handler for the join lobby button click.
+     * @returns {Promise<void>}
+     */
+    async #onJoinLobbyClicked() {
+        const code = this.#lobbyJoinCode.value.trim();
+        await this.#joinLobby(code);
+    }
+
+    /**
+     * Handler for the leave lobby button click.
+     * @returns {Promise<void>}
+     */
+    async #onLeaveLobbyClicked() {
+        await this.leaveLobby();
+    }
+
+    /**
+     * Handler for the start game button click.
+     * @returns {Promise<void>}
+     */
+    async #onStartGameClicked() {
+        if (!this.#lobbyHubConnection || !this.#currentLobby) return;
+        await this.#lobbyHubConnection?.invoke("StartGame", this.#currentLobby.id);
+    }
+
+    /**
+     * Leaves the current lobby
+     * @returns {Promise<void>}
+     */
+    async leaveLobby() {
+        if (!this.#currentLobby) return;
+
+        await leaveLobby(this.#currentLobby.id, this.#currentUser.id, this.#currentUser.token);
+        this.#currentLobby = null;
+        await this.#stopLobbyHubConnection();
+        this.#updateLobbyUi(null);
     }
 
     /**
@@ -269,19 +307,6 @@ class LobbyPanel {
             "d-none",
             !this.#currentUser || this.#currentUser.id !== lobbyData.hostId || lobbyData.users.length < 2
         );
-    }
-
-    /**
-     * Leaves the current lobby
-     * @returns {Promise<void>}
-     */
-    async leaveLobby() {
-        if (!this.#currentLobby) return;
-
-        await leaveLobby(this.#currentLobby.id, this.#currentUser.id, this.#currentUser.token);
-        this.#currentLobby = null;
-        await this.#stopLobbyHubConnection();
-        this.#updateLobbyUi(null);
     }
 
     /**

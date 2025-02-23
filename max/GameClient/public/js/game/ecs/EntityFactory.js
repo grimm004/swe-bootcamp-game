@@ -1,6 +1,5 @@
 import DrawComponent from "./components/DrawComponent.js";
 import FrameInfoComponent from "./components/FrameInfoComponent.js";
-import PhysicsComponent from "./components/PhysicsComponent.js";
 import PositionComponent from "./components/PositionComponent.js";
 import OrientationComponent from "./components/OrientationComponent.js";
 import WindowInfoComponent from "./components/WindowInfoComponent.js";
@@ -10,6 +9,8 @@ import CameraComponent from "./components/CameraComponent.js";
 import {Vector3} from "../../graphics/maths.js";
 import PlayerComponent from "./components/PlayerComponent.js";
 import MultiplayerComponent from "./components/MultiplayerComponent.js";
+import SizeComponent from "./components/SizeComponent.js";
+import RigidBodyComponent from "./components/RigidBodyComponent.js";
 
 
 export default class EntityFactory {
@@ -149,10 +150,9 @@ export default class EntityFactory {
         return this.#ecsWorld.createEntity({
             id,
             c: {
-                physics: {
-                    type: PhysicsComponent.name,
+                rigidBody: {
+                    type: RigidBodyComponent.name,
                     shapeType: shape,
-                    size,
                     posShape,
                     rotShape,
                     move: true,
@@ -167,6 +167,10 @@ export default class EntityFactory {
                 orientation: {
                     type: OrientationComponent.name,
                     direction: initialDirection,
+                },
+                size: {
+                    type: SizeComponent.name,
+                    size,
                 },
                 draw: {
                     type: DrawComponent.name,
@@ -194,10 +198,9 @@ export default class EntityFactory {
         return this.#ecsWorld.createEntity({
             id,
             c: {
-                physics: {
-                    type: PhysicsComponent.name,
+                rigidBody: {
+                    type: RigidBodyComponent.name,
                     shapeType: shape,
-                    size,
                     posShape,
                     move: false,
                     density,
@@ -211,6 +214,10 @@ export default class EntityFactory {
                 orientation: {
                     type: OrientationComponent.name,
                     direction: initialDirection,
+                },
+                size: {
+                    type: SizeComponent.name,
+                    size,
                 },
             }
         });

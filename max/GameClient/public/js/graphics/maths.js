@@ -7,6 +7,7 @@ Math.clamp = (x, min, max) => Math.min(Math.max(x, min), max);
 Math.radians = (degrees) => Math.PI * degrees / 180.0;
 Math.degrees = (radians) => 180.0 * radians / Math.PI;
 Math.lerp = (a, b, v) => (a * (1 - v)) + (b * v);
+Math.normalizeAngle = (angle) => ((angle + Math.PI) % (2 * Math.PI) + (2 * Math.PI)) % (2 * Math.PI) - Math.PI;
 
 export class FrameCounter {
     #frameTimeBuffer;
@@ -446,6 +447,10 @@ export class Vector extends Float32Array {
      */
     toArray() {
         return Array.from(this);
+    }
+
+    toString() {
+        return `(${this.toArray().map(x => x.toFixed(2)).join(", ")})`;
     }
 }
 

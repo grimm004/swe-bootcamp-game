@@ -29,7 +29,11 @@ async function main() {
 
     menu.onGameStart = async (user, lobby) => {
         menu.hide();
-        await gameUi.joinGame(user, lobby);
+
+        if (lobby)
+            await gameUi.joinGame(user, lobby);
+        else
+            await gameUi.startGame();
     };
 
     // gameUi.onGameFinish = () => { menu.show(); };

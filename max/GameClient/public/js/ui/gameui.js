@@ -173,9 +173,8 @@ class GameUi {
      * @returns {Promise<void>}
      */
     async #onGameContainerDoubleClick() {
-        if (this.#captureEnabled && this.#allowCaptureAttempts) {
-            await this.#canvas.requestPointerLock();
-        }
+        if (!(this.#captureEnabled && this.#allowCaptureAttempts)) return;
+        await this.#canvas.requestPointerLock();
     }
 
     /**
@@ -195,6 +194,7 @@ class GameUi {
             }, 2000);
             return;
         }
+
         this.#inputEnabled = true;
         this.#mouseCaptureOverlay.classList.add("d-none");
     }
@@ -248,6 +248,14 @@ class GameUi {
      */
     async joinGame(user, lobby) {
         await this.#app.joinGame(user.id, lobby.id);
+        this.#captureEnabled = true;
+    }
+
+    /**
+     * Starts the game without joining online.
+     * @returns {Promise<void>}
+     */
+    async startGame() {
         this.#captureEnabled = true;
     }
 }

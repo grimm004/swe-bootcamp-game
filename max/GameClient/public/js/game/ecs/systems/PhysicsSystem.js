@@ -1,13 +1,15 @@
 import * as ApeEcs from "../../../../lib/ape-ecs.module.js";
 import {PlayerEntityId, FrameInfoEntityId, GRAVITY, MouseInputEntityId} from "../../constants.js";
 import * as OIMO from "../../../../lib/oimo.module.js";
-import PhysicsComponent from "../components/PhysicsComponent.js";
+import ImpulseComponent from "../components/ImpulseComponent.js";
 import PositionComponent from "../components/PositionComponent.js";
 import OrientationComponent from "../components/OrientationComponent.js";
 import {toDegree} from "../../../../lib/gl-matrix/common.js";
 import {Vector3} from "../../../graphics/maths.js";
 import {mat4, quat, vec3} from "../../../../lib/gl-matrix/index.js";
 import {Debug} from "../../debug.js";
+import SizeComponent from "../components/SizeComponent.js";
+import RigidBodyComponent from "../components/RigidBodyComponent.js";
 
 
 export default class PhysicsSystem extends ApeEcs.System {
@@ -23,10 +25,13 @@ export default class PhysicsSystem extends ApeEcs.System {
             gravity: [0, GRAVITY, 0],
         });
 
-        this.subscribe(PhysicsComponent.name);
+        this.subscribe(ImpulseComponent.name);
 
-        this._query = this.createQuery()
-            .fromAll(PhysicsComponent.name, PositionComponent.name, OrientationComponent.name)
+        this._rigidBodyQuery = this.createQuery()
+            .fromAll(PositionComponent.name, OrientationComponent.name, SizeComponent.name, RigidBodyComponent.name)
+            .persist();
+        this._impulseQuery = this.createQuery()
+            .fromAll(RigidBodyComponent.name, ImpulseComponent.name)
             .persist();
 
         this._frameInfo = this.world.getEntity(FrameInfoEntityId).c.time;
@@ -41,59 +46,60 @@ export default class PhysicsSystem extends ApeEcs.System {
         return this._physicsWorld.getInfo();
     }
 
-    onPhysicsComponentAdded(component) {
-        const entity = component.entity;
-        const position = [0, 0, 0], rotation = [0, 0, 0];
+    #getOrCreateOimoBody(entity) {
+        const rigidBodyComponent = entity.getOne(RigidBodyComponent.name);
+        if (rigidBodyComponent.oimoBodyId !== null)
+            return rigidBodyComponent.oimoBodyId;
+
+        const size = entity.getOne(SizeComponent.name).size.toArray();
+
+        const pos = [0, 0, 0];
         if (entity.has(PositionComponent.name)) {
             const positionComponent = entity.getOne(PositionComponent.name);
-            position[0] = positionComponent.position.x;
-            position[1] = positionComponent.position.y;
-            position[2] = positionComponent.position.z;
+            pos[0] = positionComponent.position.x;
+            pos[1] = positionComponent.position.y;
+            pos[2] = positionComponent.position.z;
         }
 
+        const rot = [0, 0, 0];
         if (entity.has(OrientationComponent.name)) {
             const orientationComponent = entity.getOne(OrientationComponent.name);
-            rotation[0] = toDegree(orientationComponent.direction.x);
-            rotation[1] = toDegree(orientationComponent.direction.y);
-            rotation[2] = toDegree(orientationComponent.direction.z);
+            rot[0] = toDegree(orientationComponent.direction.x);
+            rot[1] = toDegree(orientationComponent.direction.y);
+            rot[2] = toDegree(orientationComponent.direction.z);
         }
 
         const physicsBody = this._physicsWorld.add({
-            type: component.shapeType,
-            size: component.size,
-            pos: position,
-            rot: rotation,
-            posShape: component.posShape,
-            rotShape: component.rotShape?.map(toDegree),
-            move: component.move,
-            density: component.density,
-            friction: component.friction,
-            restitution: component.restitution,
+            type: rigidBodyComponent.shapeType,
+            size,
+            pos,
+            rot,
+            posShape: rigidBodyComponent.posShape?.toArray(),
+            rotShape: rigidBodyComponent.rotShape?.map(toDegree)?.toArray(),
+            move: rigidBodyComponent.move,
+            density: rigidBodyComponent.density,
+            friction: rigidBodyComponent.friction,
+            restitution: rigidBodyComponent.restitution,
         });
         physicsBody.entityId = entity.id;
 
-        component.update({
-            bodyId: physicsBody.id
+        rigidBodyComponent.update({
+            oimoBodyId: physicsBody.id
         });
-    }
 
-    onChange(change) {
-        if (change.type !== PhysicsComponent.name)
-            return;
-
-        switch (change.op) {
-            case "add":
-                this.onPhysicsComponentAdded(
-                    this.world.getComponent(change.component));
-                return;
-            default:
-                return;
-        }
+        return physicsBody.id;
     }
 
     update() {
-        for (const change of this.changes)
-            this.onChange(change);
+        for (const entity of this._impulseQuery.execute()) {
+            const physicsBody = this._physicsWorld.getByName(this.#getOrCreateOimoBody(entity));
+            if (!physicsBody) continue;
+
+            for (const impulseComponent of entity.getComponents(ImpulseComponent.name)) {
+                physicsBody.applyImpulse(impulseComponent.position, impulseComponent.force.multiplied(this._physicsWorld.timeStep));
+                entity.removeComponent(impulseComponent);
+            }
+        }
 
         this._timeAccumulator += this._frameInfo.deltaTime;
         while (this._timeAccumulator >= this._physicsWorld.timeStep) {
@@ -101,15 +107,9 @@ export default class PhysicsSystem extends ApeEcs.System {
             this._timeAccumulator -= this._physicsWorld.timeStep;
         }
 
-        for (const entity of this._query.execute()) {
-            const physicsBody = this._physicsWorld.getByName(entity.c.physics.bodyId);
+        for (const entity of this._rigidBodyQuery.execute()) {
+            const physicsBody = this._physicsWorld.getByName(this.#getOrCreateOimoBody(entity));
             if (!physicsBody) continue;
-
-            const impulse = entity.c.physics.impulse;
-            if (impulse !== null) {
-                physicsBody.applyImpulse(impulse.position, new OIMO.Vec3(...impulse.force.multiplied(this._frameInfo.deltaTime)));
-                entity.c.physics.update({ impulse: null });
-            }
 
             entity.c.position.update({
                 position: new Vector3(physicsBody.getPosition()),
@@ -119,7 +119,7 @@ export default class PhysicsSystem extends ApeEcs.System {
                 direction: Vector3.orientationFromQuaternion(physicsBody.getQuaternion()),
             });
 
-            Debug.setBox(`physics_${entity.id}`, entity.c.position.position, entity.c.orientation.direction, entity.c.physics.size);
+            Debug.setBox(`physics_${entity.id}`, entity.c.position.position, entity.c.orientation.direction, entity.c.size.size);
         }
 
         this.#computeInputHits();
@@ -143,11 +143,10 @@ export default class PhysicsSystem extends ApeEcs.System {
 
         if (!firstHit.body.entityId || !mouseInputComponent.buttons.has(0)) return;
 
-        this.world.getEntity(firstHit.body.entityId).c.physics.update({
-            impulse: {
-                position: start,
-                force: new Vector3(firstHit.point).sub(start).normalise().mul(1000 * this._frameInfo.deltaTime),
-            }
+        this.world.getEntity(firstHit.body.entityId).addComponent({
+            type: ImpulseComponent.name,
+            position: new Vector3(firstHit.point),
+            force: new Vector3(firstHit.point).sub(start).normalise().mul(1000 * this._frameInfo.deltaTime),
         });
     }
 

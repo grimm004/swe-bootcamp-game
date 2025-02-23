@@ -36,7 +36,7 @@ class Menu {
 
         /**
          * Callback that the main module can assign to start the game.
-         * @type {(user: User, lobby: Lobby) => void}
+         * @type {(user: User, lobby: Lobby|null) => void}
          */
         this.onGameStart = null;
 

@@ -15,7 +15,7 @@ import {World} from "../../lib/ape-ecs.module.js";
 import FrameInfoComponent from "./ecs/components/FrameInfoComponent.js";
 import PhysicsSystem from "./ecs/systems/PhysicsSystem.js";
 import RenderingSystem from "./ecs/systems/RenderingSystem.js";
-import PhysicsComponent from "./ecs/components/PhysicsComponent.js";
+import ImpulseComponent from "./ecs/components/ImpulseComponent.js";
 import PositionComponent from "./ecs/components/PositionComponent.js";
 import OrientationComponent from "./ecs/components/OrientationComponent.js";
 import DrawComponent from "./ecs/components/DrawComponent.js";
@@ -42,6 +42,8 @@ import MultiplayerSystem from "./ecs/systems/MultiplayerSystem.js";
 import PlayerComponent from "./ecs/components/PlayerComponent.js";
 import MultiplayerComponent from "./ecs/components/MultiplayerComponent.js";
 import GameHostComponent from "./ecs/components/GameHostComponent.js";
+import SizeComponent from "./ecs/components/SizeComponent.js";
+import RigidBodyComponent from "./ecs/components/RigidBodyComponent.js";
 
 /**
  * @typedef {{position: [x: number, y: number, z: number], direction: [x: number, y: number, z: number]}} PlayerState
@@ -79,7 +81,9 @@ export class SweBootcampGame extends Application {
         this.#ecsWorld.registerComponent(MouseInputComponent);
         this.#ecsWorld.registerComponent(KeyboardInputComponent);
         this.#ecsWorld.registerComponent(CameraComponent);
-        this.#ecsWorld.registerComponent(PhysicsComponent);
+        this.#ecsWorld.registerComponent(SizeComponent);
+        this.#ecsWorld.registerComponent(RigidBodyComponent);
+        this.#ecsWorld.registerComponent(ImpulseComponent);
         this.#ecsWorld.registerComponent(DrawComponent);
         this.#ecsWorld.registerComponent(LightComponent);
         this.#ecsWorld.registerComponent(CyclicalAnimationComponent);
@@ -496,37 +500,32 @@ export class SweBootcampGame extends Application {
         if (key === "r") {
             camera.targetPosition = new Vector3(2.0);
             camera.targetOrientation = new Vector3(-45.0, 30.0, 0.0).apply(x => Math.radians(x));
-        } else if (key === "c")
-            console.log(`[${camera.position.join(", ")}], [${camera.orientation.join(", ")}]`);
-        else if (key === " ") {
+        } else if (key === " ") {
             // todo: move out to input system
             for (let i = 0; i < 6; i++) {
                 const chairEntity = this.#ecsWorld.getEntity(`chair_${i}`);
-                chairEntity.c.physics.update({
-                    impulse: {
-                        position: chairEntity.c.position.position.subtracted(new Vector3(0, -1, 0)),
-                        force: new Vector3(0.0, 100.0, 0.0)
-                    }
+                chairEntity.addComponent({
+                    type: ImpulseComponent.name,
+                    position: chairEntity.c.position.position.subtracted(new Vector3(0, -1, 0)),
+                    force: new Vector3(0.0, 100.0, 0.0),
                 });
             }
         } else if (key === "e") {
             for (let i = 0; i < 6; i++) {
                 const chairEntity = this.#ecsWorld.getEntity(`chair_${i}`);
-                chairEntity.c.physics.update({
-                    impulse: {
-                        position: chairEntity.c.position.position.multiplied(0.75),
-                        force: new Vector3(0.0, 100.0, 0.0)
-                    }
+                chairEntity.addComponent({
+                    type: ImpulseComponent.name,
+                    position: chairEntity.c.position.position.multiplied(0.75),
+                    force: new Vector3(0.0, 100.0, 0.0),
                 });
             }
         } else if (key === "i") {
             for (let i = 0; i < 6; i++) {
                 const chairEntity = this.#ecsWorld.getEntity(`chair_${i}`);
-                chairEntity.c.physics.update({
-                    impulse: {
-                        position: chairEntity.c.position.position.multiplied(1.25),
-                        force: new Vector3(0.0, 100.0, 0.0)
-                    }
+                chairEntity.addComponent({
+                    type: ImpulseComponent.name,
+                    position: chairEntity.c.position.position.multiplied(1.25),
+                    force: new Vector3(0.0, 100.0, 0.0),
                 });
             }
         }
