@@ -3,6 +3,8 @@ import {WorldObject} from "./world.js";
 
 
 export class SceneNode extends WorldObject {
+    #scale;
+
     /**
      * @param {Vector3} [position=Vector3.zeros]
      * @param {Vector3} [orientationRad=Vector3.zeros]
@@ -12,11 +14,12 @@ export class SceneNode extends WorldObject {
     constructor(position = Vector3.zeros, orientationRad = Vector3.zeros, scale = Vector3.ones, children = []) {
         super(position, orientationRad);
 
-        this._scale = new Vector3(scale);
+        this.#scale = new Vector3(scale);
         /**
          * @type {Matrix4}
+         * @protected
          */
-        this.transform = Matrix4.identity;
+        this._transform = Matrix4.identity;
 
         this.updateMatrix();
 
@@ -53,22 +56,22 @@ export class SceneNode extends WorldObject {
      * @param {Matrix4} [transform=Matrix4.identity]
      */
     update(deltaTime, uniforms, transform = Matrix4.identity) {
-        this.transform = transform.copy.mul(this.matrix);
+        this._transform = transform.copy.mul(this.matrix);
 
         for (const child of this.children)
-            child.update(deltaTime, uniforms, this.transform);
+            child.update(deltaTime, uniforms, this._transform);
     }
 
     set scale(scaleVector) {
-        this._scale = new Vector3(scaleVector);
+        this.#scale = new Vector3(scaleVector);
     }
 
     get scale() {
-        return this._scale.copy;
+        return this.#scale.copy;
     }
 
     get globalPosition() {
-        return this.transform.translation;
+        return this._transform.translation;
     }
 
     /**
@@ -82,10 +85,13 @@ export class SceneNode extends WorldObject {
                 child.draw(renderer);
     }
 
+    /**
+     * @protected
+     */
     _drawSelf() {}
 
     updateMatrix() {
-        return this.matrix.positionOrientationScale(this._position, this._orientation, this._scale);
+        return this.matrix.positionOrientationScale(this._position, this._orientation, this.#scale);
     }
 }
 
@@ -116,6 +122,10 @@ export class DrawableSceneNode extends SceneNode {
         super.update(deltaTime, uniforms, transform);
     }
 
+    /**
+     * @param {Renderer} renderer
+     * @protected
+     */
     _drawSelf(renderer) {
         renderer.draw(this);
     }
@@ -156,7 +166,7 @@ export class LitSceneNode extends DrawableSceneNode {
      */
     update(deltaTime, uniforms, transform = Matrix4.identity) {
         super.update(deltaTime, uniforms, transform);
-        this.uniforms.uModelMatrix = this.transform;
+        this.uniforms.uModelMatrix = this._transform;
     }
 }
 
@@ -188,6 +198,6 @@ export class UnlitSceneNode extends DrawableSceneNode {
      */
     update(deltaTime, uniforms, transform = Matrix4.identity) {
         super.update(deltaTime, uniforms, transform);
-        this.uniforms.uModelMatrix = this.transform;
+        this.uniforms.uModelMatrix = this._transform;
     }
 }

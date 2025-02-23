@@ -16,13 +16,13 @@ export default class CameraSystem extends ApeEcs.System {
     // noinspection JSUnusedGlobalSymbols
     init() {
         this.subscribe(CameraComponent.name);
-        this.frameInfo = this.world.getEntity(FrameInfoEntityId).c.time;
-        this.query = this.createQuery()
+        this._frameInfo = this.world.getEntity(FrameInfoEntityId).c.time;
+        this._cameraQuery = this.createQuery()
             .fromAll(CameraComponent.name)
             .persist();
     }
 
-    onCameraComponentAdded(entity) {
+    #onCameraComponentAdded(entity) {
         const windowInfo = this.world.getEntity(WindowInfoEntityId).c.window;
 
         let initialPosition = Vector3.zeros, initialOrientation = Vector3.zeros;
@@ -49,10 +49,10 @@ export default class CameraSystem extends ApeEcs.System {
         });
     }
 
-    onChange(change) {
+    #onChange(change) {
         switch (change.op) {
             case "add":
-                this.onCameraComponentAdded(
+                this.#onCameraComponentAdded(
                     this.world.getEntity(change.entity));
                 return;
             default:
@@ -62,15 +62,15 @@ export default class CameraSystem extends ApeEcs.System {
 
     update() {
         for (const change of this.changes)
-            this.onChange(change);
+            this.#onChange(change);
 
-        const deltaTime = this.frameInfo.deltaTime;
+        const deltaTime = this._frameInfo.deltaTime;
         const windowInfo = this.world.getEntity(WindowInfoEntityId).c.window;
         const mouseInputComponent = this.world.getEntity(MouseInputEntityId).c.mouse;
         const keyboardInputComponent = this.world.getEntity(KeyboardInputEntityId).c.keyboard;
         const pressedKeys = keyboardInputComponent.keys;
 
-        for (const entity of this.query.execute()) {
+        for (const entity of this._cameraQuery.execute()) {
             const cameraComponent = entity.getOne(CameraComponent.name);
             const camera = cameraComponent.camera;
 

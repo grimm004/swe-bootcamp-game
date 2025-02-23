@@ -7,7 +7,7 @@ import {SceneRootEntityId} from "../../constants.js";
 export default class RenderingSystem extends ApeEcs.System {
     // noinspection JSUnusedGlobalSymbols
     init(gl) {
-        this.renderer = new Renderer(gl, Colour.white);
+        this._renderer = new Renderer(gl, Colour.white);
     }
 
     update() {
@@ -16,7 +16,7 @@ export default class RenderingSystem extends ApeEcs.System {
 
         const sceneRoot = this.world.getEntity(SceneRootEntityId).c.draw.sceneNode;
 
-        this.renderer.clear();
-        sceneRoot.draw(this.renderer);
+        this._renderer.clear();
+        sceneRoot.draw(this._renderer);
     }
 }

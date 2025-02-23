@@ -5,6 +5,18 @@ import {WorldObject} from "./world.js";
 
 
 export class PerspectiveCamera extends WorldObject {
+    #fovRad;
+    #aspectRatio;
+    #near;
+    #far;
+
+    #maxPitch;
+    #minPitch;
+
+    #targetPosition;
+    #targetOrientation;
+    #direction;
+
     /**
      * @param {number} fovRad
      * @param {number} aspectRatio
@@ -16,16 +28,17 @@ export class PerspectiveCamera extends WorldObject {
     constructor(fovRad, aspectRatio, near = 0.1, far = 1000, position = Vector3.zeros, orientationRad = Vector3.zeros) {
         super(position, orientationRad);
 
-        this._fovRad = fovRad;
-        this._aspectRatio = aspectRatio;
-        this._near = near;
-        this._far = far;
-        this.maxPitch = Math.PI / 2 - Math.radians(1);
-        this.minPitch = -this.maxPitch;
+        this.#fovRad = fovRad;
+        this.#aspectRatio = aspectRatio;
+        this.#near = near;
+        this.#far = far;
 
-        this._targetPosition = this._position.copy;
-        this._targetOrientation = this._orientation.copy;
-        this._direction = Vector3.direction(-this._orientation.x, -this._orientation.y);
+        this.#maxPitch = Math.PI / 2 - Math.radians(1);
+        this.#minPitch = -this.#maxPitch;
+
+        this.#targetPosition = this._position.copy;
+        this.#targetOrientation = this._orientation.copy;
+        this.#direction = Vector3.direction(-this._orientation.x, -this._orientation.y);
 
         this.projectionMatrix = Matrix4.perspective(fovRad, aspectRatio, near, far);
 
@@ -34,68 +47,68 @@ export class PerspectiveCamera extends WorldObject {
     }
 
     get fov() {
-        return this._fovRad;
+        return this.#fovRad;
     }
 
     set fov(value) {
-        this._fovRad = value;
+        this.#fovRad = value;
         this.updateProjectionMatrix();
     }
 
     get aspectRatio() {
-        return this._aspectRatio;
+        return this.#aspectRatio;
     }
 
     set aspectRatio(value) {
-        this._aspectRatio = value;
+        this.#aspectRatio = value;
         this.updateProjectionMatrix();
     }
 
     get near() {
-        return this._near;
+        return this.#near;
     }
 
     set near(value) {
-        this._near = value;
+        this.#near = value;
         this.updateProjectionMatrix();
     }
 
     get far() {
-        return this._far;
+        return this.#far;
     }
 
     set far(value) {
-        this._far = value;
+        this.#far = value;
         this.updateProjectionMatrix();
     }
 
     updateProjectionMatrix() {
-        this.projectionMatrix.perspective(this._fovRad, this._aspectRatio, this._near, this._far);
+        this.projectionMatrix.perspective(this.#fovRad, this.#aspectRatio, this.#near, this.#far);
     }
 
     update(deltaTime) {
-        this._targetOrientation.y = Math.clamp(this._targetOrientation.y, this.minPitch, this.maxPitch);
+        this.#targetOrientation.y = Math.clamp(this.#targetOrientation.y, this.#minPitch, this.#maxPitch);
 
         this._orientation.elements = [
-            Math.lerp(this._orientation.x, this._targetOrientation.x, 1 - Math.exp(-8 * deltaTime)),
-            Math.lerp(this._orientation.y, this._targetOrientation.y, 1 - Math.exp(-8 * deltaTime)),
+            Math.lerp(this._orientation.x, this.#targetOrientation.x, 1 - Math.exp(-8 * deltaTime)),
+            Math.lerp(this._orientation.y, this.#targetOrientation.y, 1 - Math.exp(-8 * deltaTime)),
             0.0,
         ];
 
         const lerpConstant = 1 - Math.exp(-10 * deltaTime);
         this._position.elements = [
-            Math.lerp(this._position.x, this._targetPosition.x, lerpConstant),
-            Math.lerp(this._position.y, this._targetPosition.y, lerpConstant),
-            Math.lerp(this._position.z, this._targetPosition.z, lerpConstant)
+            Math.lerp(this._position.x, this.#targetPosition.x, lerpConstant),
+            Math.lerp(this._position.y, this.#targetPosition.y, lerpConstant),
+            Math.lerp(this._position.z, this.#targetPosition.z, lerpConstant)
         ];
 
-        this._direction.direction(-this._orientation.x, -this._orientation.y);
+        this.#direction.direction(-this._orientation.x, -this._orientation.y);
 
         this.updateMatrix();
     }
 
     set position(posVector) {
-        this._targetPosition = new Vector3(posVector);
+        this.#targetPosition = new Vector3(posVector);
         super.position = posVector;
     }
 
@@ -113,27 +126,27 @@ export class PerspectiveCamera extends WorldObject {
     }
 
     set targetPosition(posVector) {
-        this._targetPosition = new Vector3(posVector);
+        this.#targetPosition = new Vector3(posVector);
     }
 
     get targetPosition() {
-        return this._targetPosition;
+        return this.#targetPosition;
     }
 
     set targetOrientation(orientationRad) {
-        this._targetOrientation = orientationRad.copy;
+        this.#targetOrientation = orientationRad.copy;
     }
 
     get targetOrientation() {
-        return this._targetOrientation.copy;
+        return this.#targetOrientation.copy;
     }
 
     get direction() {
-        return this._direction.copy;
+        return this.#direction.copy;
     }
 
     translate(vec) {
-        this._targetPosition.add(vec);
+        this.#targetPosition.add(vec);
         super.translate(vec);
     }
 
@@ -146,9 +159,9 @@ export class PerspectiveCamera extends WorldObject {
      * @param {Vector2} vec - x component for forward/backward and y for sideways.
      */
     move(vec) {
-        const forwardComponent = this._direction.copy.mul(vec.x);
+        const forwardComponent = this.#direction.copy.mul(vec.x);
 
-        let forwardXZ = new Vector3(this._direction.x, 0, this._direction.z);
+        let forwardXZ = new Vector3(this.#direction.x, 0, this.#direction.z);
         if (forwardXZ.magnitudeSquared() < 1e-6) forwardXZ = new Vector3(0, 0, -1);
         else forwardXZ.normalise();
 
@@ -156,14 +169,14 @@ export class PerspectiveCamera extends WorldObject {
         const sidewaysComponent = right.mul(vec.y);
 
         // Add both components to the target position.
-        this._targetPosition.add(forwardComponent).add(sidewaysComponent);
+        this.#targetPosition.add(forwardComponent).add(sidewaysComponent);
     }
 
     turn(vecRad) {
-        this._targetOrientation.add(new Vector3(vecRad.x, vecRad.y, 0.0));
+        this.#targetOrientation.add(new Vector3(vecRad.x, vecRad.y, 0.0));
     }
 
     updateMatrix() {
-        return this.matrix.lookAt(this._position, this._position.copy.add(this._direction), Vector3.unitY);
+        return this.matrix.lookAt(this._position, this._position.copy.add(this.#direction), Vector3.unitY);
     }
 }

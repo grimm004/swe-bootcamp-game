@@ -9,12 +9,14 @@ export default class InputSystem extends ApeEcs.System {
         this._mouseMoved = true;
         /**
          * @type {Vector2}
+         * @private
          */
-        this.mousePos = Vector2.zeros;
+        this._mousePos = Vector2.zeros;
         /**
          * @type {Vector2}
+         * @private
          */
-        this.mouseChange = Vector2.zeros;
+        this._mouseChange = Vector2.zeros;
 
         this._mouseButtonsUpdated = false;
         this._pressedButtons = new Set();
@@ -25,8 +27,8 @@ export default class InputSystem extends ApeEcs.System {
 
     onMouseMove(mousePos, mouseChange) {
         this._mouseMoved = true;
-        this.mousePos = mousePos;
-        this.mouseChange = mouseChange;
+        this._mousePos = mousePos;
+        this._mouseChange = mouseChange;
     }
 
     onMouseButtonUpdated(pressedButtons) {
@@ -49,10 +51,10 @@ export default class InputSystem extends ApeEcs.System {
 
         if (this._mouseMoved) {
             mouseInputComponent.update({
-                x: this.mousePos.x,
-                y: this.mousePos.y,
-                dx: this.mouseChange.x,
-                dy: this.mouseChange.y,
+                x: this._mousePos.x,
+                y: this._mousePos.y,
+                dx: this._mouseChange.x,
+                dy: this._mouseChange.y,
             });
 
             this._mouseMoved = false;

@@ -48,6 +48,19 @@ import GameHostComponent from "./ecs/components/GameHostComponent.js";
  */
 
 export class SweBootcampGame extends Application {
+    #frameCounter;
+    #debugEnabled;
+
+    #ecsWorld;
+    #entityFactory;
+
+    #windowInfoEntity;
+    #frameInfoEntity;
+
+    #inputSystem;
+    #physicsSystem;
+    #multiplayerSystem;
+
     /**
      * @param {WebGL2RenderingContext} gl
      * @param {string} gameHubUrl
@@ -55,47 +68,47 @@ export class SweBootcampGame extends Application {
     constructor(gl, gameHubUrl) {
         super(gl);
 
-        this._frameCounter = new FrameCounter();
-        this._debugEnabled = false;
+        this.#frameCounter = new FrameCounter();
+        this.#debugEnabled = false;
 
-        this._ecsWorld = new World();
-        this._entityFactory = new EntityFactory(this._ecsWorld);
+        this.#ecsWorld = new World();
+        this.#entityFactory = new EntityFactory(this.#ecsWorld);
 
-        this._ecsWorld.registerComponent(WindowInfoComponent);
-        this._ecsWorld.registerComponent(FrameInfoComponent);
-        this._ecsWorld.registerComponent(MouseInputComponent);
-        this._ecsWorld.registerComponent(KeyboardInputComponent);
-        this._ecsWorld.registerComponent(CameraComponent);
-        this._ecsWorld.registerComponent(PhysicsComponent);
-        this._ecsWorld.registerComponent(DrawComponent);
-        this._ecsWorld.registerComponent(LightComponent);
-        this._ecsWorld.registerComponent(CyclicalAnimationComponent);
-        this._ecsWorld.registerComponent(PositionComponent);
-        this._ecsWorld.registerComponent(OrientationComponent);
-        this._ecsWorld.registerComponent(AnchorComponent);
-        this._ecsWorld.registerComponent(PlayerComponent);
-        this._ecsWorld.registerComponent(MultiplayerComponent);
-        this._ecsWorld.registerComponent(GameHostComponent);
+        this.#ecsWorld.registerComponent(WindowInfoComponent);
+        this.#ecsWorld.registerComponent(FrameInfoComponent);
+        this.#ecsWorld.registerComponent(MouseInputComponent);
+        this.#ecsWorld.registerComponent(KeyboardInputComponent);
+        this.#ecsWorld.registerComponent(CameraComponent);
+        this.#ecsWorld.registerComponent(PhysicsComponent);
+        this.#ecsWorld.registerComponent(DrawComponent);
+        this.#ecsWorld.registerComponent(LightComponent);
+        this.#ecsWorld.registerComponent(CyclicalAnimationComponent);
+        this.#ecsWorld.registerComponent(PositionComponent);
+        this.#ecsWorld.registerComponent(OrientationComponent);
+        this.#ecsWorld.registerComponent(AnchorComponent);
+        this.#ecsWorld.registerComponent(PlayerComponent);
+        this.#ecsWorld.registerComponent(MultiplayerComponent);
+        this.#ecsWorld.registerComponent(GameHostComponent);
 
-        this._windowInfoEntity = this._entityFactory.createWindowEntity(WindowInfoEntityId, gl.canvas.clientWidth, gl.canvas.clientHeight);
-        this._frameInfoEntity = this._entityFactory.createTimingEntity(FrameInfoEntityId);
-        this._entityFactory.createMouseInputEntity(MouseInputEntityId);
-        this._entityFactory.createKeyboardInputEntity(KeyboardInputEntityId);
+        this.#windowInfoEntity = this.#entityFactory.createWindowEntity(WindowInfoEntityId, gl.canvas.clientWidth, gl.canvas.clientHeight);
+        this.#frameInfoEntity = this.#entityFactory.createTimingEntity(FrameInfoEntityId);
+        this.#entityFactory.createMouseInputEntity(MouseInputEntityId);
+        this.#entityFactory.createKeyboardInputEntity(KeyboardInputEntityId);
 
-        this._ecsWorld.registerSystem(EveryUpdateGroup, CameraSystem);
-        this._entityFactory.createPlayerEntity(
+        this.#ecsWorld.registerSystem(EveryUpdateGroup, CameraSystem);
+        this.#entityFactory.createPlayerEntity(
             PlayerEntityId, toRadian(90.0), 0.1, 1000.0, new Vector3(2.0), new Vector3(-45.0, 30.0, 0.0).map(x => Math.radians(x)), 20);
 
         /** @type {InputSystem} */
-        this._inputSystem = this._ecsWorld.registerSystem(EveryUpdateGroup, InputSystem);
-        this._ecsWorld.registerSystem(EveryUpdateGroup, AnimationSystem);
+        this.#inputSystem = this.#ecsWorld.registerSystem(EveryUpdateGroup, InputSystem);
+        this.#ecsWorld.registerSystem(EveryUpdateGroup, AnimationSystem);
         /** @type {PhysicsSystem} */
-        this._physicsSystem = this._ecsWorld.registerSystem(EveryUpdateGroup, PhysicsSystem);
-        this._ecsWorld.registerSystem(EveryUpdateGroup, PositioningSystem);
+        this.#physicsSystem = this.#ecsWorld.registerSystem(EveryUpdateGroup, PhysicsSystem);
+        this.#ecsWorld.registerSystem(EveryUpdateGroup, PositioningSystem);
         /** @type {MultiplayerSystem} */
-        this._multiplayerSystem = this._ecsWorld.registerSystem(EveryUpdateGroup, MultiplayerSystem, [this._entityFactory, gameHubUrl]);
-        this._ecsWorld.registerSystem(EveryUpdateGroup, GraphicsSystem);
-        this._ecsWorld.registerSystem(EveryDrawGroup, RenderingSystem, [gl]);
+        this.#multiplayerSystem = this.#ecsWorld.registerSystem(EveryUpdateGroup, MultiplayerSystem, [this.#entityFactory, gameHubUrl]);
+        this.#ecsWorld.registerSystem(EveryUpdateGroup, GraphicsSystem);
+        this.#ecsWorld.registerSystem(EveryDrawGroup, RenderingSystem, [gl]);
 
         /**
          * @type {(game: SweBootcampGame, deltaTime: number) => void}
@@ -113,7 +126,7 @@ export class SweBootcampGame extends Application {
      * @returns {PlayerState}
      */
     get playerState() {
-        const playerEntity = this._ecsWorld.getEntity(PlayerEntityId);
+        const playerEntity = this.#ecsWorld.getEntity(PlayerEntityId);
         return {
             position: playerEntity.c.position.position.toArray(),
             direction: playerEntity.c.orientation.direction.toArray()
@@ -125,7 +138,7 @@ export class SweBootcampGame extends Application {
      * @returns {number}
      */
     get averageFrameRate() {
-        return this._frameCounter.averageFrameRate;
+        return this.#frameCounter.averageFrameRate;
     }
 
     /**
@@ -133,7 +146,7 @@ export class SweBootcampGame extends Application {
      * @returns {string}
      */
     get physicsDebugStats() {
-        return this._physicsSystem.physicsDebugStats;
+        return this.#physicsSystem.physicsDebugStats;
     }
 
     /**
@@ -141,7 +154,7 @@ export class SweBootcampGame extends Application {
      * @returns {boolean}
      */
     get debugEnabled() {
-        return this._debugEnabled;
+        return this.#debugEnabled;
     }
 
     /**
@@ -149,15 +162,14 @@ export class SweBootcampGame extends Application {
      * @param {boolean} value - The new value.
      */
     set debugEnabled(value) {
-        this._debugEnabled = value;
+        this.#debugEnabled = value;
     }
 
     /**
      * Asynchronously Load the Game's shaders in parallel.
      * @returns {Promise<void>}
-     * @private
      */
-    async _loadShaders() {
+    async #loadShaders() {
         const shaderNames = ["col", "tex", "colLit", "texLit"];
         const shaderFetchPromises = shaderNames.map((name) => fetchShaderSource(name));
         const resolvedShaders = await Promise.all(shaderFetchPromises);
@@ -205,9 +217,8 @@ export class SweBootcampGame extends Application {
      * @param {Mesh} bulbMesh - The lightbulb mesh.
      * @param {Mesh} bulbHolderMesh - The lightbulb holder mesh.
      * @returns {[UnlitSceneNode, SceneNode]}
-     * @private
      */
-    _loadLightBulb(bulbMesh, bulbHolderMesh) {
+    #loadLightBulb(bulbMesh, bulbHolderMesh) {
         const bulb = new UnlitSceneNode(bulbMesh);
         const bulbHolder = new LitSceneNode(bulbHolderMesh, new Vector3(0.0, -0.3, 0.0), Vector3.zeros, new Vector3(2.0), [bulb]);
 
@@ -219,9 +230,8 @@ export class SweBootcampGame extends Application {
      * @param {number} count - The number of chairs to create.
      * @param {Texture} texture - The chair texture.
      * @returns {SceneNode[]}
-     * @private
      */
-    _loadChairs(count, texture) {
+    #loadChairs(count, texture) {
         const chairSeatMesh = new TexCubeMesh(this._gl, texture, new Vector3(0.40, 0.07, 0.45), new Vector2(1.0));
         const chairRestMesh = new TexCubeMesh(this._gl, texture, new Vector3(0.325, 0.45, 0.025), new Vector2(1.0));
         const frontLegMesh = new TexCubeMesh(this._gl, texture, new Vector3(0.025, 0.45, 0.025), new Vector2(1.0));
@@ -245,9 +255,8 @@ export class SweBootcampGame extends Application {
      * Create table scene node.
      * @param {Texture} texture - The table texture.
      * @returns {SceneNode}
-     * @private
      */
-    _loadTable(texture) {
+    #loadTable(texture) {
         const tableTopMesh = new TexCubeMesh(this._gl, texture, new Vector3(0.90, 0.05, 1.80), new Vector2(1.0));
         const legMesh = new TexCubeMesh(this._gl, texture, new Vector3(0.10, 0.80, 0.10), new Vector2(1.0));
         const posX = 0.375, pozY = -0.425, posZ = 0.825;
@@ -265,7 +274,7 @@ export class SweBootcampGame extends Application {
      * @returns {Promise<this>}
      */
     async initialise() {
-        await this._loadShaders();
+        await this.#loadShaders();
 
         const [
             woodTexture,
@@ -297,9 +306,9 @@ export class SweBootcampGame extends Application {
         Debug.setPoint("unitY", Vector3.unitY, Colour.green, true);
         Debug.setPoint("unitZ", Vector3.unitZ, Colour.blue, true);
 
-        const chairNodes = this._loadChairs(6, woodTexture);
+        const chairNodes = this.#loadChairs(6, woodTexture);
 
-        const tableNode = new SceneNode(Vector3.zeros, Vector3.zeros, Vector3.ones, [this._loadTable(woodTexture)]);
+        const tableNode = new SceneNode(Vector3.zeros, Vector3.zeros, Vector3.ones, [this.#loadTable(woodTexture)]);
 
         const shelves = [];
         for (let i = 0; i < 3; i++)
@@ -318,7 +327,7 @@ export class SweBootcampGame extends Application {
         const ceilingMesh = new TexPlaneMesh(this._gl, woodPlanksTexture, new Vector2(2.5), new Vector3(0.0, -1.0, 0.0));
         const wallMesh = new TexPlaneMesh(this._gl, paintTexture, new Vector2(2.5, 1.15));
 
-        const [lightBulb, roomLight] = this._loadLightBulb(bulbMesh, bulbHolderMesh);
+        const [lightBulb, roomLight] = this.#loadLightBulb(bulbMesh, bulbHolderMesh);
 
         const staticSceneGraph = new SceneNode(Vector3.zeros, Vector3.zeros, Vector3.ones, [roomLight])
             .addChild(new LitSceneNode(floorMesh, new Vector3(0.0, 0.0, 0.0), Vector3.zeros, Vector3.ones, [...shelves])
@@ -329,14 +338,14 @@ export class SweBootcampGame extends Application {
                 .addChild(new LitSceneNode(wallMesh, new Vector3(2.5, 1.15, 0.0), new Vector3(0.0, 90.0, 90.0).map(x => Math.radians(x)))));
 
         // Scene graph root entity
-        this._entityFactory.createDrawEntity(
+        this.#entityFactory.createDrawEntity(
             SceneRootEntityId,
             new SceneNode()
                 .addChild(staticSceneGraph)
                 .addChild(tableNode)
                 .addChildren(chairNodes));
 
-        this._ecsWorld.createEntity({
+        this.#ecsWorld.createEntity({
             id: "light",
             c: {
                 light: {
@@ -409,9 +418,9 @@ export class SweBootcampGame extends Application {
 
         let i = 0;
         for (const {size, position, orientation, offset} of collisionBoxes)
-            this._entityFactory.createCollisionBox(`collisionBox_${i++}`, size, position, orientation, offset);
+            this.#entityFactory.createCollisionBox(`collisionBox_${i++}`, size, position, orientation, offset);
 
-        this._entityFactory.createPhysicalObjectEntity(
+        this.#entityFactory.createPhysicalObjectEntity(
             "table",
             tableNode,
             new Vector3(1.8, 0.85, 0.9),
@@ -431,7 +440,7 @@ export class SweBootcampGame extends Application {
 
         i = 0;
         for (const {position, orientation} of chairPositions)
-            this._entityFactory.createPhysicalObjectEntity(
+            this.#entityFactory.createPhysicalObjectEntity(
                 `chair_${i}`,
                 chairNodes[i++],
                 new Vector3(0.45, 1.05, 0.40),
@@ -451,7 +460,7 @@ export class SweBootcampGame extends Application {
     onResize(width, height) {
         this._gl.viewport(0, 0, width, height);
 
-        this._windowInfoEntity.c.window.update({
+        this.#windowInfoEntity.c.window.update({
             width,
             height,
             aspectRatio: width / height,
@@ -464,26 +473,26 @@ export class SweBootcampGame extends Application {
      * @param {string} gameId - The ID of the game to join.
      */
     async joinGame(playerId, gameId) {
-        await this._multiplayerSystem.joinGame(playerId, gameId);
+        await this.#multiplayerSystem.joinGame(playerId, gameId);
     }
 
     onMouseMove(dx, dy, x, y) {
         super.onMouseMove(dx, dy, x, y);
-        this._inputSystem.onMouseMove(this._mousePos, this._mouseChange);
+        this.#inputSystem.onMouseMove(this._mousePos, this._mouseChange);
     }
 
     onMouseDown(button) {
         super.onMouseDown(button);
-        this._inputSystem.onMouseButtonUpdated(this._pressedButtons);
+        this.#inputSystem.onMouseButtonUpdated(this._pressedButtons);
     }
 
     onMouseUp(button) {
         super.onMouseUp(button);
-        this._inputSystem.onMouseButtonUpdated(this._pressedButtons);
+        this.#inputSystem.onMouseButtonUpdated(this._pressedButtons);
     }
 
     onKeyDown(key) {
-        const camera = this._ecsWorld.getEntity(PlayerEntityId).c.camera.camera;
+        const camera = this.#ecsWorld.getEntity(PlayerEntityId).c.camera.camera;
         if (key === "r") {
             camera.targetPosition = new Vector3(2.0);
             camera.targetOrientation = new Vector3(-45.0, 30.0, 0.0).apply(x => Math.radians(x));
@@ -492,7 +501,7 @@ export class SweBootcampGame extends Application {
         else if (key === " ") {
             // todo: move out to input system
             for (let i = 0; i < 6; i++) {
-                const chairEntity = this._ecsWorld.getEntity(`chair_${i}`);
+                const chairEntity = this.#ecsWorld.getEntity(`chair_${i}`);
                 chairEntity.c.physics.update({
                     impulse: {
                         position: chairEntity.c.position.position.subtracted(new Vector3(0, -1, 0)),
@@ -502,7 +511,7 @@ export class SweBootcampGame extends Application {
             }
         } else if (key === "e") {
             for (let i = 0; i < 6; i++) {
-                const chairEntity = this._ecsWorld.getEntity(`chair_${i}`);
+                const chairEntity = this.#ecsWorld.getEntity(`chair_${i}`);
                 chairEntity.c.physics.update({
                     impulse: {
                         position: chairEntity.c.position.position.multiplied(0.75),
@@ -512,7 +521,7 @@ export class SweBootcampGame extends Application {
             }
         } else if (key === "i") {
             for (let i = 0; i < 6; i++) {
-                const chairEntity = this._ecsWorld.getEntity(`chair_${i}`);
+                const chairEntity = this.#ecsWorld.getEntity(`chair_${i}`);
                 chairEntity.c.physics.update({
                     impulse: {
                         position: chairEntity.c.position.position.multiplied(1.25),
@@ -523,17 +532,17 @@ export class SweBootcampGame extends Application {
         }
 
         super.onKeyDown(key);
-        this._inputSystem.onKeyboardUpdate(this._pressedKeys);
+        this.#inputSystem.onKeyboardUpdate(this._pressedKeys);
     }
 
     onKeyUp(key) {
         super.onKeyUp(key);
-        this._inputSystem.onKeyboardUpdate(this._pressedKeys);
+        this.#inputSystem.onKeyboardUpdate(this._pressedKeys);
     }
 
     _update(deltaTime) {
-        this._frameInfoEntity.c.time.update({deltaTime: deltaTime});
-        this._ecsWorld.runSystems(EveryUpdateGroup);
+        this.#frameInfoEntity.c.time.update({deltaTime: deltaTime});
+        this.#ecsWorld.runSystems(EveryUpdateGroup);
 
         super._update(deltaTime);
         this.onUpdateCompleted?.(this, deltaTime);
@@ -541,12 +550,12 @@ export class SweBootcampGame extends Application {
 
     _draw(deltaTime) {
         super._draw(deltaTime);
-        this._frameCounter.tick(deltaTime);
+        this.#frameCounter.tick(deltaTime);
 
-        this._ecsWorld.runSystems(EveryDrawGroup);
+        this.#ecsWorld.runSystems(EveryDrawGroup);
 
-        if (this._debugEnabled)
-            Debug.draw(this._debugEnabled);
+        if (this.#debugEnabled)
+            Debug.draw(this.#debugEnabled);
 
         this.onDrawCompleted?.(this, deltaTime);
     }

@@ -39,7 +39,7 @@ export default class MultiplayerSystem extends ApeEcs.System {
      */
     async joinGame(playerId, gameId) {
         this.world.getEntity(PlayerEntityId).c.player.update({playerId, gameId});
-        await this._startGameHubConnection(gameId);
+        await this.#startGameHubConnection(gameId);
     }
 
     /**
@@ -48,9 +48,9 @@ export default class MultiplayerSystem extends ApeEcs.System {
      * @returns {Promise<boolean>}
      * @private
      */
-    async _startGameHubConnection(gameId) {
+    async #startGameHubConnection(gameId) {
         if (this._gameHubConnection)
-            await this._stopGameHubConnection();
+            await this.#stopGameHubConnection();
 
         /**
          * @type {HubConnection|null}
@@ -70,7 +70,7 @@ export default class MultiplayerSystem extends ApeEcs.System {
             return false;
         }
 
-        gameHubConnection?.on("PlayerStateUpdate", this._onPlayerStateUpdate.bind(this));
+        gameHubConnection?.on("PlayerStateUpdate", this.#onPlayerStateUpdate.bind(this));
 
         this._gameHubConnection = gameHubConnection;
         return true;
@@ -82,7 +82,7 @@ export default class MultiplayerSystem extends ApeEcs.System {
      * @param {number} deltaTime
      * @private
      */
-    _onPlayerStateUpdate(playerId, state, deltaTime) {
+    #onPlayerStateUpdate(playerId, state, deltaTime) {
         if (this.world.getEntity(PlayerEntityId).c.player.playerId === playerId) return;
 
         const {
@@ -90,7 +90,7 @@ export default class MultiplayerSystem extends ApeEcs.System {
             direction,
         } = JSON.parse(state);
 
-        this._setMultiplayerState(playerId, new Vector3(position), new Vector3(direction), deltaTime);
+        this.#setMultiplayerState(playerId, new Vector3(position), new Vector3(direction), deltaTime);
     }
 
     /**
@@ -100,7 +100,7 @@ export default class MultiplayerSystem extends ApeEcs.System {
      * @param {number} deltaTime
      * @private
      */
-    _setMultiplayerState(playerId, position, direction, deltaTime) {
+    #setMultiplayerState(playerId, position, direction, deltaTime) {
         let player = this.world.getEntity(playerId);
         if (!player)
             player = this._entityFactory.createMultiplayerEntity(playerId);
@@ -118,7 +118,7 @@ export default class MultiplayerSystem extends ApeEcs.System {
      * @returns {Promise<void>}
      * @private
      */
-    async _stopGameHubConnection() {
+    async #stopGameHubConnection() {
         if (!this._gameHubConnection) return;
 
         try {

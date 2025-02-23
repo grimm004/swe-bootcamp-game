@@ -9,9 +9,16 @@ Math.degrees = (radians) => 180.0 * radians / Math.PI;
 Math.lerp = (a, b, v) => (a * (1 - v)) + (b * v);
 
 export class FrameCounter {
+    #frameTimeBuffer;
+    #bufferSize;
+
+    /**
+     * Creates a new frame counter.
+     * @param {number} [bufferSize=50] - The size of the frame time buffer for averaging.
+     */
     constructor(bufferSize = 50) {
-        this._bufferSize = bufferSize;
-        this._frameTimeBuffer = new Float32Array(bufferSize);
+        this.#bufferSize = bufferSize;
+        this.#frameTimeBuffer = new Float32Array(bufferSize);
         this.totalFrames = 0;
         this.averageFrameTime = 0.0;
     }
@@ -21,13 +28,13 @@ export class FrameCounter {
     }
 
     tick(deltaTime) {
-        this._frameTimeBuffer[this.totalFrames++ % this._bufferSize] = deltaTime;
+        this.#frameTimeBuffer[this.totalFrames++ % this.#bufferSize] = deltaTime;
 
-        if (this.totalFrames > this._frameTimeBuffer.length) {
+        if (this.totalFrames > this.#frameTimeBuffer.length) {
             this.averageFrameTime = 0.0;
-            for (const frameTime of this._frameTimeBuffer)
+            for (const frameTime of this.#frameTimeBuffer)
                 this.averageFrameTime += frameTime;
-            this.averageFrameTime /= this._frameTimeBuffer.length;
+            this.averageFrameTime /= this.#frameTimeBuffer.length;
         }
     }
 }
@@ -247,14 +254,16 @@ export class Matrix4 extends Float32Array {
 }
 
 export class Vector extends Float32Array {
+    #vectorConstructor;
+
     constructor(elements, constructor) {
         super(elements);
         if (this.constructor === Vector) throw new Error("Cannot instantiate abstract Vector.");
-        this._constructor = constructor;
+        this.#vectorConstructor = constructor;
     }
 
     get copy() {
-        return new this._constructor(this);
+        return new this.#vectorConstructor(this);
     }
 
     set elements(elements) {
@@ -311,7 +320,7 @@ export class Vector extends Float32Array {
      * @returns {Vector}
      */
     map(f) {
-        return new this._constructor(super.map(f));
+        return new this.#vectorConstructor(super.map(f));
     }
 
     /**
@@ -341,10 +350,10 @@ export class Vector extends Float32Array {
      * @returns {this}
      */
     add(val) {
-        if (val.constructor === this._constructor)
+        if (val.constructor === this.#vectorConstructor)
             this.apply((x, i) => x + val[i]);
         else if (typeof val === "number")
-            this.add(new this._constructor(val));
+            this.add(new this.#vectorConstructor(val));
         return this;
     }
 
@@ -361,10 +370,10 @@ export class Vector extends Float32Array {
      * @returns {this}
      */
     mul(val) {
-        if (val.constructor === this._constructor)
+        if (val.constructor === this.#vectorConstructor)
             this.apply((x, i) => x * val[i]);
         else if (typeof val === "number")
-            this.mul(new this._constructor(val));
+            this.mul(new this.#vectorConstructor(val));
         return this;
     }
 
@@ -377,7 +386,7 @@ export class Vector extends Float32Array {
      * @returns {this}
      */
     sub(val) {
-        return this.add(typeof val === "number" ? new this._constructor(-val) : val.copy.negate());
+        return this.add(typeof val === "number" ? new this.#vectorConstructor(-val) : val.copy.negate());
     }
 
     subtracted(val) {
@@ -389,7 +398,7 @@ export class Vector extends Float32Array {
      * @returns {this}
      */
     div(val) {
-        return this.mul(typeof val === "number" ? new this._constructor(1.0 / val) : val.copy.invert());
+        return this.mul(typeof val === "number" ? new this.#vectorConstructor(1.0 / val) : val.copy.invert());
     }
 
     divided(val) {

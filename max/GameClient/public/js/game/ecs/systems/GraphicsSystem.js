@@ -9,23 +9,26 @@ export default class GraphicsSystem extends ApeEcs.System {
     // noinspection JSUnusedGlobalSymbols
     init() {
         this.subscribe(DrawComponent.name);
+
+        this._frameInfo = this.world.getEntity(FrameInfoEntityId).c.time;
+        this._worldTransform = Matrix4.positionOrientationScale();
     }
 
-    onDrawComponentChanged(component, updatedProps) {
+    #onDrawComponentChanged(component, updatedProps) {
         if (component.sceneNode && (!updatedProps.includes("visible") && !updatedProps.includes("childrenVisible")))
             return;
 
-        component.sceneNode.visible = component.visible;
-        component.sceneNode.childrenVisible = component.childrenVisible;
-
-        this.frameInfo = this.world.getEntity(FrameInfoEntityId).c.time;
-        this.worldTransform = Matrix4.positionOrientationScale();
+        component.c.sceneNode.visible = component.visible;
+        component.c.sceneNode.childrenVisible = component.childrenVisible;
     }
 
-    onChange(change) {
+    #onChange(change) {
+        if (change.type !== DrawComponent.name)
+            return;
+
         switch (change.op) {
             case "change":
-                this.onDrawComponentChanged(
+                this.#onDrawComponentChanged(
                     this.world.getComponent(change.component),
                     change.props);
                 return;
@@ -36,9 +39,9 @@ export default class GraphicsSystem extends ApeEcs.System {
 
     update() {
         for (const change of this.changes)
-            this.onChange(change);
+            this.#onChange(change);
 
-        const deltaTime = this.frameInfo;
+        const deltaTime = this._frameInfo;
 
         const lightEntity = this.world.getEntity("light");
         const lightComponent = lightEntity.c.light;
@@ -63,7 +66,7 @@ export default class GraphicsSystem extends ApeEcs.System {
             uColour: lightComponent.colour
         };
 
-        Debug.uniforms = {
+        Debug._uniforms = {
             uViewMatrix: camera.matrix,
             uProjectionMatrix: camera.projectionMatrix
         };
@@ -74,6 +77,6 @@ export default class GraphicsSystem extends ApeEcs.System {
             tex: unlitUniforms,
             texLit: litUniforms,
             colLit: litUniforms
-        }, this.worldTransform);
+        }, this._worldTransform);
     }
 }

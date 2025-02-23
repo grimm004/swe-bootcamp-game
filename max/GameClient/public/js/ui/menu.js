@@ -6,24 +6,33 @@ import { logoutUser } from "../services/auth.js";
 
 class Menu {
     /**
+     * The global current user.
+     * @type {User|null}
+     */
+    #currentUser;
+
+    #authPanel;
+    #lobbyPanel;
+    #profilePanel;
+
+    #menuContainer;
+    #navButtons;
+    #logoutButton;
+
+    /**
      * Creates a new menu.
      * @param {string} lobbyHubUrl - The URL of the lobby hub.
      */
     constructor(lobbyHubUrl) {
-        this._menuContainer = document.getElementById("menuContainer");
-        this._navButtons = document.querySelectorAll(".online-nav .nav-btn");
-        this._logoutButton = document.getElementById("logoutButton");
+        this.#currentUser = null;
 
-        /**
-         * The global current user.
-         * @type {User|null}
-         * @private
-         */
-        this._currentUser = null;
+        this.#authPanel = new AuthPanel();
+        this.#lobbyPanel = new LobbyPanel(lobbyHubUrl);
+        this.#profilePanel = new ProfilePanel();
 
-        this._authPanel = new AuthPanel();
-        this._lobbyPanel = new LobbyPanel(lobbyHubUrl);
-        this._profilePanel = new ProfilePanel();
+        this.#menuContainer = document.getElementById("menuContainer");
+        this.#navButtons = document.querySelectorAll(".online-nav .nav-btn");
+        this.#logoutButton = document.getElementById("logoutButton");
 
         /**
          * Callback that the main module can assign to start the game.
@@ -31,16 +40,16 @@ class Menu {
          */
         this.onGameStart = null;
 
-        this._lobbyPanel.onGameStart = (user, lobby) => this.onGameStart?.(user, lobby);
+        this.#lobbyPanel.onGameStart = (user, lobby) => this.onGameStart?.(user, lobby);
 
-        this._authPanel.onLoginSuccess = (user) => {
-            this._currentUser = user;
-            this._authPanel.hide();
+        this.#authPanel.onLoginSuccess = (user) => {
+            this.#currentUser = user;
+            this.#authPanel.hide();
             const nav = document.querySelector(".online-nav");
             if (nav) nav.classList.remove("d-none");
-            this._lobbyPanel.onLoginSuccess(user);
-            this._profilePanel.onLoginSuccess(user);
-            this._lobbyPanel.show();
+            this.#lobbyPanel.onLoginSuccess(user);
+            this.#profilePanel.onLoginSuccess(user);
+            this.#lobbyPanel.show();
         };
     }
 
@@ -49,31 +58,31 @@ class Menu {
      * @returns {Menu}
      */
     setup() {
-        this._authPanel.setup();
-        this._lobbyPanel.setup();
-        this._profilePanel.setup();
+        this.#authPanel.setup();
+        this.#lobbyPanel.setup();
+        this.#profilePanel.setup();
 
-        this._navButtons.forEach((btn) =>
+        this.#navButtons.forEach((btn) =>
             btn.addEventListener("click", () => {
-                this._lobbyPanel.hide();
-                this._profilePanel.hide();
+                this.#lobbyPanel.hide();
+                this.#profilePanel.hide();
 
                 const targetPanel = btn.getAttribute("data-target");
                 if (targetPanel)
                     document.getElementById(targetPanel).classList.remove("d-none");
             }));
 
-        this._logoutButton.addEventListener("click", async () => {
-            await this._lobbyPanel.leaveLobby();
+        this.#logoutButton.addEventListener("click", async () => {
+            await this.#lobbyPanel.leaveLobby();
 
-            if (this._currentUser) {
-                await logoutUser(this._currentUser);
-                this._currentUser = null;
+            if (this.#currentUser) {
+                await logoutUser(this.#currentUser);
+                this.#currentUser = null;
             }
 
-            this._lobbyPanel.hide();
-            this._profilePanel.hide();
-            this._authPanel.show();
+            this.#lobbyPanel.hide();
+            this.#profilePanel.hide();
+            this.#authPanel.show();
             const nav = document.querySelector(".online-nav");
             if (nav) nav.classList.add("d-none");
         });
@@ -86,7 +95,7 @@ class Menu {
      * @returns {this}
      */
     show() {
-        this._menuContainer.classList.remove("d-none");
+        this.#menuContainer.classList.remove("d-none");
         return this;
     }
 
@@ -95,7 +104,7 @@ class Menu {
      * @returns {this}
      */
     hide() {
-        this._menuContainer.classList.add("d-none");
+        this.#menuContainer.classList.add("d-none");
         return this;
     }
 }

@@ -122,11 +122,11 @@ export default class PhysicsSystem extends ApeEcs.System {
             Debug.setBox(`physics_${entity.id}`, entity.c.position.position, entity.c.orientation.direction, entity.c.physics.size);
         }
 
-        this.computeInputHits();
+        this.#computeInputHits();
     }
 
     // todo: To be extracted to the respective system(s)
-    computeInputHits() {
+    #computeInputHits() {
         const camera = this.world.getEntity(PlayerEntityId).c.camera.camera;
         const cameraPosition = camera.position;
         const cameraDirection = camera.direction;
@@ -135,7 +135,7 @@ export default class PhysicsSystem extends ApeEcs.System {
         const end = start.plus(cameraDirection.mul(10));
 
         const mouseInputComponent = this.world.getEntity(MouseInputEntityId).c.mouse;
-        const rayCastResult = this.rayCastAll(start, end);
+        const rayCastResult = this.#rayCastAll(start, end);
         if (!rayCastResult.length) return;
 
         const firstHit = rayCastResult[0];
@@ -153,7 +153,7 @@ export default class PhysicsSystem extends ApeEcs.System {
 
     // todo: To be extracted when physics component is split into physics and collision/sized components
     // todo: fix types
-    rayCastAll(from, to) {
+    #rayCastAll(from, to) {
         const hits = [];
 
         // Convert from/to raw arrays for convenience
@@ -176,7 +176,7 @@ export default class PhysicsSystem extends ApeEcs.System {
             for (let shape = body.shapes; shape != null; shape = shape.next) {
                 // For example, handle only "box" shapes
                 if (shape.type === 2 /* BOX */) {
-                    const maybeHit = this._intersectRayOimoBox(
+                    const maybeHit = this.#intersectRayOimoBox(
                         fromArr,
                         dirArr,
                         rayLength,
@@ -207,7 +207,7 @@ export default class PhysicsSystem extends ApeEcs.System {
      * @param {OIMO.Box}  shape - A box shape
      * @return {object|null}         - null if no hit; or { body, fraction, distance, point }
      */
-    _intersectRayOimoBox(fromArr, dirArr, rayLength, body, shape) {
+    #intersectRayOimoBox(fromArr, dirArr, rayLength, body, shape) {
         // 1) Build a single matrix that converts from world-space → local-box-space.
         //    We do the inverse( bodyTransform * shapeLocalOffset ).
         //    In Oimo, body orientation is often in body.orientation or body.getQuaternion(),
@@ -232,7 +232,7 @@ export default class PhysicsSystem extends ApeEcs.System {
             mat4.multiply(mBody, mBody, rotMat);
         }
 
-        // Build mat4 from shape’s local offset (position, rotation) - need to look into this
+        // Build mat4 from shape’s local offset (position, rotation) - #todo need to look into this
         // const mShape = mat4.create();
         // {
         //     mat4.identity(mShape);
@@ -280,7 +280,7 @@ export default class PhysicsSystem extends ApeEcs.System {
         const halfX = shape.halfWidth;
         const halfY = shape.halfHeight;
         const halfZ = shape.halfDepth;
-        const tResult = this._intersectRayAABB(localOrigin, localDir, halfX, halfY, halfZ);
+        const tResult = this.#intersectRayAABB(localOrigin, localDir, halfX, halfY, halfZ);
         if (tResult === null || tResult < 0 || tResult > rayLength) {
             return null; // no valid intersection
         }
@@ -310,7 +310,7 @@ export default class PhysicsSystem extends ApeEcs.System {
      * `localOrigin`, `localDir` must be in the box’s local space.
      * Returns param 't' (>= 0) if it hits, else null.
      */
-    _intersectRayAABB(localOrigin, localDir, hx, hy, hz) {
+    #intersectRayAABB(localOrigin, localDir, hx, hy, hz) {
         let tMin = 0.000001;
         let tMax = 1e9;
 

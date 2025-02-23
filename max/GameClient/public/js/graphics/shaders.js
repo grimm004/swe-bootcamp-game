@@ -4,6 +4,9 @@ import {Colour, Matrix4, Vector2, Vector3, Vector4} from "./maths.js";
 
 
 export class Shader {
+    #layouts;
+    #locationCache;
+
     /**
      * @param {WebGL2RenderingContext} gl
      * @param {string} vertexShaderSource
@@ -15,9 +18,9 @@ export class Shader {
         this.name = null;
         this.id = this.createProgram(vertexShaderSource, fragmentShaderSource);
 
-        this._layouts = {};
+        this.#layouts = {};
 
-        this._locationCache = {
+        this.#locationCache = {
             attributes: {},
             uniforms: {},
         };
@@ -51,32 +54,32 @@ export class Shader {
     }
 
     addLayout(name, layout) {
-        this._layouts[name] = layout;
+        this.#layouts[name] = layout;
         return this;
     }
 
     getLayout(name) {
-        return this._layouts[name];
+        return this.#layouts[name];
     }
 
     hasLayout(name) {
-        return Object.prototype.hasOwnProperty.call(this._layouts, name);
+        return Object.prototype.hasOwnProperty.call(this.#layouts, name);
     }
 
     getAttrib(name) {
-        if (!Object.prototype.hasOwnProperty.call(this._locationCache.attributes, name))
-            this._locationCache.attributes[name] = this.gl.getAttribLocation(this.id, name);
-        if (this._locationCache.attributes[name] === -1)
+        if (!Object.prototype.hasOwnProperty.call(this.#locationCache.attributes, name))
+            this.#locationCache.attributes[name] = this.gl.getAttribLocation(this.id, name);
+        if (this.#locationCache.attributes[name] === -1)
             throw new Error(`Unknown attribute name: ${name}`);
-        return this._locationCache.attributes[name];
+        return this.#locationCache.attributes[name];
     }
 
     getUniform(name) {
-        if (!Object.prototype.hasOwnProperty.call(this._locationCache.uniforms, name))
-            this._locationCache.uniforms[name] = this.gl.getUniformLocation(this.id, name);
-        if (this._locationCache.uniforms[name] === null)
+        if (!Object.prototype.hasOwnProperty.call(this.#locationCache.uniforms, name))
+            this.#locationCache.uniforms[name] = this.gl.getUniformLocation(this.id, name);
+        if (this.#locationCache.uniforms[name] === null)
             throw new Error(`Unknown uniform name: ${name}`);
-        return this._locationCache.uniforms[name];
+        return this.#locationCache.uniforms[name];
     }
 
     setUniform(name, value) {

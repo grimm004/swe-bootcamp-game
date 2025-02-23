@@ -10,43 +10,61 @@ import { showMessage } from "../message-popup.js";
 
 
 class LobbyPanel {
+    #lobbyHubUrl;
+
+    #lobbyPanel;
+    #lobbyPreJoin;
+    #lobbyInGame;
+    #lobbyCodeDisplay;
+    #lobbyDetails;
+    #lobbyUserList;
+    #createLobbyBtn;
+    #joinLobbyBtn;
+    #lobbyJoinCode;
+    #leaveLobbyBtn;
+    #startGameBtn;
+
+    #currentLobby;
+    #lobbyHubConnection;
+    #currentUser;
+
     /**
      * Creates a new lobby panel.
      * @param {string} lobbyHubUrl - The URL of the SignalR lobby hub.
      */
     constructor(lobbyHubUrl) {
-        this._lobbyHubUrl = lobbyHubUrl;
+        this.#lobbyHubUrl = lobbyHubUrl;
 
-        this._lobbyPanel = document.getElementById("lobbyPanel");
-        this._lobbyPreJoin = document.getElementById("lobbyPreJoin");
-        this._lobbyInGame = document.getElementById("lobbyInGame");
-        this._lobbyCodeDisplay = document.getElementById("lobbyCodeDisplay");
-        this._lobbyDetails = document.getElementById("lobbyDetails");
-        this._lobbyUserList = document.getElementById("lobbyUserList");
-        this._createLobbyBtn = document.getElementById("createLobbyBtn");
-        this._joinLobbyBtn = document.getElementById("joinLobbyBtn");
-        this._lobbyJoinCode = document.getElementById("lobbyJoinCode");
-        this._leaveLobbyBtn = document.getElementById("leaveLobbyBtn");
-        this._startGameBtn = document.getElementById("startGameBtn");
+        this.#lobbyPanel = document.getElementById("lobbyPanel");
+        this.#lobbyPreJoin = document.getElementById("lobbyPreJoin");
+        this.#lobbyInGame = document.getElementById("lobbyInGame");
+        this.#lobbyCodeDisplay = document.getElementById("lobbyCodeDisplay");
+        this.#lobbyDetails = document.getElementById("lobbyDetails");
+        this.#lobbyUserList = document.getElementById("lobbyUserList");
+        this.#createLobbyBtn = document.getElementById("createLobbyBtn");
+        this.#joinLobbyBtn = document.getElementById("joinLobbyBtn");
+        this.#lobbyJoinCode = document.getElementById("lobbyJoinCode");
+        this.#leaveLobbyBtn = document.getElementById("leaveLobbyBtn");
+        this.#startGameBtn = document.getElementById("startGameBtn");
 
         /**
          * @type {Lobby|null}
          * @private
          */
-        this._currentLobby = null;
+        this.#currentLobby = null;
 
         /**
          * @type {HubConnection|null}
          * @private
          */
-        this._lobbyHubConnection = null;
+        this.#lobbyHubConnection = null;
 
         /**
          * The current user. Set by Menu when the user logs in.
          * @type {User|null}
          * @private
          */
-        this._currentUser = null;
+        this.#currentUser = null;
 
         /**
          * Callback to be invoked when the game should start.
@@ -60,19 +78,19 @@ class LobbyPanel {
      * @returns {this}
      */
     setup() {
-        this._createLobbyBtn.addEventListener("click", this._createLobby.bind(this));
+        this.#createLobbyBtn.addEventListener("click", this.#createLobby.bind(this));
 
-        this._joinLobbyBtn.addEventListener("click", async () => {
-            const code = this._lobbyJoinCode.value.trim();
-            await this._joinLobby(code);
+        this.#joinLobbyBtn.addEventListener("click", async () => {
+            const code = this.#lobbyJoinCode.value.trim();
+            await this.#joinLobby(code);
         });
 
-        this._leaveLobbyBtn.addEventListener("click", this.leaveLobby.bind(this));
+        this.#leaveLobbyBtn.addEventListener("click", this.leaveLobby.bind(this));
 
-        this._startGameBtn.addEventListener("click", async () => {
-            if (this._lobbyHubConnection && this._currentLobby) {
+        this.#startGameBtn.addEventListener("click", async () => {
+            if (this.#lobbyHubConnection && this.#currentLobby) {
                 // noinspection JSCheckFunctionSignatures
-                await this._lobbyHubConnection?.invoke("StartGame", this._currentLobby.id);
+                await this.#lobbyHubConnection?.invoke("StartGame", this.#currentLobby.id);
             }
         });
 
@@ -84,7 +102,7 @@ class LobbyPanel {
      * @param {User} user - The logged-in user.
      */
     onLoginSuccess(user) {
-        this._currentUser = user;
+        this.#currentUser = user;
     }
 
     /**
@@ -92,21 +110,21 @@ class LobbyPanel {
      * @returns {Promise<void>}
      * @private
      */
-    async _createLobby() {
-        if (!this._currentUser) return;
+    async #createLobby() {
+        if (!this.#currentUser) return;
 
-        const lobbyData = await createLobby(this._currentUser.token);
+        const lobbyData = await createLobby(this.#currentUser.token);
         if (!lobbyData) {
             showMessage("Failed to create lobby.", "error");
             return;
         }
 
-        this._currentLobby = lobbyData;
-        this._updateLobbyUi(lobbyData);
+        this.#currentLobby = lobbyData;
+        this.#updateLobbyUi(lobbyData);
 
-        await this._startLobbyHubConnection(lobbyData.id);
+        await this.#startLobbyHubConnection(lobbyData.id);
 
-        this._lobbyJoinCode.value = "";
+        this.#lobbyJoinCode.value = "";
     }
 
     /**
@@ -115,20 +133,20 @@ class LobbyPanel {
      * @returns {Promise<void>}
      * @private
      */
-    async _joinLobby(joinCode) {
-        if (!this._currentUser) return;
+    async #joinLobby(joinCode) {
+        if (!this.#currentUser) return;
 
-        const lobbyData = await joinLobby(joinCode, this._currentUser.token);
+        const lobbyData = await joinLobby(joinCode, this.#currentUser.token);
         if (!lobbyData) {
             showMessage(`Could not find lobby with code "${joinCode}".`, "error");
             return;
         }
 
-        this._currentLobby = lobbyData;
-        this._updateLobbyUi(lobbyData);
-        this._lobbyJoinCode.value = "";
+        this.#currentLobby = lobbyData;
+        this.#updateLobbyUi(lobbyData);
+        this.#lobbyJoinCode.value = "";
 
-        await this._startLobbyHubConnection(lobbyData.id);
+        await this.#startLobbyHubConnection(lobbyData.id);
     }
 
     /**
@@ -137,57 +155,57 @@ class LobbyPanel {
      * @returns {Promise<void>}
      * @private
      */
-    async _startLobbyHubConnection(lobbyId) {
-        if (this._lobbyHubConnection)
-            await this._stopLobbyHubConnection();
+    async #startLobbyHubConnection(lobbyId) {
+        if (this.#lobbyHubConnection)
+            await this.#stopLobbyHubConnection();
 
-        this._lobbyHubConnection = new HubConnectionBuilder()
-            .withUrl(this._lobbyHubUrl)
+        this.#lobbyHubConnection = new HubConnectionBuilder()
+            .withUrl(this.#lobbyHubUrl)
             .withAutomaticReconnect()
             .configureLogging(LogLevel.Information)
             .build();
 
         try {
-            await this._lobbyHubConnection?.start();
+            await this.#lobbyHubConnection?.start();
             // noinspection JSCheckFunctionSignatures
-            await this._lobbyHubConnection?.invoke("AddToLobbyGroup", lobbyId);
+            await this.#lobbyHubConnection?.invoke("AddToLobbyGroup", lobbyId);
         } catch {
             showMessage("Failed to connect to lobby hub.", "error");
-            this._lobbyHubConnection = null;
+            this.#lobbyHubConnection = null;
             return;
         }
 
-        this._lobbyHubConnection?.on("PlayerJoined", async () => {
-            const lobbyData = await getLobbyById(lobbyId, this._currentUser.token);
+        this.#lobbyHubConnection?.on("PlayerJoined", async () => {
+            const lobbyData = await getLobbyById(lobbyId, this.#currentUser.token);
             if (!lobbyData) return;
 
-            this._currentLobby = lobbyData;
-            this._updateLobbyUi(lobbyData);
+            this.#currentLobby = lobbyData;
+            this.#updateLobbyUi(lobbyData);
         });
 
-        this._lobbyHubConnection?.on("PlayerLeft", async (userId) => {
-            if (userId === this._currentUser.id) {
-                this._currentLobby = null;
-                await this._stopLobbyHubConnection();
-                this._updateLobbyUi(null);
+        this.#lobbyHubConnection?.on("PlayerLeft", async (userId) => {
+            if (userId === this.#currentUser.id) {
+                this.#currentLobby = null;
+                await this.#stopLobbyHubConnection();
+                this.#updateLobbyUi(null);
                 return;
             }
 
-            const lobbyData = await getLobbyById(lobbyId, this._currentUser.token);
+            const lobbyData = await getLobbyById(lobbyId, this.#currentUser.token);
             if (!lobbyData) return;
 
-            this._currentLobby = lobbyData;
-            this._updateLobbyUi(lobbyData);
+            this.#currentLobby = lobbyData;
+            this.#updateLobbyUi(lobbyData);
         });
 
-        this._lobbyHubConnection?.on("LobbyDisbanded", async () => {
-            this._currentLobby = null;
-            await this._stopLobbyHubConnection();
-            this._updateLobbyUi(null);
+        this.#lobbyHubConnection?.on("LobbyDisbanded", async () => {
+            this.#currentLobby = null;
+            await this.#stopLobbyHubConnection();
+            this.#updateLobbyUi(null);
         });
 
-        this._lobbyHubConnection?.on("GameStarted", () => {
-            this.onGameStart?.(this._currentUser, this._currentLobby);
+        this.#lobbyHubConnection?.on("GameStarted", () => {
+            this.onGameStart?.(this.#currentUser, this.#currentLobby);
         });
     }
 
@@ -196,16 +214,16 @@ class LobbyPanel {
      * @returns {Promise<void>}
      * @private
      */
-    async _stopLobbyHubConnection() {
-        if (!this._lobbyHubConnection) return;
+    async #stopLobbyHubConnection() {
+        if (!this.#lobbyHubConnection) return;
 
         try {
-            await this._lobbyHubConnection?.stop();
+            await this.#lobbyHubConnection?.stop();
         } catch {
             // Ignore errors.
         }
 
-        this._lobbyHubConnection = null;
+        this.#lobbyHubConnection = null;
     }
 
     /**
@@ -213,21 +231,21 @@ class LobbyPanel {
      * @param {Lobby|null} lobbyData - The lobby data to display.
      * @private
      */
-    _updateLobbyUi(lobbyData) {
+    #updateLobbyUi(lobbyData) {
         if (!lobbyData) {
-            this._lobbyInGame.classList.add("d-none");
-            this._lobbyPreJoin.classList.remove("d-none");
-            this._lobbyCodeDisplay.value = "";
-            this._lobbyDetails.classList.add("d-none");
-            this._lobbyUserList.replaceChildren();
+            this.#lobbyInGame.classList.add("d-none");
+            this.#lobbyPreJoin.classList.remove("d-none");
+            this.#lobbyCodeDisplay.value = "";
+            this.#lobbyDetails.classList.add("d-none");
+            this.#lobbyUserList.replaceChildren();
             return;
         }
 
-        this._lobbyPreJoin.classList.add("d-none");
-        this._lobbyDetails.classList.remove("d-none");
-        this._lobbyInGame.classList.remove("d-none");
+        this.#lobbyPreJoin.classList.add("d-none");
+        this.#lobbyDetails.classList.remove("d-none");
+        this.#lobbyInGame.classList.remove("d-none");
 
-        this._lobbyCodeDisplay.value = lobbyData.joinCode;
+        this.#lobbyCodeDisplay.value = lobbyData.joinCode;
 
         /**
          * @param {LobbyUser} user
@@ -243,27 +261,27 @@ class LobbyPanel {
                 return li;
             }
 
-            if (!this._currentUser || this._currentUser.id !== lobbyData.hostId)
+            if (!this.#currentUser || this.#currentUser.id !== lobbyData.hostId)
                 return li;
 
             const removeBtn = document.createElement("button");
             removeBtn.innerText = "Remove";
             removeBtn.style.marginLeft = "auto";
-            removeBtn.addEventListener("click", async () => await this._removePlayerFromLobby(user.id));
+            removeBtn.addEventListener("click", async () => await this.#removePlayerFromLobby(user.id));
 
             return li;
         };
 
-        this._lobbyUserList.replaceChildren(
+        this.#lobbyUserList.replaceChildren(
             createPlayerRow(lobbyData.users.find(u => u.id === lobbyData.hostId)),
             ...lobbyData.users
                 .filter(u => u.id !== lobbyData.hostId)
                 .map(createPlayerRow)
         );
 
-        this._startGameBtn.classList.toggle(
+        this.#startGameBtn.classList.toggle(
             "d-none",
-            !this._currentUser || this._currentUser.id !== lobbyData.hostId || lobbyData.users.length < 2
+            !this.#currentUser || this.#currentUser.id !== lobbyData.hostId || lobbyData.users.length < 2
         );
     }
 
@@ -272,12 +290,12 @@ class LobbyPanel {
      * @returns {Promise<void>}
      */
     async leaveLobby() {
-        if (!this._currentLobby) return;
+        if (!this.#currentLobby) return;
 
-        await leaveLobby(this._currentLobby.id, this._currentUser.id, this._currentUser.token);
-        this._currentLobby = null;
-        await this._stopLobbyHubConnection();
-        this._updateLobbyUi(null);
+        await leaveLobby(this.#currentLobby.id, this.#currentUser.id, this.#currentUser.token);
+        this.#currentLobby = null;
+        await this.#stopLobbyHubConnection();
+        this.#updateLobbyUi(null);
     }
 
     /**
@@ -286,14 +304,14 @@ class LobbyPanel {
      * @returns {Promise<void>}
      * @private
      */
-    async _removePlayerFromLobby(userId) {
-        if (!this._currentLobby) return;
+    async #removePlayerFromLobby(userId) {
+        if (!this.#currentLobby) return;
 
-        const result = await removePlayerFromLobby(this._currentLobby.id, userId, this._currentUser.token);
+        const result = await removePlayerFromLobby(this.#currentLobby.id, userId, this.#currentUser.token);
         if (result) {
             showMessage("Player removed from lobby.", "info");
-            this._currentLobby = result;
-            this._updateLobbyUi(result);
+            this.#currentLobby = result;
+            this.#updateLobbyUi(result);
         } else showMessage("Failed to remove player.", "error");
     }
 
@@ -302,7 +320,7 @@ class LobbyPanel {
      * @returns {this}
      */
     show() {
-        this._lobbyPanel.classList.remove("d-none");
+        this.#lobbyPanel.classList.remove("d-none");
         return this;
     }
 
@@ -311,7 +329,7 @@ class LobbyPanel {
      * @returns {this}
      */
     hide() {
-        this._lobbyPanel.classList.add("d-none");
+        this.#lobbyPanel.classList.add("d-none");
         return this;
     }
 }

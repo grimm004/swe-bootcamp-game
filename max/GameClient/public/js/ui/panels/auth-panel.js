@@ -3,16 +3,29 @@ import { showMessage } from "../message-popup.js";
 
 
 class AuthPanel {
-    constructor() {
-        this._authPanel = document.getElementById("authPanel");
-        this._authForm = document.getElementById("authForm");
-        this._authPageTitle = document.getElementById("authPageTitle");
-        this._authSubmitButton = document.getElementById("authSubmitButton");
-        this._toggleAuthButton = document.getElementById("toggleAuthButton");
-        this._toggleAuthText = document.getElementById("toggleAuthText");
-        this._signUpOnlyFields = document.querySelectorAll(".sign-up-only");
+    #authPanel;
+    #authForm;
+    #authPageTitle;
+    #authSubmitButton;
+    #toggleAuthButton;
+    #toggleAuthText;
+    #signUpOnlyFields;
 
-        this._isSignUpMode = false;
+    #isSignUpMode;
+
+    /**
+     * Creates a new authentication panel.
+     */
+    constructor() {
+        this.#authPanel = document.getElementById("authPanel");
+        this.#authForm = document.getElementById("authForm");
+        this.#authPageTitle = document.getElementById("authPageTitle");
+        this.#authSubmitButton = document.getElementById("authSubmitButton");
+        this.#toggleAuthButton = document.getElementById("toggleAuthButton");
+        this.#toggleAuthText = document.getElementById("toggleAuthText");
+        this.#signUpOnlyFields = document.querySelectorAll(".sign-up-only");
+
+        this.#isSignUpMode = false;
 
         /**
          * Callback to be invoked when authentication is successful.
@@ -27,8 +40,8 @@ class AuthPanel {
      * @returns {this}
      */
     setup() {
-        this._toggleAuthButton.addEventListener("click", this._onToggleAuthButtonClicked.bind(this));
-        this._authForm.addEventListener("submit", this._onAuthFormSubmit.bind(this));
+        this.#toggleAuthButton.addEventListener("click", this.#onToggleAuthButtonClicked.bind(this));
+        this.#authForm.addEventListener("submit", this.#onAuthFormSubmit.bind(this));
 
         return this;
     }
@@ -36,27 +49,25 @@ class AuthPanel {
     /**
      * Handles the toggle auth button click event.
      * @param {MouseEvent} e - The click event.
-     * @private
      */
-    _onToggleAuthButtonClicked(e) {
+    #onToggleAuthButtonClicked(e) {
         e.preventDefault();
-        this._setSignUpMode(!this._isSignUpMode);
+        this.#setSignUpMode(!this.#isSignUpMode);
     }
 
     /**
      * Handles the form submission event.
      * @param {SubmitEvent} e - The form submission event.
-     * @private
      */
-    async _onAuthFormSubmit(e) {
+    async #onAuthFormSubmit(e) {
         e.preventDefault();
 
-        const formData = new FormData(this._authForm);
+        const formData = new FormData(this.#authForm);
         const username = formData.get("username");
         const password = formData.get("password");
 
         try {
-            if (this._isSignUpMode) {
+            if (this.#isSignUpMode) {
                 const displayName = formData.get("displayNameSignup");
                 const confirmPassword = formData.get("confirmPassword");
                 if (password !== confirmPassword) {
@@ -69,7 +80,7 @@ class AuthPanel {
                     return;
                 }
                 showMessage("Registration successful. Please log in.", "success");
-                this._setSignUpMode(false);
+                this.#setSignUpMode(false);
                 return;
             }
 
@@ -85,7 +96,7 @@ class AuthPanel {
 
             this.onLoginSuccess?.(user);
 
-            this._authForm.reset();
+            this.#authForm.reset();
         } catch (err) {
             showMessage(err.message || "Authentication failed.", "error");
         }
@@ -94,15 +105,14 @@ class AuthPanel {
     /**
      * Sets the sign-up mode for the authentication form.
      * @param {boolean} isSignUpMode - True to show the sign-up form; false to show the login form.
-     * @private
      */
-    _setSignUpMode(isSignUpMode) {
+    #setSignUpMode(isSignUpMode) {
         if (isSignUpMode) {
-            this._authPageTitle.innerText = "Sign Up";
-            this._authSubmitButton.innerText = "Sign Up";
-            this._toggleAuthButton.innerText = "Log In";
-            this._toggleAuthText.innerText = "Already have an account?";
-            this._signUpOnlyFields.forEach((el) => {
+            this.#authPageTitle.innerText = "Sign Up";
+            this.#authSubmitButton.innerText = "Sign Up";
+            this.#toggleAuthButton.innerText = "Log In";
+            this.#toggleAuthText.innerText = "Already have an account?";
+            this.#signUpOnlyFields.forEach((el) => {
                 el.classList.remove("collapsed");
                 el.classList.add("expanded");
                 const input = el.querySelector("input");
@@ -111,11 +121,11 @@ class AuthPanel {
                 }
             });
         } else {
-            this._authPageTitle.innerText = "Log In";
-            this._authSubmitButton.innerText = "Log In";
-            this._toggleAuthButton.innerText = "Sign Up";
-            this._toggleAuthText.innerText = "Don't have an account?";
-            this._signUpOnlyFields.forEach((el) => {
+            this.#authPageTitle.innerText = "Log In";
+            this.#authSubmitButton.innerText = "Log In";
+            this.#toggleAuthButton.innerText = "Sign Up";
+            this.#toggleAuthText.innerText = "Don't have an account?";
+            this.#signUpOnlyFields.forEach((el) => {
                 el.classList.remove("expanded");
                 el.classList.add("collapsed");
                 const input = el.querySelector("input");
@@ -124,7 +134,7 @@ class AuthPanel {
                 }
             });
         }
-        this._isSignUpMode = isSignUpMode;
+        this.#isSignUpMode = isSignUpMode;
     }
 
     /**
@@ -132,7 +142,7 @@ class AuthPanel {
      * @returns {this}
      */
     show() {
-        this._authPanel.classList.remove("d-none");
+        this.#authPanel.classList.remove("d-none");
         return this;
     }
 
@@ -141,7 +151,7 @@ class AuthPanel {
      * @returns {this}
      */
     hide() {
-        this._authPanel.classList.add("d-none");
+        this.#authPanel.classList.add("d-none");
         return this;
     }
 }

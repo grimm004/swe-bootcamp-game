@@ -13,12 +13,14 @@ import MultiplayerComponent from "./components/MultiplayerComponent.js";
 
 
 export default class EntityFactory {
+    #ecsWorld;
+
     constructor(ecsWorld) {
-        this._ecsWorld = ecsWorld;
+        this.#ecsWorld = ecsWorld;
     }
 
     createWindowEntity(id, initialWidth, initialHeight) {
-        return this._ecsWorld.createEntity({
+        return this.#ecsWorld.createEntity({
             id,
             c: {
                 window: {
@@ -32,7 +34,7 @@ export default class EntityFactory {
     }
 
     createTimingEntity(id) {
-        return this._ecsWorld.createEntity({
+        return this.#ecsWorld.createEntity({
             id,
             c: {
                 time: {
@@ -43,7 +45,7 @@ export default class EntityFactory {
     }
 
     createMouseInputEntity(id) {
-        return this._ecsWorld.createEntity({
+        return this.#ecsWorld.createEntity({
             id,
             c: {
                 mouse: {
@@ -55,7 +57,7 @@ export default class EntityFactory {
     }
 
     createKeyboardInputEntity(id) {
-        return this._ecsWorld.createEntity({
+        return this.#ecsWorld.createEntity({
             id,
             c: {
                 keyboard: {
@@ -67,7 +69,7 @@ export default class EntityFactory {
     }
 
     createPlayerEntity(id, fovRad, near, far, initialPosition, initialDirection, mouseSensitivity) {
-        return this._ecsWorld.createEntity({
+        return this.#ecsWorld.createEntity({
             id,
             c: {
                 player: {
@@ -93,7 +95,7 @@ export default class EntityFactory {
     }
 
     createMultiplayerEntity(id) {
-        return this._ecsWorld.createEntity({
+        return this.#ecsWorld.createEntity({
             id,
             c: {
                 multiplayer: {
@@ -116,7 +118,7 @@ export default class EntityFactory {
     }
 
     createDrawEntity(id, sceneNode) {
-        return this._ecsWorld.createEntity({
+        return this.#ecsWorld.createEntity({
             id,
             c: {
                 draw: {
@@ -144,7 +146,7 @@ export default class EntityFactory {
      * @returns {WorldEntity}
      */
     createPhysicalObjectEntity(id, sceneNode, size, initialPosition, initialDirection, posShape = Vector3.zeros, rotShape = Vector3.zeros, shape = "box", density= 1, friction = 0.2, restitution = 0.2) {
-        return this._ecsWorld.createEntity({
+        return this.#ecsWorld.createEntity({
             id,
             c: {
                 physics: {
@@ -189,7 +191,7 @@ export default class EntityFactory {
      * @returns {WorldEntity}
      */
     createCollisionBox(id, size, initialPosition, initialDirection, posShape, shape = "box", density= 1, friction = 0.2, restitution = 0.2) {
-        return this._ecsWorld.createEntity({
+        return this.#ecsWorld.createEntity({
             id,
             c: {
                 physics: {

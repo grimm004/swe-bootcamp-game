@@ -3,17 +3,23 @@ import { showMessage } from "../message-popup.js";
 
 
 class ProfilePanel {
+    #profilePanel;
+    #profileForm;
+    #displayNameInput;
+
+    #currentUser;
+
     constructor() {
-        this._profilePanel = document.getElementById("profilePanel");
-        this._profileForm = document.getElementById("profileForm");
-        this._displayNameInput = this._profileForm.querySelector("input[name='displayName']");
+        this.#profilePanel = document.getElementById("profilePanel");
+        this.#profileForm = document.getElementById("profileForm");
+        this.#displayNameInput = this.#profileForm.querySelector("input[name='displayName']");
 
         /**
          * The current user. This should be updated by Menu.
          * @type {User|null}
          * @private
          */
-        this._currentUser = null;
+        this.#currentUser = null;
     }
 
     /**
@@ -21,14 +27,14 @@ class ProfilePanel {
      * @returns {this}
      */
     setup() {
-        this._profileForm.addEventListener("submit", async (e) => {
+        this.#profileForm.addEventListener("submit", async (e) => {
             e.preventDefault();
 
-            if (!this._currentUser) return;
+            if (!this.#currentUser) return;
 
-            this._currentUser.displayName = this._displayNameInput.value;
+            this.#currentUser.displayName = this.#displayNameInput.value;
 
-            const success = await updateProfile(this._currentUser);
+            const success = await updateProfile(this.#currentUser);
             if (!success) {
                 showMessage("Failed to update profile.", "error");
                 return;
@@ -45,9 +51,9 @@ class ProfilePanel {
      * @param {User} user
      */
     onLoginSuccess(user) {
-        this._currentUser = user;
-        if (this._displayNameInput) {
-            this._displayNameInput.value = user.displayName;
+        this.#currentUser = user;
+        if (this.#displayNameInput) {
+            this.#displayNameInput.value = user.displayName;
         }
     }
 
@@ -56,7 +62,7 @@ class ProfilePanel {
      * @returns {this}
      */
     show() {
-        this._profilePanel.classList.remove("d-none");
+        this.#profilePanel.classList.remove("d-none");
         return this;
     }
 
@@ -65,7 +71,7 @@ class ProfilePanel {
      * @returns {this}
      */
     hide() {
-        this._profilePanel.classList.add("d-none");
+        this.#profilePanel.classList.add("d-none");
         return this;
     }
 }

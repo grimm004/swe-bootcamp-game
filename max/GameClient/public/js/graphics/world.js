@@ -39,6 +39,9 @@ export class WorldObject {
         this.updateMatrix();
     }
 
+    /**
+     * @returns {Matrix4}
+     */
     updateMatrix() {
         return Matrix4.identity;
     }
