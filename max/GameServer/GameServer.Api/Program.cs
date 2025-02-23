@@ -6,7 +6,6 @@ using GameServer.Api.Hubs;
 using GameServer.Api.Services;
 using GameServer.Data;
 using GameServer.Domain;
-using GameServer.Domain.Models;
 using GameServer.Domain.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
@@ -21,12 +20,7 @@ builder.Services
     .AddGameServerData(dbContextOptions =>
         dbContextOptions
             .UseSqlite($"Data Source={dbPath}")
-            .EnableSensitiveDataLogging()
-            .UseRoleSeeding(
-            [
-                new AuthRole { Name = AuthRoles.Admin, Description = "Administrative role" },
-                new AuthRole { Name = AuthRoles.Player, Description = "Player role" }
-            ]))
+            .EnableSensitiveDataLogging())
     .AddSingleton<ISaltedHashService, Sha512SaltedHashService>(_ =>
         new Sha512SaltedHashService("GameUserPasswordSalt"u8.ToArray()))
     .AddDomain();
@@ -38,9 +32,14 @@ builder.Services.AddAuthentication("GameServerScheme")
         "GameServerScheme", _ => { });
 
 builder.Services.AddAuthorizationBuilder()
-    .AddPolicy(AuthPolicies.AllAuthenticated, policy => policy.RequireAuthenticatedUser())
-    .AddPolicy(AuthPolicies.Player, policy => policy.RequireRole("admin", "player"))
-    .AddPolicy(AuthPolicies.AdminOnly, policy => policy.RequireRole("admin"));
+    .AddPolicy(AuthPolicies.AllAuthenticated, policy => policy
+        .RequireAuthenticatedUser())
+    .AddPolicy(AuthPolicies.Player, policy => policy
+        .RequireAuthenticatedUser()
+        .RequireRole(AuthRoles.Admin, AuthRoles.Player))
+    .AddPolicy(AuthPolicies.AdminOnly, policy => policy
+        .RequireAuthenticatedUser()
+        .RequireRole(AuthRoles.Admin));
 
 var app = builder.Build();
 

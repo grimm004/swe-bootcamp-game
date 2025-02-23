@@ -16,7 +16,7 @@ public class AuthService(
             return new AlreadyExists();
 
         var passwordData = Encoding.UTF8.GetBytes(registration.Password);
-        var passwordSalt = saltedHashService.GenerateRandomBytes(16);
+        var passwordSalt = saltedHashService.GenerateRandomBytes(8);
         var passwordHash = saltedHashService.HashData(passwordData, passwordSalt);
 
         var user = await userRepository.CreateUserAsync(

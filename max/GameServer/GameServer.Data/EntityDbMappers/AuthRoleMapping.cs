@@ -24,5 +24,10 @@ internal class AuthRoleMapping : IEntityTypeConfiguration<AuthRole>
         builder
             .HasMany(r => r.Users)
             .WithMany(u => u.Roles);
+
+        builder.HasData(
+            new AuthRole { Name = "admin", Description = "Administrator" },
+            new AuthRole { Name = "player", Description = "Player role" }
+        );
     }
 }

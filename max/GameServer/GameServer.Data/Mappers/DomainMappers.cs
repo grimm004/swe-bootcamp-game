@@ -17,8 +17,8 @@ internal static class DomainMappers
             Id = user.Id,
             Username = user.Username,
             DisplayName = user.DisplayName,
-            PasswordSalt = user.PasswordSalt,
-            PasswordHash = user.PasswordHash,
+            PasswordSalt = user.AuthCredentials.PasswordSalt,
+            PasswordHash = user.AuthCredentials.PasswordHash,
             Roles = user.Roles?.Select(r => r.Name).ToList()!
         };
 

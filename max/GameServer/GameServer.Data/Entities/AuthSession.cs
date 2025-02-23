@@ -9,5 +9,5 @@ internal class AuthSession
     public DateTime ExpiresAt { get; set; }
     public DateTime? RevokedAt { get; set; }
 
-    public User User { get; set; } = null!;
+    public User? User { get; set; }
 }

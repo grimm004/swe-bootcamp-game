@@ -1,7 +1,8 @@
+using GameServer.Data.Entities;
 using GameServer.Data.Mappers;
-using GameServer.Domain.Models;
 using GameServer.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
+using User = GameServer.Domain.Models.User;
 
 namespace GameServer.Data.Repositories;
 
@@ -12,15 +13,18 @@ public class UserRepository(GameServerDbContext dbContext) : IUserRepository
         var user = new Entities.User
         {
             Username = username,
-            PasswordSalt = passwordSalt,
-            PasswordHash = passwordHash,
-            DisplayName = displayName
+            DisplayName = displayName,
+            AuthCredentials = new UserAuthCredentials
+            {
+                PasswordSalt = passwordSalt,
+                PasswordHash = passwordHash
+            }
         };
 
         dbContext.Users.Add(user);
 
         var updatedRows = await dbContext.SaveChangesAsync(token);
-        return updatedRows == 1 ? user.MapToUser() : null;
+        return updatedRows > 0 ? user.MapToUser() : null;
     }
 
     public async Task<User?> GetUserByUsernameAsync(string username, CancellationToken token = default)
