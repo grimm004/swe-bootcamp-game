@@ -23,10 +23,80 @@ class AuthPanel {
     }
 
     /**
+     * Sets up the panel event handlers.
+     * @returns {this}
+     */
+    setup() {
+        this._toggleAuthButton.addEventListener("click", this._onToggleAuthButtonClicked.bind(this));
+        this._authForm.addEventListener("submit", this._onAuthFormSubmit.bind(this));
+
+        return this;
+    }
+
+    /**
+     * Handles the toggle auth button click event.
+     * @param {MouseEvent} e - The click event.
+     * @private
+     */
+    _onToggleAuthButtonClicked(e) {
+        e.preventDefault();
+        this._setSignUpMode(!this._isSignUpMode);
+    }
+
+    /**
+     * Handles the form submission event.
+     * @param {SubmitEvent} e - The form submission event.
+     * @private
+     */
+    async _onAuthFormSubmit(e) {
+        e.preventDefault();
+
+        const formData = new FormData(this._authForm);
+        const username = formData.get("username");
+        const password = formData.get("password");
+
+        try {
+            if (this._isSignUpMode) {
+                const displayName = formData.get("displayNameSignup");
+                const confirmPassword = formData.get("confirmPassword");
+                if (password !== confirmPassword) {
+                    showMessage("Passwords do not match.", "error");
+                    return;
+                }
+                const signUpResult = await signupUser(username, password, displayName);
+                if (!signUpResult.success) {
+                    showMessage(`Failed to register: ${signUpResult.error}`, "error");
+                    return;
+                }
+                showMessage("Registration successful. Please log in.", "success");
+                this._setSignUpMode(false);
+                return;
+            }
+
+            const user = await loginUser(username, password);
+            if (!user) {
+                showMessage("Invalid username or password.", "error");
+                return;
+            }
+            if (!user.roles?.includes("player")) {
+                showMessage("Access Denied: You are not authorised to view the game.", "error");
+                return;
+            }
+
+            this.onLoginSuccess?.(user);
+
+            this._authForm.reset();
+        } catch (err) {
+            showMessage(err.message || "Authentication failed.", "error");
+        }
+    }
+
+    /**
      * Sets the sign-up mode for the authentication form.
      * @param {boolean} isSignUpMode - True to show the sign-up form; false to show the login form.
+     * @private
      */
-    setSignUpMode(isSignUpMode) {
+    _setSignUpMode(isSignUpMode) {
         if (isSignUpMode) {
             this._authPageTitle.innerText = "Sign Up";
             this._authSubmitButton.innerText = "Sign Up";
@@ -58,68 +128,21 @@ class AuthPanel {
     }
 
     /**
-     * Sets up the panel event handlers.
-     */
-    setupUi() {
-        this._toggleAuthButton.addEventListener("click", (e) => {
-            e.preventDefault();
-            this.setSignUpMode(!this._isSignUpMode);
-        });
-
-        this._authForm.addEventListener("submit", async (e) => {
-            e.preventDefault();
-
-            const formData = new FormData(this._authForm);
-            const username = formData.get("username");
-            const password = formData.get("password");
-
-            try {
-                if (this._isSignUpMode) {
-                    const displayName = formData.get("displayNameSignup");
-                    const confirmPassword = formData.get("confirmPassword");
-                    if (password !== confirmPassword) {
-                        showMessage("Passwords do not match.", "error");
-                        return;
-                    }
-                    const signUpResult = await signupUser(username, password, displayName);
-                    if (!signUpResult.success) {
-                        showMessage(`Failed to register: ${signUpResult.error}`, "error");
-                        return;
-                    }
-                    showMessage("Registration successful. Please log in.", "success");
-                    this.setSignUpMode(false);
-                    return;
-                }
-
-                const user = await loginUser(username, password);
-                if (!user) {
-                    showMessage("Invalid username or password.", "error");
-                    return;
-                }
-                if (!user.roles?.includes("player")) {
-                    showMessage("Access Denied: You are not authorised to view the game.", "error");
-                    return;
-                }
-
-                this.onLoginSuccess?.(user);
-            } catch (err) {
-                showMessage(err.message || "Authentication failed.", "error");
-            }
-        });
-    }
-
-    /**
      * Shows the panel container.
+     * @returns {this}
      */
     show() {
         this._authPanel.classList.remove("d-none");
+        return this;
     }
 
     /**
      * Hides the panel container.
+     * @returns {this}
      */
     hide() {
         this._authPanel.classList.add("d-none");
+        return this;
     }
 }
 

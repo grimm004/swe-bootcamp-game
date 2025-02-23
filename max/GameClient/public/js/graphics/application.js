@@ -1,88 +1,129 @@
 import {Vector2} from "./maths.js";
 
+/**
+ * @typedef {WebGL2RenderingContext & {shaders: {[shaderName: string]: Shader}, boundShader: Shader|null}} WebGL2RenderingContextWithShaders
+ */
 
 export class Application {
     /**
-     * @param {WebGL2RenderingContext} gl
+     * Create a new Application instance.
+     * @param {WebGL2RenderingContext} gl - The WebGL2 rendering context.
      */
     constructor(gl) {
-        this.gl = gl;
-        this.gl["shaders"] = {};
-        this.gl["boundShader"] = null;
+        /**
+         * The WebGL2 rendering context.
+         * @type {WebGL2RenderingContextWithShaders}
+         * @protected
+         */
+        this._gl = /** @type {WebGL2RenderingContextWithShaders} */ (gl);
+        this._gl["shaders"] = {};
+        this._gl["boundShader"] = null;
 
         /**
          * @type {Vector2}
+         * @protected
          */
-        this.mousePos = Vector2.zeros;
+        this._mousePos = Vector2.zeros;
         /**
          * @type {Vector2}
+         * @protected
          */
-        this.mouseChange = Vector2.zeros;
+        this._mouseChange = Vector2.zeros;
 
-        this.pressedButtons = new Set();
-        this.pressedKeys = new Set();
+        this._pressedButtons = new Set();
+        this._pressedKeys = new Set();
 
-        this.initialised = false;
+        this._initialised = false;
     }
 
+    /**
+     * Add a shader to the application.
+     * @param {string} name - The name of the shader.
+     * @param {Shader} shader - The shader to add.
+     * @returns {this}
+     */
     addShader(name, shader) {
-        this.gl["shaders"][name] = shader;
+        this._gl["shaders"][name] = shader;
         shader.name = name;
         return this;
     }
 
-    mouseMove(dx, dy, x, y) {
-        const rect = this.gl.canvas.getBoundingClientRect();
-        this.mousePos = new Vector2(x - rect.left, y - rect.top);
-        this.mouseChange = new Vector2(dx, dy);
+    /**
+     * Handle mouse movement.
+     * @param {number} dx - The change in x position.
+     * @param {number} dy - The change in y position.
+     * @param {number} x - The absolute x position.
+     * @param {number} y - The absolute y position.
+     */
+    onMouseMove(dx, dy, x, y) {
+        const rect = this._gl.canvas.getBoundingClientRect();
+        this._mousePos = new Vector2(x - rect.left, y - rect.top);
+        this._mouseChange = new Vector2(dx, dy);
     }
 
-    mouseDown(button) {
-        this.pressedButtons.add(button);
+    /**
+     * Handle mouse button press
+     * @param {number} button - The button pressed.
+     */
+    onMouseDown(button) {
+        this._pressedButtons.add(button);
     }
 
-    mouseUp(button) {
-        this.pressedButtons.delete(button);
+    /**
+     * Handle mouse button release
+     * @param {number} button - The button released.
+     */
+    onMouseUp(button) {
+        this._pressedButtons.delete(button);
     }
 
-    keyDown(key) {
-        this.pressedKeys.add(key);
+    /**
+     * Handle key press
+     * @param {string} key - The key pressed.
+     */
+    onKeyDown(key) {
+        this._pressedKeys.add(key);
     }
 
-    keyUp(key) {
-        this.pressedKeys.delete(key);
+    /**
+     * Handle key release
+     * @param {string} key - The key released.
+     */
+    onKeyUp(key) {
+        this._pressedKeys.delete(key);
     }
 
-    isKeyDown(key) {
-        return this.pressedKeys.has(key);
-    }
-
-    isKeyUp(key) {
-        return !this.isKeyDown(key);
-    }
-
-    isButtonDown(key) {
-        return this.pressedButtons.has(key);
-    }
-
-    isButtonUp(key) {
-        return !this.isButtonDown(key);
-    }
-
+    /**
+     * Asynchronously initialise the application
+     * @returns {Promise<this>}
+     */
     async initialise() {
-        this.initialised = true;
+        if (this._initialised) throw Error("Already initialised.");
+        this._initialised = true;
         return this;
     }
 
-    update() {
-        if (!this.initialised) throw Error("Not initialised.");
-        this.mouseChange = Vector2.zeros;
+    /**
+     * Update the application.
+     * @protected
+     */
+    _update() {
+        if (!this._initialised) throw Error("Not initialised.");
+        this._mouseChange = Vector2.zeros;
     }
 
-    draw() {
-        if (!this.initialised) throw Error("Not initialised.");
+    /**
+     * Draw the application.
+     * @protected
+     */
+    _draw() {
+        if (!this._initialised) throw Error("Not initialised.");
     }
 
+    /**
+     * Enter the Application's main loop.
+     * @returns {this}
+     */
     run() {
         let previousTime = 0;
         const app = this;
@@ -92,13 +133,15 @@ export class Application {
 
             const deltaTime = (currentTime - previousTime) / 1000;
 
-            app.update(deltaTime);
-            app.draw(deltaTime);
+            app._update(deltaTime);
+            app._draw(deltaTime);
 
             previousTime = currentTime;
             requestAnimationFrame(mainloop);
         }
 
         requestAnimationFrame(mainloop);
+
+        return this;
     }
 }

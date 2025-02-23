@@ -5,7 +5,11 @@ import { logoutUser } from "../services/auth.js";
 
 
 class Menu {
-    constructor() {
+    /**
+     * Creates a new menu.
+     * @param {string} lobbyHubUrl - The URL of the lobby hub.
+     */
+    constructor(lobbyHubUrl) {
         this._menuContainer = document.getElementById("menuContainer");
         this._navButtons = document.querySelectorAll(".online-nav .nav-btn");
         this._logoutButton = document.getElementById("logoutButton");
@@ -13,12 +17,13 @@ class Menu {
         /**
          * The global current user.
          * @type {User|null}
+         * @private
          */
-        this.currentUser = null;
+        this._currentUser = null;
 
-        this.authPanel = new AuthPanel();
-        this.lobbyPanel = new LobbyPanel();
-        this.profilePanel = new ProfilePanel();
+        this._authPanel = new AuthPanel();
+        this._lobbyPanel = new LobbyPanel(lobbyHubUrl);
+        this._profilePanel = new ProfilePanel();
 
         /**
          * Callback that the main module can assign to start the game.
@@ -26,73 +31,72 @@ class Menu {
          */
         this.onGameStart = null;
 
-        this.lobbyPanel.onGameStart = (user, lobby) => this.onGameStart?.(user, lobby);
+        this._lobbyPanel.onGameStart = (user, lobby) => this.onGameStart?.(user, lobby);
 
-        this.authPanel.onLoginSuccess = (user) => {
-            this.currentUser = user;
-            this.authPanel.hide();
+        this._authPanel.onLoginSuccess = (user) => {
+            this._currentUser = user;
+            this._authPanel.hide();
             const nav = document.querySelector(".online-nav");
             if (nav) nav.classList.remove("d-none");
-            this.lobbyPanel.onLoginSuccess(user);
-            this.profilePanel.onLoginSuccess(user);
-            this.lobbyPanel.show();
+            this._lobbyPanel.onLoginSuccess(user);
+            this._profilePanel.onLoginSuccess(user);
+            this._lobbyPanel.show();
         };
     }
 
     /**
      * Sets up the UI event handlers.
+     * @returns {Menu}
      */
-    setupUi() {
-        this.authPanel.setupUi();
-        this.lobbyPanel.setupUi();
-        this.profilePanel.setupUi();
+    setup() {
+        this._authPanel.setup();
+        this._lobbyPanel.setup();
+        this._profilePanel.setup();
 
-        // Navigation between Lobby and Profile panels.
-        this._navButtons.forEach((btn) => {
+        this._navButtons.forEach((btn) =>
             btn.addEventListener("click", () => {
-                // Hide both panels, then show the target.
-                this.lobbyPanel.hide();
-                this.profilePanel.hide();
+                this._lobbyPanel.hide();
+                this._profilePanel.hide();
+
                 const targetPanel = btn.getAttribute("data-target");
-                if (targetPanel) {
+                if (targetPanel)
                     document.getElementById(targetPanel).classList.remove("d-none");
-                }
-            });
-        });
+            }));
 
         this._logoutButton.addEventListener("click", async () => {
-            // Stop lobby hub and leave lobby if needed.
-            await this.lobbyPanel.stopLobbyHubConnection();
-            if (this.lobbyPanel._currentLobby) {
-                await this.lobbyPanel.leaveLobby();
-                this.lobbyPanel._currentLobby = null;
-                this.lobbyPanel.updateLobbyUi(null);
+            await this._lobbyPanel.leaveLobby();
+
+            if (this._currentUser) {
+                await logoutUser(this._currentUser);
+                this._currentUser = null;
             }
-            if (this.currentUser) {
-                await logoutUser(this.currentUser);
-                this.currentUser = null;
-            }
-            // Hide panels and show the auth panel.
-            this.lobbyPanel.hide();
-            this.profilePanel.hide();
-            this.authPanel.show();
+
+            this._lobbyPanel.hide();
+            this._profilePanel.hide();
+            this._authPanel.show();
             const nav = document.querySelector(".online-nav");
             if (nav) nav.classList.add("d-none");
         });
+
+        return this;
     }
 
     /**
      * Shows the menu container.
+     * @returns {this}
      */
     show() {
         this._menuContainer.classList.remove("d-none");
+        return this;
     }
 
     /**
      * Hides the menu container.
+     * @returns {this}
      */
     hide() {
         this._menuContainer.classList.add("d-none");
+        return this;
     }
 }
 

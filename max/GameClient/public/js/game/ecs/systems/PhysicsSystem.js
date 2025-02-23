@@ -1,5 +1,5 @@
 import * as ApeEcs from "../../../../lib/ape-ecs.module.js";
-import {CameraEntityId, FrameInfoEntityId, GRAVITY, MouseInputEntityId} from "../../constants.js";
+import {PlayerEntityId, FrameInfoEntityId, GRAVITY, MouseInputEntityId} from "../../constants.js";
 import * as OIMO from "../../../../lib/oimo.module.js";
 import PhysicsComponent from "../components/PhysicsComponent.js";
 import PositionComponent from "../components/PositionComponent.js";
@@ -108,7 +108,7 @@ export default class PhysicsSystem extends ApeEcs.System {
             Debug.setBox(`physics_${entity.id}`, entity.c.position.position, entity.c.orientation.direction, entity.c.physics.size);
         }
 
-        const camera = this.world.getEntity(CameraEntityId).c.camera.camera;
+        const camera = this.world.getEntity(PlayerEntityId).c.camera.camera;
         const cameraPosition = camera.position;
         const cameraDirection = camera.direction;
 

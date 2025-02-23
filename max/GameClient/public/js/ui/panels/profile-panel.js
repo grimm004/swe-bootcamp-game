@@ -11,14 +11,16 @@ class ProfilePanel {
         /**
          * The current user. This should be updated by Menu.
          * @type {User|null}
+         * @private
          */
         this._currentUser = null;
     }
 
     /**
      * Sets up the panel event handlers.
+     * @returns {this}
      */
-    setupUi() {
+    setup() {
         this._profileForm.addEventListener("submit", async (e) => {
             e.preventDefault();
 
@@ -34,6 +36,8 @@ class ProfilePanel {
 
             showMessage("Profile updated successfully.", "success");
         });
+
+        return this;
     }
 
     /**
@@ -49,16 +53,20 @@ class ProfilePanel {
 
     /**
      * Shows the panel container.
+     * @returns {this}
      */
     show() {
         this._profilePanel.classList.remove("d-none");
+        return this;
     }
 
     /**
      * Hides the panel container.
+     * @returns {this}
      */
     hide() {
         this._profilePanel.classList.add("d-none");
+        return this;
     }
 }
 

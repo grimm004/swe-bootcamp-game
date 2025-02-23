@@ -431,6 +431,13 @@ export class Vector extends Float32Array {
     ones() {
         return this.apply(() => 1);
     }
+
+    /**
+     * @returns {number[]}
+     */
+    toArray() {
+        return Array.from(this);
+    }
 }
 
 export class Vector2 extends Vector {

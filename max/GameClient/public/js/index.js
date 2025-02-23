@@ -1,8 +1,12 @@
-import { SweBootcampGame } from "./game/game.js";
+import {SweBootcampGame} from "./game/game.js";
 import Menu from "./ui/menu.js";
 import GameUi from "./ui/gameui.js";
 
 
+/**
+ * Main entry point for the application.
+ * @returns {Promise<void>}
+ */
 async function main() {
     const canvas = document.querySelector("#glCanvas");
     const gl = canvas.getContext("webgl2");
@@ -11,22 +15,26 @@ async function main() {
         return;
     }
 
-    const app = new SweBootcampGame(gl);
+    const gameHubUrl = "/hubs/v1/game";
+    const lobbyHubUrl = "/hubs/v1/lobby";
 
-    const gameUi = new GameUi(app, canvas, gl);
-    await gameUi.setup();
+    const app = new SweBootcampGame(gl, gameHubUrl)
+    await app.initialise();
 
-    const menu = new Menu();
-    menu.setupUi();
+    const gameUi = await new GameUi(app, canvas)
+        .setup();
+
+    const menu = new Menu(lobbyHubUrl)
+        .setup();
 
     menu.onGameStart = async (user, lobby) => {
         menu.hide();
         await gameUi.joinGame(user, lobby);
     };
 
-    await gameUi.run();
-
     // gameUi.onGameFinish = () => { menu.show(); };
+
+    app.run();
 }
 
 window.onload = main;

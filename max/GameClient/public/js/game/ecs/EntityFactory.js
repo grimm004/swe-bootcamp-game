@@ -8,6 +8,8 @@ import MouseInputComponent from "./components/MouseInputComponent.js";
 import KeyboardInputComponent from "./components/KeyboardInputComponent.js";
 import CameraComponent from "./components/CameraComponent.js";
 import {Vector3} from "../../graphics/maths.js";
+import PlayerComponent from "./components/PlayerComponent.js";
+import MultiplayerComponent from "./components/MultiplayerComponent.js";
 
 
 export default class EntityFactory {
@@ -64,13 +66,16 @@ export default class EntityFactory {
         });
     }
 
-    createCameraEntity(id, fovRad, near, far, initialPosition, initialDirection, mouseSensitivity) {
+    createPlayerEntity(id, fovRad, near, far, initialPosition, initialDirection, mouseSensitivity) {
         return this._ecsWorld.createEntity({
             id,
             c: {
+                player: {
+                    type: PlayerComponent.name,
+                },
                 camera: {
-                    mouseSensitivity,
                     type: CameraComponent.name,
+                    mouseSensitivity,
                     fovRad,
                     near,
                     far,
@@ -82,6 +87,29 @@ export default class EntityFactory {
                 orientation: {
                     type: OrientationComponent.name,
                     direction: initialDirection,
+                },
+            }
+        });
+    }
+
+    createMultiplayerEntity(id) {
+        return this._ecsWorld.createEntity({
+            id,
+            c: {
+                multiplayer: {
+                    type: MultiplayerComponent.name,
+                    playerId: id,
+                },
+                position: {
+                    type: PositionComponent.name,
+                    position: Vector3.zeros,
+                },
+                orientation: {
+                    type: OrientationComponent.name,
+                    direction: Vector3.zeros,
+                },
+                time: {
+                    type: FrameInfoComponent.name,
                 },
             }
         });

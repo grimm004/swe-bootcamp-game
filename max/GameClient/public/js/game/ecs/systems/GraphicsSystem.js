@@ -1,6 +1,6 @@
 import * as ApeEcs from "../../../../lib/ape-ecs.module.js";
 import DrawComponent from "../components/DrawComponent.js";
-import {CameraEntityId, FrameInfoEntityId, SceneRootEntityId} from "../../constants.js";
+import {PlayerEntityId, FrameInfoEntityId, SceneRootEntityId} from "../../constants.js";
 import {Matrix4} from "../../../graphics/maths.js";
 import {Debug} from "../../debug.js";
 
@@ -44,7 +44,7 @@ export default class GraphicsSystem extends ApeEcs.System {
         const lightComponent = lightEntity.c.light;
         let lightPosition = lightComponent.attachedTo ? lightComponent.attachedTo.globalPosition : lightEntity.c.position.position;
 
-        const camera = this.world.getEntity(CameraEntityId).c.camera.camera;
+        const camera = this.world.getEntity(PlayerEntityId).c.camera.camera;
 
         const commonUniforms = {
             uViewMatrix: camera.matrix,

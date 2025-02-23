@@ -1,22 +1,16 @@
-import {HubConnectionBuilder, LogLevel} from "../../lib/signalr.module.js";
-import {showMessage} from "./message-popup.js";
-import {Vector3} from "../graphics/maths.js";
-
 class GameUi {
     /**
      * @param {SweBootcampGame} app
      * @param {HTMLCanvasElement} canvas
-     * @param {WebGL2RenderingContext} gl
      */
-    constructor(app, canvas, gl) {
+    constructor(app, canvas) {
         this.app = app;
         this.canvas = canvas;
-        this.gl = gl;
 
         this._inputEnabled = false;
         this._allowCaptureAttempts = true;
-        this._captureEnabled = false;
 
+        this._gameContainer = document.getElementById("gameContainer");
         this._mouseCaptureOverlay = document.getElementById("mouseCaptureOverlay");
         this._enableDebugCheckbox = document.getElementById("enableDebugCheckbox");
         this._fpsLabel = document.getElementById("fpsLabel");
@@ -31,132 +25,223 @@ class GameUi {
 
         /**
          * @type {Lobby|null}
+         * @private
          */
         this._currentLobby = null;
-
-        /**
-         * @type {HubConnection|null}
-         */
-        this._gameHubConnection = null;
-    }
-
-    get captureEnabled() {
-        return this._captureEnabled;
     }
 
     /**
-     * @param {boolean} value
+     * Gets whether the mouse capture overlay is visible.
+     * @returns {boolean}
+     * @private
      */
-    set captureEnabled(value) {
-        this._captureEnabled = value;
+    get _captureEnabled() {
+        return !this._mouseCaptureOverlay.classList.contains("d-none");
+    }
+
+    /**
+     * Sets whether the mouse capture overlay is visible.
+     * @param {boolean} value - True to hide the overlay and enable mouse capture, false to hide it.
+     * @private
+     */
+    set _captureEnabled(value) {
         this._mouseCaptureOverlay.classList.toggle("d-none", !value);
     }
 
-    async setup() {
-        this.setupResize();
-        this.setupInput();
-        this.setupPointerLock();
-        this.setupDebug();
-
-        await this.app.initialise();
+    /**
+     * Sets up the game UI.
+     * @returns {this}
+     */
+    setup() {
+        return this
+            ._setupResize()
+            ._setupInput()
+            ._setupPointerLock()
+            ._setupDebug();
     }
 
-    setupResize() {
-        const resize = () => {
-            this.canvas.width = window.innerWidth;
-            this.canvas.height = window.innerHeight;
-            this.app.resize();
-            this.gl.viewport(0, 0, this.canvas.width, this.canvas.height);
-        };
-        resize();
-        window.addEventListener("resize", resize, false);
+    /**
+     * Sets up the canvas resize event.
+     * @returns {this}
+     * @private
+     */
+    _setupResize() {
+        this._onResize();
+        window.addEventListener("resize", this._onResize.bind(this), false);
+        return this;
     }
 
-    setupInput() {
-        // Key events.
-        document.body.addEventListener(
-            "keydown",
-            (e) => {
-                if (this._inputEnabled) this.app.keyDown(e.key.toLowerCase());
-            },
-            false
-        );
-        document.body.addEventListener(
-            "keyup",
-            (e) => {
-                if (this._inputEnabled) this.app.keyUp(e.key.toLowerCase());
-            },
-            false
-        );
-
-        // Mouse events.
-        this.canvas.addEventListener(
-            "pointermove",
-            (event) => {
-                if (this._inputEnabled) {
-                    event.getCoalescedEvents().forEach((e) => {
-                        this.app.mouseMove(e.movementX, e.movementY, e.clientX, e.clientY);
-                    });
-                }
-            },
-            false
-        );
-        this.canvas.addEventListener(
-            "mousedown",
-            (e) => {
-                if (this._inputEnabled) this.app.mouseDown(e.button);
-            },
-            false
-        );
-        this.canvas.addEventListener(
-            "mouseup",
-            (e) => {
-                if (this._inputEnabled) this.app.mouseUp(e.button);
-            },
-            false
-        );
-        this.canvas.addEventListener(
-            "contextmenu",
-            (e) => {
-                if (this._inputEnabled && e.button === 2) e.preventDefault();
-            },
-            false
-        );
+    /**
+     * Handles the window resize event.
+     * @private
+     */
+    _onResize() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        this.app.onResize(window.innerWidth, window.innerHeight);
     }
 
-    setupPointerLock() {
-        // noinspection JSUnresolvedReference
-        this.canvas.requestPointerLock =
-            this.canvas.requestPointerLock || this.canvas.mozRequestPointerLock;
-        const gameContainer = document.getElementById("gameContainer");
-        gameContainer.addEventListener(
-            "dblclick",
-            () => this._captureEnabled && this._allowCaptureAttempts ? this.canvas.requestPointerLock() : null,
-            false
-        );
+    /**
+     * Sets up the input events.
+     * @returns {this}
+     * @private
+     */
+    _setupInput() {
+        this.canvas.addEventListener("pointermove", this._onMouseMove.bind(this), false);
+        this.canvas.addEventListener("mousedown", this._onMouseDown.bind(this), false);
+        this.canvas.addEventListener("mouseup", this._onMouseUp.bind(this), false);
+        this.canvas.addEventListener("contextmenu", this._onMouseContextMenu.bind(this), false);
 
-        document.addEventListener("pointerlockchange", () => {
-            // noinspection JSUnresolvedReference
-            if (
-                (document.pointerLockElement || document.mozPointerLockElement) !==
-                this.canvas
-            ) {
-                this._inputEnabled = false;
-                this._allowCaptureAttempts = false;
-                setTimeout(() => {
-                    this._allowCaptureAttempts = true;
-                    this._mouseCaptureOverlay.classList.remove("d-none");
-                }, 2000);
-                return;
-            }
-            this._inputEnabled = true;
-            this._mouseCaptureOverlay.classList.add("d-none");
+        document.body.addEventListener("keydown", this._onKeyDown.bind(this), false);
+        document.body.addEventListener("keyup", this._onKeyUp.bind(this), false);
+
+        return this;
+    }
+
+    /**
+     * Handles the mouse move event.
+     * @param {PointerEvent} event - The mouse move event.
+     * @private
+     */
+    _onMouseMove(event) {
+        if (!this._inputEnabled) return;
+        event.getCoalescedEvents().forEach((e) => {
+            this.app.onMouseMove(e.movementX, e.movementY, e.clientX, e.clientY);
         });
     }
 
-    // When the game should start (after authentication).
-    async run() {
-        this.app.run();
+    /**
+     * Handles the mouse down event.
+     * @param {MouseEvent} e - The mouse down event.
+     * @private
+     */
+    _onMouseDown(e) {
+        if (!this._inputEnabled) return;
+        this.app.onMouseDown(e.button);
+    }
+
+    /**
+     * Handles the mouse up event.
+     * @param {MouseEvent} e - The mouse up event.
+     * @private
+     */
+    _onMouseUp(e) {
+        if (!this._inputEnabled) return;
+        this.app.onMouseUp(e.button);
+    }
+
+    /**
+     * Handles the mouse context menu event.
+     * @param {MouseEvent} e - The mouse context menu event.
+     * @private
+     */
+    _onMouseContextMenu(e) {
+        if (!this._inputEnabled || e.button !== 2) return;
+        e.preventDefault();
+    }
+
+    /**
+     * Handles the key down event.
+     * @param {KeyboardEvent} e - The key down event.
+     * @private
+     */
+    _onKeyDown(e) {
+        if (!this._inputEnabled) return;
+        this.app.onKeyDown(e.key.toLowerCase());
+    }
+
+    /**
+     * Handles the key up event.
+     * @param {KeyboardEvent} e - The key up event
+     * @private
+     */
+    _onKeyUp(e) {
+        if (!this._inputEnabled) return;
+        this.app.onKeyUp(e.key.toLowerCase());
+    }
+
+    /**
+     * Sets up the pointer lock events.
+     * @returns {this}
+     * @private
+     */
+    _setupPointerLock() {
+        // noinspection JSUnresolvedReference
+        this.canvas.requestPointerLock = this.canvas.requestPointerLock || this.canvas.mozRequestPointerLock;
+
+        this._gameContainer.addEventListener("dblclick", this._onGameContainerDoubleClick.bind(this), false);
+        document.addEventListener("pointerlockchange", this._onPointerLockChange.bind(this), false);
+
+        return this;
+    }
+
+    async _onGameContainerDoubleClick() {
+        if (this._captureEnabled && this._allowCaptureAttempts) {
+            await this.canvas.requestPointerLock();
+        }
+    }
+
+    _onPointerLockChange() {
+        // noinspection JSUnresolvedReference
+        if (
+            (document.pointerLockElement || document.mozPointerLockElement) !==
+            this.canvas
+        ) {
+            this._inputEnabled = false;
+            this._allowCaptureAttempts = false;
+            setTimeout(() => {
+                this._allowCaptureAttempts = true;
+                this._mouseCaptureOverlay.classList.remove("d-none");
+            }, 2000);
+            return;
+        }
+        this._inputEnabled = true;
+        this._mouseCaptureOverlay.classList.add("d-none");
+    }
+
+    /**
+     * Sets up the debug UI.
+     * @returns {this}
+     * @private
+     */
+    _setupDebug() {
+        this._enableDebugCheckbox.addEventListener("change", this._onDebugCheckboxChange.bind(this), false);
+
+        this.app.onUpdateCompleted = this._onGameUpdateCompleted.bind(this);
+        this.app.onDrawCompleted = this._onGameDrawCompleted.bind(this);
+
+        return this;
+    }
+
+    /**
+     * Handles the debug checkbox change event.
+     * @param {Event} e - The checkbox change event.
+     * @private
+     */
+    _onDebugCheckboxChange(e) {
+        this.app.debugEnabled = !!e.target.checked;
+        this._playerPositionLabel.classList.toggle("d-none", !this.app.debugEnabled);
+        this._physicsStatsLabel.classList.toggle("d-none", !this.app.debugEnabled);
+    }
+
+    /**
+     * Handles the game update completed event
+     * @param {PlayerState} playerState
+     * @param {string} physicsDebugStats
+     * @private
+     */
+    _onGameUpdateCompleted({playerState, physicsDebugStats}) {
+        const {position: [x, y, z], direction: [a, b, c]} = playerState;
+        this._playerPositionLabel.innerHTML = `Pos: ${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}<br>Dir: ${a.toFixed(2)}, ${b.toFixed(2)}, ${c.toFixed(2)}`;
+        this._physicsStatsLabel.innerHTML = physicsDebugStats.replace("Time in milliseconds<br><br>", "");
+    }
+
+    /**
+     * Handles the game draw completed event.
+     * @private
+     */
+    _onGameDrawCompleted() {
+        this._fpsLabel.textContent = `${this.app.averageFrameRate.toFixed(2)} FPS`;
     }
 
     /**
@@ -169,92 +254,8 @@ class GameUi {
         this._currentUser = user;
         this._currentLobby = lobby;
 
-        this.captureEnabled = await this.startGameHubConnection(lobby.id);
-    }
-
-    /**
-     * Starts the game hub connection for the specified lobby.
-     * @param {string} lobbyId - The lobby ID to connect to.
-     * @returns {Promise<boolean>}
-     */
-    async startGameHubConnection(lobbyId) {
-        if (this._gameHubConnection)
-            await this.stopGameHubConnection();
-
-        /**
-         * @type {HubConnection|null}
-         */
-        const gameHubConnection = new HubConnectionBuilder()
-            .withUrl("/hubs/v1/game")
-            .withAutomaticReconnect()
-            .configureLogging(LogLevel.Information)
-            .build();
-
-        try {
-            await gameHubConnection?.start();
-            await gameHubConnection?.invoke("AddToGameGroup", lobbyId);
-        } catch {
-            showMessage("Failed to connect to game hub.", "error");
-            return false;
-        }
-
-        gameHubConnection?.on("PlayerStateUpdate", (playerId, state, deltaTime) => {
-            if (playerId === this._currentUser.id) return;
-
-            const {
-                position,
-                direction,
-            } = JSON.parse(state);
-            this.app.tempPlayerStates[playerId] = {
-                position: new Vector3(position),
-                direction: new Vector3(direction),
-                deltaTime
-            };
-        });
-
-        this._gameHubConnection = gameHubConnection;
-        return true;
-    }
-
-    /**
-     * Stops the game hub connection.
-     * @returns {Promise<void>}
-     */
-    async stopGameHubConnection() {
-        if (!this._gameHubConnection) return;
-
-        try {
-            await this._gameHubConnection?.stop();
-        } catch {
-            // Ignore errors.
-        }
-
-        this._gameHubConnection = null;
-    }
-
-    finishGame() {
-        this._inputEnabled = false;
-        this.captureEnabled = false;
-        this._currentUser = null;
-        this._currentLobby = null;
-    }
-
-    setupDebug() {
-        this._enableDebugCheckbox.addEventListener("change", e => {
-            this.app.debugEnabled = !!e.target.checked;
-            this._playerPositionLabel.classList.toggle("d-none", !this.app.debugEnabled);
-            this._physicsStatsLabel.classList.toggle("d-none", !this.app.debugEnabled);
-        });
-
-        this.app.onUpdateCompleted = async (app, deltaTime) => {
-            // public async Task PlayerStateUpdate(string lobbyId, string playerId, string state, float deltaTime)
-            await this._gameHubConnection?.invoke("PlayerStateUpdate", this._currentLobby.id, this._currentUser.id, JSON.stringify(app.playerState), deltaTime);
-            const {position: [x, y, z], direction: [a, b, c]} = app.playerState;
-            this._playerPositionLabel.innerHTML = `Pos: ${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}<br>Dir: ${a.toFixed(2)}, ${b.toFixed(2)}, ${c.toFixed(2)}`;
-            this._physicsStatsLabel.innerHTML = app.physicsDebugStats.replace("Time in milliseconds<br><br>", "");
-        };
-
-        this.app.onDrawCompleted = (app) => this._fpsLabel.textContent = `${app.averageFrameRate.toFixed(2)} FPS`;
+        await this.app.joinGame(user.id, lobby.id);
+        this._captureEnabled = true;
     }
 }
 
