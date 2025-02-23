@@ -133,7 +133,7 @@ export class SweBootcampGame extends Application {
      * @returns {string}
      */
     get physicsDebugStats() {
-        return this._physicsSystem.physicsWorld.getInfo();
+        return this._physicsSystem.physicsDebugStats;
     }
 
     /**

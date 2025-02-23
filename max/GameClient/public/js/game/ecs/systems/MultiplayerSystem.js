@@ -147,7 +147,7 @@ export default class MultiplayerSystem extends ApeEcs.System {
             const playerDirection = orientationComponent.direction;
 
             // todo remove after testing
-            Debug.setBox(multiplayerComponent.playerId, playerPosition, playerDirection.multiplied(-1), new Vector3(0.2), Colour.black, false);
+            Debug.setBox(`player_${multiplayerComponent.playerId}`, playerPosition, playerDirection.multiplied(-1), new Vector3(0.2), Colour.black, false);
         }
 
         // Broadcast local player state

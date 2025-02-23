@@ -13,8 +13,8 @@ import {Debug} from "../../debug.js";
 export default class PhysicsSystem extends ApeEcs.System {
     // noinspection JSUnusedGlobalSymbols
     init() {
-        this.physicsWorld = new OIMO.World({
-            timestep: 0,
+        this._physicsWorld = new OIMO.World({
+            timestep: 0.001,
             iterations: 8,
             broadphase: 2,
             worldscale: 1,
@@ -25,11 +25,20 @@ export default class PhysicsSystem extends ApeEcs.System {
 
         this.subscribe(PhysicsComponent.name);
 
-        this.query = this.createQuery()
+        this._query = this.createQuery()
             .fromAll(PhysicsComponent.name, PositionComponent.name, OrientationComponent.name)
             .persist();
 
-        this.frameInfo = this.world.getEntity(FrameInfoEntityId).c.time;
+        this._frameInfo = this.world.getEntity(FrameInfoEntityId).c.time;
+        this._timeAccumulator = 0;
+    }
+
+    /**
+     * Fetches the OIMO physics debug stats.
+     * @returns {string}
+     */
+    get physicsDebugStats() {
+        return this._physicsWorld.getInfo();
     }
 
     onPhysicsComponentAdded(component) {
@@ -49,7 +58,7 @@ export default class PhysicsSystem extends ApeEcs.System {
             rotation[2] = toDegree(orientationComponent.direction.z);
         }
 
-        const physicsBody = this.physicsWorld.add({
+        const physicsBody = this._physicsWorld.add({
             type: component.shapeType,
             size: component.size,
             pos: position,
@@ -69,6 +78,9 @@ export default class PhysicsSystem extends ApeEcs.System {
     }
 
     onChange(change) {
+        if (change.type !== PhysicsComponent.name)
+            return;
+
         switch (change.op) {
             case "add":
                 this.onPhysicsComponentAdded(
@@ -83,17 +95,19 @@ export default class PhysicsSystem extends ApeEcs.System {
         for (const change of this.changes)
             this.onChange(change);
 
-        this.physicsWorld.timeStep = this.frameInfo.deltaTime;
-        this.physicsWorld.timerate = this.physicsWorld.timeStep * 1000;
-        this.physicsWorld.step();
+        this._timeAccumulator += this._frameInfo.deltaTime;
+        while (this._timeAccumulator >= this._physicsWorld.timeStep) {
+            this._physicsWorld.step();
+            this._timeAccumulator -= this._physicsWorld.timeStep;
+        }
 
-        for (const entity of this.query.execute()) {
-            const physicsBody = this.physicsWorld.getByName(entity.c.physics.bodyId);
+        for (const entity of this._query.execute()) {
+            const physicsBody = this._physicsWorld.getByName(entity.c.physics.bodyId);
             if (!physicsBody) continue;
 
             const impulse = entity.c.physics.impulse;
             if (impulse !== null) {
-                physicsBody.applyImpulse(impulse.position, new OIMO.Vec3(...impulse.force.multiplied(this.frameInfo.deltaTime)));
+                physicsBody.applyImpulse(impulse.position, new OIMO.Vec3(...impulse.force.multiplied(this._frameInfo.deltaTime)));
                 entity.c.physics.update({ impulse: null });
             }
 
@@ -108,6 +122,11 @@ export default class PhysicsSystem extends ApeEcs.System {
             Debug.setBox(`physics_${entity.id}`, entity.c.position.position, entity.c.orientation.direction, entity.c.physics.size);
         }
 
+        this.computeInputHits();
+    }
+
+    // todo: To be extracted to the respective system(s)
+    computeInputHits() {
         const camera = this.world.getEntity(PlayerEntityId).c.camera.camera;
         const cameraPosition = camera.position;
         const cameraDirection = camera.direction;
@@ -127,7 +146,7 @@ export default class PhysicsSystem extends ApeEcs.System {
         this.world.getEntity(firstHit.body.entityId).c.physics.update({
             impulse: {
                 position: start,
-                force: new Vector3(firstHit.point).sub(start).normalise().mul(1000 * this.frameInfo.deltaTime),
+                force: new Vector3(firstHit.point).sub(start).normalise().mul(1000 * this._frameInfo.deltaTime),
             }
         });
     }
@@ -152,7 +171,7 @@ export default class PhysicsSystem extends ApeEcs.System {
         vec3.scale(dirArr, dirArr, 1.0 / rayLength); // normalize direction
 
         // Loop over all bodies in the physics world
-        for (let body = this.physicsWorld.rigidBodies; body != null; body = body.next) {
+        for (let body = this._physicsWorld.rigidBodies; body != null; body = body.next) {
             // Each body can have multiple shapes
             for (let shape = body.shapes; shape != null; shape = shape.next) {
                 // For example, handle only "box" shapes
