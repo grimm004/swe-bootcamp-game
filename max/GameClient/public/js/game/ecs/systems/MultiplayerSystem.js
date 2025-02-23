@@ -46,7 +46,6 @@ export default class MultiplayerSystem extends ApeEcs.System {
      * Starts the game hub connection for the specified lobby.
      * @param {string} gameId - The ID of the game to join.
      * @returns {Promise<boolean>}
-     * @private
      */
     async #startGameHubConnection(gameId) {
         if (this._gameHubConnection)
@@ -80,7 +79,6 @@ export default class MultiplayerSystem extends ApeEcs.System {
      * @param {string} playerId
      * @param {string} state
      * @param {number} deltaTime
-     * @private
      */
     #onPlayerStateUpdate(playerId, state, deltaTime) {
         if (this.world.getEntity(PlayerEntityId).c.player.playerId === playerId) return;
@@ -98,7 +96,6 @@ export default class MultiplayerSystem extends ApeEcs.System {
      * @param {Vector3} position
      * @param {Vector3} direction
      * @param {number} deltaTime
-     * @private
      */
     #setMultiplayerState(playerId, position, direction, deltaTime) {
         let player = this.world.getEntity(playerId);
@@ -116,7 +113,6 @@ export default class MultiplayerSystem extends ApeEcs.System {
     /**
      * Stops the game hub connection.
      * @returns {Promise<void>}
-     * @private
      */
     async #stopGameHubConnection() {
         if (!this._gameHubConnection) return;

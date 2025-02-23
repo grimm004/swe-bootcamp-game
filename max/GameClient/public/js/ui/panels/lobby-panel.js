@@ -24,9 +24,19 @@ class LobbyPanel {
     #leaveLobbyBtn;
     #startGameBtn;
 
-    #currentLobby;
-    #lobbyHubConnection;
-    #currentUser;
+    /**
+     * @type {Lobby|null}
+     */
+    #currentLobby = null;
+    /**
+     * @type {HubConnection|null}
+     */
+    #lobbyHubConnection = null;
+    /**
+     * The current user. Set by Menu when the user logs in.
+     * @type {User|null}
+     */
+    #currentUser = null;
 
     /**
      * Creates a new lobby panel.
@@ -46,25 +56,6 @@ class LobbyPanel {
         this.#lobbyJoinCode = document.getElementById("lobbyJoinCode");
         this.#leaveLobbyBtn = document.getElementById("leaveLobbyBtn");
         this.#startGameBtn = document.getElementById("startGameBtn");
-
-        /**
-         * @type {Lobby|null}
-         * @private
-         */
-        this.#currentLobby = null;
-
-        /**
-         * @type {HubConnection|null}
-         * @private
-         */
-        this.#lobbyHubConnection = null;
-
-        /**
-         * The current user. Set by Menu when the user logs in.
-         * @type {User|null}
-         * @private
-         */
-        this.#currentUser = null;
 
         /**
          * Callback to be invoked when the game should start.
@@ -108,7 +99,6 @@ class LobbyPanel {
     /**
      * Creates a new lobby.
      * @returns {Promise<void>}
-     * @private
      */
     async #createLobby() {
         if (!this.#currentUser) return;
@@ -131,7 +121,6 @@ class LobbyPanel {
      * Joins an existing lobby.
      * @param {string} joinCode - The join code provided by the user.
      * @returns {Promise<void>}
-     * @private
      */
     async #joinLobby(joinCode) {
         if (!this.#currentUser) return;
@@ -153,7 +142,6 @@ class LobbyPanel {
      * Starts the lobby hub connection for the provided lobby ID.
      * @param {string} lobbyId - The lobby ID to connect to.
      * @returns {Promise<void>}
-     * @private
      */
     async #startLobbyHubConnection(lobbyId) {
         if (this.#lobbyHubConnection)
@@ -212,7 +200,6 @@ class LobbyPanel {
     /**
      * Stops the current lobby hub connection.
      * @returns {Promise<void>}
-     * @private
      */
     async #stopLobbyHubConnection() {
         if (!this.#lobbyHubConnection) return;
@@ -229,7 +216,6 @@ class LobbyPanel {
     /**
      * Updates the lobby UI with the provided lobby data.
      * @param {Lobby|null} lobbyData - The lobby data to display.
-     * @private
      */
     #updateLobbyUi(lobbyData) {
         if (!lobbyData) {
@@ -302,7 +288,6 @@ class LobbyPanel {
      * Removes a player from the current lobby.
      * @param {string} userId - The user ID to remove.
      * @returns {Promise<void>}
-     * @private
      */
     async #removePlayerFromLobby(userId) {
         if (!this.#currentLobby) return;

@@ -202,7 +202,6 @@ class GameUi {
     /**
      * Sets up the debug UI.
      * @returns {this}
-     * @private
      */
     #setupDebug() {
         this.#enableDebugCheckbox.addEventListener("change", this.#onDebugCheckboxChange.bind(this), false);

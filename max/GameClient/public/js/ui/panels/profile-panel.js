@@ -7,19 +7,16 @@ class ProfilePanel {
     #profileForm;
     #displayNameInput;
 
+    /**
+     * The current user. This should be updated by Menu.
+     * @type {User|null}
+     */
     #currentUser;
 
     constructor() {
         this.#profilePanel = document.getElementById("profilePanel");
         this.#profileForm = document.getElementById("profileForm");
         this.#displayNameInput = this.#profileForm.querySelector("input[name='displayName']");
-
-        /**
-         * The current user. This should be updated by Menu.
-         * @type {User|null}
-         * @private
-         */
-        this.#currentUser = null;
     }
 
     /**
