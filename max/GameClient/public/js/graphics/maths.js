@@ -1,7 +1,7 @@
 // noinspection JSCheckFunctionSignatures,JSValidateTypes,JSUnusedGlobalSymbols
 
 import {mat4, vec3, vec4} from "../../lib/gl-matrix/index.js";
-import * as OIMO from "../../lib/oimo.module.js";
+import {oimo} from "../../lib/oimo-physics.module.js";
 
 Math.clamp = (x, min, max) => Math.min(Math.max(x, min), max);
 Math.radians = (degrees) => Math.PI * degrees / 180.0;
@@ -520,7 +520,7 @@ export class Vector2 extends Vector {
 
 export class Vector3 extends Vector {
     /**
-     * @param {number|Vector3|OIMO.Vec3|Vector2|Float32Array|Array} [x]
+     * @param {number|Vector3|Vector2|Float32Array|Array|oimo.common.Vec3} [x]
      * @param {number} [y]
      * @param {number} [z]
      */
@@ -530,7 +530,7 @@ export class Vector3 extends Vector {
             xVal = x;
             yVal = typeof y === "number" ? y : xVal;
             zVal = typeof z === "number" ? z : yVal;
-        } else if (x instanceof Vector3 || x instanceof OIMO.Vec3) {
+        } else if (x instanceof Vector3 || x instanceof Vector4 || x instanceof oimo.common.Vec3) {
             xVal = x.x;
             yVal = x.y;
             zVal = x.z;
@@ -600,7 +600,7 @@ export class Vector3 extends Vector {
     }
 
     /**
-     * @param {OIMO.Quat} quaternion
+     * @param {oimo.Quat} quaternion
      * @returns {Vector3}
      */
     static directionFromQuaternion(quaternion) {
@@ -611,7 +611,7 @@ export class Vector3 extends Vector {
     }
 
     /**
-     * @param {OIMO.Quat} quaternion
+     * @param {oimo.Quat} quaternion
      * @returns {Vector3}
      */
     static orientationFromQuaternion(quaternion) {

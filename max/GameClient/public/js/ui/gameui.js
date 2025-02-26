@@ -230,7 +230,7 @@ class GameUi {
     #onGameUpdateCompleted({playerState, physicsDebugStats}) {
         const {position: [x, y, z], direction: [a, b, c]} = playerState;
         this.#playerPositionLabel.innerHTML = `Pos: ${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}<br>Dir: ${a.toFixed(2)}, ${b.toFixed(2)}, ${c.toFixed(2)}`;
-        this.#physicsStatsLabel.innerHTML = physicsDebugStats.replace("Time in milliseconds<br><br>", "");
+        this.#physicsStatsLabel.innerHTML = physicsDebugStats;
     }
 
     /**

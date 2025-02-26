@@ -37,7 +37,6 @@ async function main() {
     };
 
     // gameUi.onGameFinish = () => { menu.show(); };
-
     app.run();
 }
 

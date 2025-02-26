@@ -138,23 +138,17 @@ export default class EntityFactory {
      * @param {Vector3} size
      * @param {Vector3} initialPosition
      * @param {Vector3} initialDirection
-     * @param {Vector3} [posShape=Vector3.zeros]
-     * @param {Vector3} [rotShape=Vector3.zeros]
-     * @param {string} [shape="box"]
      * @param {number} [density=1]
      * @param {number} [friction=0.2]
      * @param {number} [restitution=0.2]
      * @returns {WorldEntity}
      */
-    createPhysicalObjectEntity(id, sceneNode, size, initialPosition, initialDirection, posShape = Vector3.zeros, rotShape = Vector3.zeros, shape = "box", density= 1, friction = 0.2, restitution = 0.2) {
+    createPhysicalObjectEntity(id, sceneNode, size, initialPosition, initialDirection, density= 1, friction = 0.2, restitution = 0.2) {
         return this.#ecsWorld.createEntity({
             id,
             c: {
                 rigidBody: {
                     type: RigidBodyComponent.name,
-                    shapeType: shape,
-                    posShape,
-                    rotShape,
                     move: true,
                     density,
                     friction,
@@ -187,21 +181,17 @@ export default class EntityFactory {
      * @param {Vector3} size
      * @param {Vector3} initialPosition
      * @param {Vector3} initialDirection
-     * @param {Vector3} posShape
-     * @param {string} [shape="box"]
      * @param {number} [density=1]
      * @param {number} [friction=0.2]
      * @param {number} [restitution=0.2]
      * @returns {WorldEntity}
      */
-    createCollisionBox(id, size, initialPosition, initialDirection, posShape, shape = "box", density= 1, friction = 0.2, restitution = 0.2) {
+    createCollisionBox(id, size, initialPosition, initialDirection, density= 1, friction = 0.2, restitution = 0.2) {
         return this.#ecsWorld.createEntity({
             id,
             c: {
                 rigidBody: {
                     type: RigidBodyComponent.name,
-                    shapeType: shape,
-                    posShape,
                     move: false,
                     density,
                     friction,

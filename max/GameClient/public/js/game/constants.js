@@ -1,4 +1,3 @@
-export const GRAVITY = -9.81;
 export const WindowInfoEntityId = "window";
 export const FrameInfoEntityId = "frame";
 export const MouseInputEntityId = "mouse";

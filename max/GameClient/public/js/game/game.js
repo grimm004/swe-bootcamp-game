@@ -384,62 +384,55 @@ export class SweBootcampGame extends Application {
         const collisionBoxes = [
             {
                 size: new Vector3(5, 0.1, 5),
-                position: Vector3.zeros,
+                position: new Vector3(0.0, -0.05, 0.0),
                 orientation: Vector3.zeros,
-                offset: new Vector3(0.0, -0.05, 0.0)
             },
             {
                 size: new Vector3(0.1, 2.5, 5),
-                position: Vector3.zeros,
+                position: new Vector3(-2.55, 1.25, 0.0),
                 orientation: Vector3.zeros,
-                offset: new Vector3(-2.55, 1.25, 0.0)
             },
             {
                 size: new Vector3(0.1, 2.5, 5),
-                position: Vector3.zeros,
+                position: new Vector3(2.55, 1.25, 0.0),
                 orientation: Vector3.zeros,
-                offset: new Vector3(2.55, 1.25, 0.0)
             },
             {
                 size: new Vector3(5, 2.5, 0.1),
-                position: Vector3.zeros,
+                position: new Vector3(0.0, 1.25, -2.55),
                 orientation: Vector3.zeros,
-                offset: new Vector3(0.0, 1.25, -2.55)
             },
             {
                 size: new Vector3(5, 2.5, 0.1),
-                position: Vector3.zeros,
+                position: new Vector3(0.0, 1.25, 2.55),
                 orientation: Vector3.zeros,
-                offset: new Vector3(0.0, 1.25, 2.55)
             },
             {
                 size: new Vector3(5, 0.1, 5),
-                position: Vector3.zeros,
+                position: new Vector3(0.0, 2.35, 0.0),
                 orientation: Vector3.zeros,
-                offset: new Vector3(0.0, 2.35, 0.0)
             },
         ];
 
         let i = 0;
-        for (const {size, position, orientation, offset} of collisionBoxes)
-            this.#entityFactory.createCollisionBox(`collisionBox_${i++}`, size, position, orientation, offset);
+        for (const {size, position, orientation} of collisionBoxes)
+            this.#entityFactory.createCollisionBox(`collisionBox_${i++}`, size, position, orientation);
 
         this.#entityFactory.createPhysicalObjectEntity(
             "table",
             tableNode,
             new Vector3(1.8, 0.85, 0.9),
-            new Vector3(0.0, 1.25, 0.0),
-            new Vector3(0.0, -Math.PI / 2, 0.0),
-            new Vector3(0, 0.425, 0),
+            new Vector3(0.0, 2.25, 0.0),
+            new Vector3(0.0, toRadian(90.0), 0.0),
         );
 
         const chairPositions = [
-            {position: new Vector3(0.0, 0.0, -1.2), orientation: new Vector3(0.0, Math.radians(-90), 0.0)},
-            {position: new Vector3(0.0, 0.0, 1.2), orientation: new Vector3(Math.PI / 2, Math.radians(90), 0.0)},
-            {position: new Vector3(-0.75, 0.0, 0.40), orientation: new Vector3(0.0, Math.radians(0), 0.0)},
-            {position: new Vector3(-0.75, 0.0, -0.40), orientation: new Vector3(0.0, Math.radians(0), 0.0)},
-            {position: new Vector3(0.75, 0.0, -0.40), orientation: new Vector3(0.0, Math.radians(180), 0.0)},
-            {position: new Vector3(0.75, 0.0, 0.40), orientation: new Vector3(0.0, Math.radians(180), 0.0)},
+            {position: new Vector3(0.0, 0.01, -1.2), orientation: new Vector3(0.0, Math.radians(-90), 0.0)},
+            {position: new Vector3(0.0, 0.5, 1.2), orientation: new Vector3(Math.PI / 8, Math.radians(90), 0.0)},
+            {position: new Vector3(-0.75, 0.01, 0.40), orientation: new Vector3(0.0, Math.radians(0), 0.0)},
+            {position: new Vector3(-0.75, 0.01, -0.40), orientation: new Vector3(0.0, Math.radians(0), 0.0)},
+            {position: new Vector3(0.75, 0.01, -0.40), orientation: new Vector3(0.0, Math.radians(180), 0.0)},
+            {position: new Vector3(0.75, 0.01, 0.40), orientation: new Vector3(0.0, Math.radians(180), 0.0)},
         ];
 
         i = 0;
@@ -450,7 +443,6 @@ export class SweBootcampGame extends Application {
                 new Vector3(0.45, 1.05, 0.40),
                 position,
                 orientation,
-                new Vector3(0, 0.525, 0),
             );
 
         return super.initialise();
