@@ -1,4 +1,4 @@
-import {Colour, FrameCounter, Vector2, Vector3} from "../graphics/maths.js";
+import {Colour, FrameCounter, Quaternion, Vector2, Vector3} from "../graphics/maths.js";
 import {TexCubeMesh, TexPlaneMesh} from "../graphics/meshes.js";
 import {fetchMesh, fetchShaderSource, fetchTexture} from "./util.js";
 import {
@@ -29,7 +29,7 @@ import WindowInfoComponent from "./ecs/components/WindowInfoComponent.js";
 import MouseInputComponent from "./ecs/components/MouseInputComponent.js";
 import KeyboardInputComponent from "./ecs/components/KeyboardInputComponent.js";
 import InputSystem from "./ecs/systems/InputSystem.js";
-import {toRadian} from "../../lib/gl-matrix/common.js";
+import {toDegree, toRadian} from "../../lib/gl-matrix/common.js";
 import AnchorComponent from "./ecs/components/AnchorComponent.js";
 import CyclicalAnimationComponent from "./ecs/components/CyclicalAnimationComponent.js";
 import AnimationSystem from "./ecs/systems/AnimationSystem.js";
@@ -46,7 +46,7 @@ import SizeComponent from "./ecs/components/SizeComponent.js";
 import RigidBodyComponent from "./ecs/components/RigidBodyComponent.js";
 
 /**
- * @typedef {{position: [x: number, y: number, z: number], direction: [x: number, y: number, z: number]}} PlayerState
+ * @typedef {{position: [x: number, y: number, z: number], direction: [x: number, y: number, z: number], orientation: [x: number, y: number, z: number, w: number]}} PlayerState
  */
 
 export class SweBootcampGame extends Application {
@@ -100,9 +100,6 @@ export class SweBootcampGame extends Application {
         this.#entityFactory.createKeyboardInputEntity(KeyboardInputEntityId);
 
         this.#ecsWorld.registerSystem(EveryUpdateGroup, CameraSystem);
-        this.#entityFactory.createPlayerEntity(
-            PlayerEntityId, toRadian(90.0), 0.1, 1000.0, new Vector3(2.0), new Vector3(-45.0, 30.0, 0.0).map(x => Math.radians(x)), 20);
-
         /** @type {InputSystem} */
         this.#inputSystem = this.#ecsWorld.registerSystem(EveryUpdateGroup, InputSystem);
         this.#ecsWorld.registerSystem(EveryUpdateGroup, AnimationSystem);
@@ -125,15 +122,22 @@ export class SweBootcampGame extends Application {
         this.onDrawCompleted = null;
     }
 
+    // noinspection JSUnusedGlobalSymbols
     /**
      * Fetches the local player's current state.
      * @returns {PlayerState}
      */
     get playerState() {
         const playerEntity = this.#ecsWorld.getEntity(PlayerEntityId);
+        const cameraComponent = playerEntity.c.camera.camera;
         return {
             position: playerEntity.c.position.position.toArray(),
-            direction: playerEntity.c.orientation.direction.toArray()
+            cameraRotation: {
+                yaw: cameraComponent.yaw,
+                pitch: cameraComponent.pitch,
+            },
+            direction: cameraComponent.direction.toArray(),
+            orientation: playerEntity.c.orientation.orientation.toArray()
         };
     }
 
@@ -145,6 +149,7 @@ export class SweBootcampGame extends Application {
         return this.#frameCounter.averageFrameRate;
     }
 
+    // noinspection JSUnusedGlobalSymbols
     /**
      * Fetches the OIMO physics debug stats.
      * @returns {string}
@@ -224,9 +229,9 @@ export class SweBootcampGame extends Application {
      */
     #loadLightBulb(bulbMesh, bulbHolderMesh) {
         const bulb = new UnlitSceneNode(bulbMesh);
-        const bulbHolder = new LitSceneNode(bulbHolderMesh, new Vector3(0.0, -0.3, 0.0), Vector3.zeros, new Vector3(2.0), [bulb]);
+        const bulbHolder = new LitSceneNode(bulbHolderMesh, new Vector3(0.0, -0.3, 0.0), Quaternion.identity, new Vector3(2.0), [bulb]);
 
-        return [bulb, new SceneNode(Vector3.zeros, Vector3.zeros, Vector3.ones, [bulbHolder])];
+        return [bulb, new SceneNode(Vector3.zeros, Quaternion.identity, Vector3.ones, [bulbHolder])];
     }
 
     /**
@@ -244,7 +249,7 @@ export class SweBootcampGame extends Application {
         const chairs = [];
         for (let i = 0; i < count; i++)
             chairs.push(new SceneNode(Vector3.zeros).addChild(
-                new LitSceneNode(chairSeatMesh, new Vector3(0.0, -0.09, 0.0), new Vector3(Math.radians(90), 0.0, 0.0))
+                new LitSceneNode(chairSeatMesh, new Vector3(0.0, -0.09, 0.0), Quaternion.fromTaitBryan(90, 0.0, 0.0))
                     .addChild(new LitSceneNode(chairRestMesh, new Vector3(0.0, 0.325, -0.20)))
                     .addChild(new LitSceneNode(backLegMesh, new Vector3(0.175, 0.09, -0.20)))
                     .addChild(new LitSceneNode(backLegMesh, new Vector3(-0.175, 0.09, -0.20)))
@@ -264,7 +269,7 @@ export class SweBootcampGame extends Application {
         const tableTopMesh = new TexCubeMesh(this._gl, texture, new Vector3(0.90, 0.05, 1.80), new Vector2(1.0));
         const legMesh = new TexCubeMesh(this._gl, texture, new Vector3(0.10, 0.80, 0.10), new Vector2(1.0));
         const posX = 0.375, pozY = -0.425, posZ = 0.825;
-        return new SceneNode(new Vector3(0.0, -0.425, 0.0), new Vector3(toRadian(90.0), 0.0, 0.0)).addChild(
+        return new SceneNode(new Vector3(0.0, -0.425, 0.0), Quaternion.fromEuler(0.0, 90.0, 0.0)).addChild(
             new LitSceneNode(tableTopMesh, new Vector3(0.0, 0.825, 0.0))
                 .addChild(new LitSceneNode(legMesh, new Vector3(posX, pozY, -posZ)))
                 .addChild(new LitSceneNode(legMesh, new Vector3(-posX, pozY, -posZ)))
@@ -312,20 +317,20 @@ export class SweBootcampGame extends Application {
 
         const chairNodes = this.#loadChairs(6, woodTexture);
 
-        const tableNode = new SceneNode(Vector3.zeros, Vector3.zeros, Vector3.ones, [this.#loadTable(woodTexture)]);
+        const tableNode = new SceneNode(Vector3.zeros, Quaternion.identity, Vector3.ones, [this.#loadTable(woodTexture)]);
 
         const shelves = [];
         for (let i = 0; i < 3; i++)
             shelves.push(new LitSceneNode(shelfMesh));
 
         shelves[0].position = new Vector3(2.25, 0, 0);
-        shelves[0].orientation = new Vector3(Math.radians(-90.0), 0, 0);
+        shelves[0].orientation = Quaternion.fromTaitBryan(-90.0, 0, 0);
 
         shelves[1].position = new Vector3(-2.25, 0, 0);
-        shelves[1].orientation = new Vector3(Math.radians(90.0, 0, 0), 0, 0);
+        shelves[1].orientation = Quaternion.fromTaitBryan(90.0, 0, 0);
 
         shelves[2].position = new Vector3(0, 0, 2.25);
-        shelves[2].orientation = new Vector3(Math.radians(0, 0, 0), 0, 0);
+        shelves[2].orientation = Quaternion.fromTaitBryan(0, 0, 0);
 
         const floorMesh = new TexPlaneMesh(this._gl, carpetTexture, new Vector2(2.5));
         const ceilingMesh = new TexPlaneMesh(this._gl, woodPlanksTexture, new Vector2(2.5), new Vector3(0.0, -1.0, 0.0));
@@ -333,13 +338,13 @@ export class SweBootcampGame extends Application {
 
         const [lightBulb, roomLight] = this.#loadLightBulb(bulbMesh, bulbHolderMesh);
 
-        const staticSceneGraph = new SceneNode(Vector3.zeros, Vector3.zeros, Vector3.ones, [roomLight])
-            .addChild(new LitSceneNode(floorMesh, new Vector3(0.0, 0.0, 0.0), Vector3.zeros, Vector3.ones, [...shelves])
-                .addChild(new LitSceneNode(ceilingMesh, new Vector3(0.0, 2.3, 0.0), new Vector3(), Vector3.ones))
-                .addChild(new LitSceneNode(wallMesh, new Vector3(0.0, 1.15, 2.5), new Vector3(0.0, -90.0, 0.0).map(x => Math.radians(x))))
-                .addChild(new LitSceneNode(wallMesh, new Vector3(0.0, 1.15, -2.5), new Vector3(0.0, 90.0, 0.0).map(x => Math.radians(x))))
-                .addChild(new LitSceneNode(wallMesh, new Vector3(-2.5, 1.15, 0.0), new Vector3(0.0, 90.0, -90.0).map(x => Math.radians(x))))
-                .addChild(new LitSceneNode(wallMesh, new Vector3(2.5, 1.15, 0.0), new Vector3(0.0, 90.0, 90.0).map(x => Math.radians(x)))));
+        const staticSceneGraph = new SceneNode(Vector3.zeros, Quaternion.identity, Vector3.ones, [roomLight])
+            .addChild(new LitSceneNode(floorMesh, new Vector3(0.0, 0.0, 0.0), Quaternion.identity, Vector3.ones, [...shelves])
+                .addChild(new LitSceneNode(ceilingMesh, new Vector3(0.0, 2.3, 0.0), Quaternion.identity, Vector3.ones))
+                .addChild(new LitSceneNode(wallMesh, new Vector3(0.0, 1.15, 2.5), Quaternion.fromTaitBryan(0.0, -90.0, 0.0)))
+                .addChild(new LitSceneNode(wallMesh, new Vector3(0.0, 1.15, -2.5), Quaternion.fromTaitBryan(0.0, 90.0, 0.0)))
+                .addChild(new LitSceneNode(wallMesh, new Vector3(-2.5, 1.15, 0.0), Quaternion.fromTaitBryan(0.0, 90.0, -90.0)))
+                .addChild(new LitSceneNode(wallMesh, new Vector3(2.5, 1.15, 0.0), Quaternion.fromTaitBryan(0.0, 90.0, 90.0))));
 
         // Scene graph root entity
         this.#entityFactory.createDrawEntity(
@@ -348,6 +353,9 @@ export class SweBootcampGame extends Application {
                 .addChild(staticSceneGraph)
                 .addChild(tableNode)
                 .addChildren(chairNodes));
+
+        this.#entityFactory.createPlayerEntity(
+            PlayerEntityId, toRadian(90.0), 0.1, 1000.0, new Vector3(2.0), 20, -45, 30);
 
         this.#ecsWorld.createEntity({
             id: "light",
@@ -362,7 +370,7 @@ export class SweBootcampGame extends Application {
                 },
                 orientation: {
                     type: OrientationComponent.name,
-                    direction: new Vector3(0.0, -0.3, 0.0),
+                    orientation: Quaternion.fromTaitBryan(0.0, toDegree(-0.3), 0.0),
                 },
                 draw: {
                     type: DrawComponent.name,
@@ -374,7 +382,8 @@ export class SweBootcampGame extends Application {
                     duration: 1.5,
                     callback: (entity, animation) => {
                         entity.c.orientation.update({
-                            direction: new Vector3(0.0, Math.sin(animation.progress * Math.PI * 2.0) / 2.0, 0.0),
+                            orientation: entity.c.orientation.orientation
+                                .fromEuler(toDegree(Math.sin(animation.progress * Math.PI * 2.0) / 2.0), 0.0, 0.0),
                         });
                     }
                 }
@@ -385,32 +394,32 @@ export class SweBootcampGame extends Application {
             {
                 size: new Vector3(5, 0.1, 5),
                 position: new Vector3(0.0, -0.05, 0.0),
-                orientation: Vector3.zeros,
+                orientation: Quaternion.identity,
             },
             {
                 size: new Vector3(0.1, 2.5, 5),
                 position: new Vector3(-2.55, 1.25, 0.0),
-                orientation: Vector3.zeros,
+                orientation: Quaternion.identity,
             },
             {
                 size: new Vector3(0.1, 2.5, 5),
                 position: new Vector3(2.55, 1.25, 0.0),
-                orientation: Vector3.zeros,
+                orientation: Quaternion.identity,
             },
             {
                 size: new Vector3(5, 2.5, 0.1),
                 position: new Vector3(0.0, 1.25, -2.55),
-                orientation: Vector3.zeros,
+                orientation: Quaternion.identity,
             },
             {
                 size: new Vector3(5, 2.5, 0.1),
                 position: new Vector3(0.0, 1.25, 2.55),
-                orientation: Vector3.zeros,
+                orientation: Quaternion.identity,
             },
             {
                 size: new Vector3(5, 0.1, 5),
                 position: new Vector3(0.0, 2.35, 0.0),
-                orientation: Vector3.zeros,
+                orientation: Quaternion.identity,
             },
         ];
 
@@ -423,16 +432,16 @@ export class SweBootcampGame extends Application {
             tableNode,
             new Vector3(1.8, 0.85, 0.9),
             new Vector3(0.0, 2.25, 0.0),
-            new Vector3(0.0, toRadian(90.0), 0.0),
+            Quaternion.fromEuler(0.0, 90.0, 0.0),
         );
 
         const chairPositions = [
-            {position: new Vector3(0.0, 0.01, -1.2), orientation: new Vector3(0.0, Math.radians(-90), 0.0)},
-            {position: new Vector3(0.0, 0.5, 1.2), orientation: new Vector3(Math.PI / 8, Math.radians(90), 0.0)},
-            {position: new Vector3(-0.75, 0.01, 0.40), orientation: new Vector3(0.0, Math.radians(0), 0.0)},
-            {position: new Vector3(-0.75, 0.01, -0.40), orientation: new Vector3(0.0, Math.radians(0), 0.0)},
-            {position: new Vector3(0.75, 0.01, -0.40), orientation: new Vector3(0.0, Math.radians(180), 0.0)},
-            {position: new Vector3(0.75, 0.01, 0.40), orientation: new Vector3(0.0, Math.radians(180), 0.0)},
+            {position: new Vector3(0.0, 0.01, -1.2), orientation: Quaternion.fromEuler(0.0, -90, 0.0)},
+            {position: new Vector3(0.0, 0.01, 1.2), orientation: Quaternion.fromEuler(0.0, 90, 0.0)},
+            {position: new Vector3(-0.75, 0.01, 0.40), orientation: Quaternion.fromEuler(0.0, 0, 0.0)},
+            {position: new Vector3(-0.75, 0.01, -0.40), orientation: Quaternion.fromEuler(0.0, 0, 0.0)},
+            {position: new Vector3(0.75, 0.01, -0.40), orientation: Quaternion.fromEuler(0.0, 180, 0.0)},
+            {position: new Vector3(0.75, 0.01, 0.40), orientation: Quaternion.fromEuler(0.0, 180, 0.0)},
         ];
 
         i = 0;
@@ -491,7 +500,7 @@ export class SweBootcampGame extends Application {
         const camera = this.#ecsWorld.getEntity(PlayerEntityId).c.camera.camera;
         if (key === "r") {
             camera.targetPosition = new Vector3(2.0);
-            camera.targetOrientation = new Vector3(-45.0, 30.0, 0.0).apply(x => Math.radians(x));
+            camera.setTargetYawPitch(-45.0, 30.0);
         } else if (key === " ") {
             // todo: move out to input system
             for (let i = 0; i < 6; i++) {
@@ -546,7 +555,7 @@ export class SweBootcampGame extends Application {
         this.#ecsWorld.runSystems(EveryDrawGroup);
 
         if (this.#debugEnabled)
-            Debug.draw(this.#debugEnabled);
+            Debug.draw();
 
         this.onDrawCompleted?.(this, deltaTime);
     }

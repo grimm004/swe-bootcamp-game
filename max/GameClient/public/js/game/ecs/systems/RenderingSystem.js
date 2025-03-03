@@ -11,9 +11,6 @@ export default class RenderingSystem extends ApeEcs.System {
     }
 
     update() {
-        for (const change of this.changes)
-            this.onChange(change);
-
         const sceneRoot = this.world.getEntity(SceneRootEntityId).c.draw.sceneNode;
 
         this._renderer.clear();

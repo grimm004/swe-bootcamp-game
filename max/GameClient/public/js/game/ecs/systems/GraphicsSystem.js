@@ -11,7 +11,7 @@ export default class GraphicsSystem extends ApeEcs.System {
         this.subscribe(DrawComponent.name);
 
         this._frameInfo = this.world.getEntity(FrameInfoEntityId).c.time;
-        this._worldTransform = Matrix4.positionOrientationScale();
+        this._worldTransform = Matrix4.identity;
     }
 
     #onDrawComponentChanged(component, updatedProps) {
@@ -66,7 +66,7 @@ export default class GraphicsSystem extends ApeEcs.System {
             uColour: lightComponent.colour
         };
 
-        Debug._uniforms = {
+        Debug.uniforms = {
             uViewMatrix: camera.matrix,
             uProjectionMatrix: camera.projectionMatrix
         };

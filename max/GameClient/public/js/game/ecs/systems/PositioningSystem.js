@@ -10,23 +10,13 @@ export default class PositioningSystem extends ApeEcs.System {
         this._drawPositionQuery = this.createQuery()
             .fromAll(DrawComponent.name, PositionComponent.name, OrientationComponent.name)
             .persist();
-
-        this._orientationQuery = this.createQuery()
-            .fromAll(OrientationComponent.name)
-            .persist();
     }
 
     update() {
-        for (const entity of this._orientationQuery.execute())
-            entity.getOne(OrientationComponent.name).update({
-                direction: entity.c.orientation.direction.map(Math.normalizeAngle)
-            });
-
         for (const entity of this._drawPositionQuery.execute()) {
             const drawComponent = entity.getOne(DrawComponent.name);
             drawComponent.sceneNode.position = entity.c.position.position;
-            drawComponent.sceneNode.orientation = entity.c.orientation.direction;
-            entity.c.draw.update();
+            drawComponent.sceneNode.orientation = entity.c.orientation.orientation;
         }
     }
 }

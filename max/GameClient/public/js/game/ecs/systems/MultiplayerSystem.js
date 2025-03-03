@@ -4,7 +4,7 @@ import MultiplayerComponent from "../components/MultiplayerComponent.js";
 import PositionComponent from "../components/PositionComponent.js";
 import OrientationComponent from "../components/OrientationComponent.js";
 import {Debug} from "../../debug.js";
-import {Colour, Vector3} from "../../../graphics/maths.js";
+import {Colour, Quaternion, Vector3} from "../../../graphics/maths.js";
 import {HubConnectionBuilder, LogLevel} from "../../../../lib/signalr.module.js";
 import {showMessage} from "../../../ui/message-popup.js";
 
@@ -85,19 +85,19 @@ export default class MultiplayerSystem extends ApeEcs.System {
 
         const {
             position,
-            direction,
+            orientation,
         } = JSON.parse(state);
 
-        this.#setMultiplayerState(playerId, new Vector3(position), new Vector3(direction), deltaTime);
+        this.#setMultiplayerState(playerId, new Vector3(position), new Quaternion(orientation), deltaTime);
     }
 
     /**
      * @param {string} playerId
      * @param {Vector3} position
-     * @param {Vector3} direction
+     * @param {Quaternion} orientation
      * @param {number} deltaTime
      */
-    #setMultiplayerState(playerId, position, direction, deltaTime) {
+    #setMultiplayerState(playerId, position, orientation, deltaTime) {
         let player = this.world.getEntity(playerId);
         if (!player)
             player = this._entityFactory.createMultiplayerEntity(playerId);
@@ -106,7 +106,7 @@ export default class MultiplayerSystem extends ApeEcs.System {
         // todo: add interpolation
         // todo: potentially convert to action components and process them in the update loop (replay actions or take latest state, etc.)
         player.c.position.update({position});
-        player.c.orientation.update({direction});
+        player.c.orientation.update({orientation});
         player.c.time.update({deltaTime});
     }
 
@@ -140,21 +140,21 @@ export default class MultiplayerSystem extends ApeEcs.System {
                 throw new Error("Player entity found with multiplayer component.");
 
             const playerPosition = positionComponent.position;
-            const playerDirection = orientationComponent.direction;
+            const playerOrientation = orientationComponent.orientation;
 
             // todo remove after testing
-            Debug.setBox(`player_${multiplayerComponent.playerId}`, playerPosition, playerDirection.multiplied(-1), new Vector3(0.2), Colour.black, false);
+            Debug.setBox(`player_${multiplayerComponent.playerId}`, playerPosition, playerOrientation, new Vector3(0.2), Colour.black, false);
         }
 
         // Broadcast local player state
         if (this._gameHubConnection) {
             const playerPosition = playerEntity.c.position.position;
-            const playerDirection = playerEntity.c.orientation.direction;
+            const playerOrientation = playerEntity.c.orientation.orientation;
 
             // noinspection JSCheckFunctionSignatures
             await this._gameHubConnection?.invoke("PlayerStateUpdate", playerComponent.gameId, playerComponent.playerId, JSON.stringify({
                 position: playerPosition.toArray(),
-                direction: playerDirection.toArray(),
+                orientation: playerOrientation.toArray(),
             }), this._frameInfo.deltaTime);
         }
     }

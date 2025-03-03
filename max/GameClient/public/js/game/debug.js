@@ -1,4 +1,4 @@
-import {Colour, Matrix4, Vector3} from "../graphics/maths.js";
+import {Colour, Matrix4, Quaternion, Vector3} from "../graphics/maths.js";
 import {ColCubeMesh} from "../graphics/meshes.js";
 
 
@@ -17,7 +17,7 @@ export const Debug = {
     _colourPoolIndex: 0,
     _pointMesh: null,
     _boxMesh: null,
-    _uniforms: {},
+    uniforms: {},
     _points: {},
     _singleDrawPoints: {},
     _boxes: {},
@@ -25,34 +25,34 @@ export const Debug = {
 
     /**
      * @param {string} id
-     * @param {Vector3} pos
+     * @param {Vector3} position
      * @param {Colour} [colour=Colour.black]
      * @param {boolean} [persistent=false]
      */
-    setPoint(id, pos, colour = Colour.black, persistent = false) {
+    setPoint(id, position, colour = Colour.black, persistent = false) {
         const pointPool = persistent ? this._points : this._singleDrawPoints;
 
         pointPool[id] = {
-            pos: pos,
+            position,
             colour: pointPool[id]?.colour ?? colour ?? this._colourPool[this._colourPoolIndex++ % this._colourPool.length]
         }
     },
 
     /**
      * @param {string} id
-     * @param {Vector3} pos
-     * @param {Vector3} dir
-     * @param {Vector3} size
+     * @param {Vector3} position
+     * @param {Quaternion} orientation
+     * @param {Vector3} scale
      * @param {Colour} [colour]
      * @param {boolean} [persistent=true]
      */
-    setBox(id, pos, dir, size, colour = null, persistent = true) {
+    setBox(id, position, orientation, scale, colour = null, persistent = true) {
         const boxPool = persistent ? this._boxes : this._singleDrawBoxes;
 
         boxPool[id] = {
-            pos: pos,
-            dir: dir,
-            size: size,
+            position,
+            orientation,
+            scale,
             colour: boxPool[id]?.colour ?? colour ?? this._colourPool[this._colourPoolIndex++ % this._colourPool.length]
         };
     },
@@ -66,8 +66,8 @@ export const Debug = {
     draw() {
         for (const point of [...Object.values(this._points), ...Object.values(this._singleDrawPoints)]) {
             const uniforms = {
-                ...this._uniforms,
-                uModelMatrix: Matrix4.positionOrientationScale(point.pos, Vector3.zeros, Vector3.ones.mul(0.025))
+                ...this.uniforms,
+                uModelMatrix: Matrix4.fromRotationTranslationScale(Quaternion.identity, point.position, Vector3.ones.mul(0.025))
             }
             this._pointMesh?.setColour(point.colour);
             this._pointMesh?.bind(uniforms);
@@ -76,8 +76,8 @@ export const Debug = {
 
         for (const box of [...Object.values(this._boxes), ...Object.values(this._singleDrawBoxes)]) {
             const uniforms = {
-                ...this._uniforms,
-                uModelMatrix: Matrix4.positionOrientationScale(box.pos, box.dir, box.size.multiplied(0.501))
+                ...this.uniforms,
+                uModelMatrix: Matrix4.fromRotationTranslationScale(box.orientation, box.position, box.scale.multiplied(0.501))
             }
             this._boxMesh?.setColour(box.colour);
             this._boxMesh?.bind(uniforms);

@@ -4,8 +4,7 @@ import {oimo} from "../../../../lib/oimo-physics.module.js";
 import ImpulseComponent from "../components/ImpulseComponent.js";
 import PositionComponent from "../components/PositionComponent.js";
 import OrientationComponent from "../components/OrientationComponent.js";
-import {FrameCounter, Vector3} from "../../../graphics/maths.js";
-import {mat4, quat, vec3} from "../../../../lib/gl-matrix/index.js";
+import {FrameCounter, Quaternion, Vector3} from "../../../graphics/maths.js";
 import {Debug} from "../../debug.js";
 import SizeComponent from "../components/SizeComponent.js";
 import RigidBodyComponent from "../components/RigidBodyComponent.js";
@@ -85,8 +84,8 @@ export default class PhysicsSystem extends ApeEcs.System {
 
         this._rigidBodyConfig.rotation.identity();
         if (entity.has(OrientationComponent.name)) {
-            const {x, y, z} = entity.getOne(OrientationComponent.name).direction;
-            this._rigidBodyConfig.rotation.fromEulerXyz(new oimo.common.Vec3(x, y, z));
+            const {x, y, z, w} = entity.getOne(OrientationComponent.name).orientation;
+            this._rigidBodyConfig.rotation.fromQuat(new oimo.common.Quat(x, y, z, w));
         }
 
         this._rigidBodyConfig.type = rigidBodyComponent.move
@@ -114,7 +113,7 @@ export default class PhysicsSystem extends ApeEcs.System {
             if (!physicsBody) continue;
 
             for (const impulseComponent of entity.getComponents(ImpulseComponent.name)) {
-                physicsBody.applyImpulse(impulseComponent.position, impulseComponent.force.multiplied(this._fixedTimeStep));
+                physicsBody.applyImpulse(impulseComponent.force.multiplied(this._fixedTimeStep), impulseComponent.position);
                 entity.removeComponent(impulseComponent);
             }
         }
@@ -139,10 +138,10 @@ export default class PhysicsSystem extends ApeEcs.System {
             });
 
             entity.c.orientation.update({
-                direction: Vector3.orientationFromQuaternion(physicsBody.getOrientation()),
+                orientation: new Quaternion(physicsBody.getOrientation()),
             });
 
-            Debug.setBox(`physics_${entity.id}`, entity.c.position.position, entity.c.orientation.direction, entity.c.size.size);
+            Debug.setBox(`physics_${entity.id}`, entity.c.position.position, entity.c.orientation.orientation, entity.c.size.size);
         }
 
         this.#inputRayCast();
@@ -182,7 +181,7 @@ export default class PhysicsSystem extends ApeEcs.System {
         this.world.getEntity(entityId).addComponent({
             type: ImpulseComponent.name,
             position: hitPosition,
-            force: hitPosition.subtracted(camera.position).normalise().mul(10 * this._frameInfo.deltaTime),
+            force: hitPosition.subtracted(camera.position).normalise().mul(10000 * this._frameInfo.deltaTime),
         });
     }
 }

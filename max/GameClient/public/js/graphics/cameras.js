@@ -1,6 +1,6 @@
 // noinspection JSUnusedGlobalSymbols
 
-import {Matrix4, Vector3} from "./maths.js";
+import {Matrix4, Quaternion, Vector3} from "./maths.js";
 import {WorldObject} from "./world.js";
 
 
@@ -10,12 +10,23 @@ export class PerspectiveCamera extends WorldObject {
     #near;
     #far;
 
-    #maxPitch;
-    #minPitch;
+    #maxPitchDegrees;
+    #minPitchDegrees;
 
+    /**
+     * @type {Vector3}
+     */
     #targetPosition;
+    /**
+     * @type {Quaternion}
+     */
     #targetOrientation;
+    /**
+     * @type {Vector3}
+     */
     #direction;
+    #yaw;
+    #pitch;
 
     /**
      * @param {number} fovRad
@@ -23,22 +34,26 @@ export class PerspectiveCamera extends WorldObject {
      * @param {number} [near=0.1]
      * @param {number} [far=1000]
      * @param {Vector3} [position=Vector3.zeros]
-     * @param {Vector3} [orientationRad=Vector3.zeros]
+     * @param {Quaternion} [orientation=Quaternion.identity]
+     * @param {number} [yaw=0]
+     * @param {number} [pitch=0]
      */
-    constructor(fovRad, aspectRatio, near = 0.1, far = 1000, position = Vector3.zeros, orientationRad = Vector3.zeros) {
-        super(position, orientationRad);
+    constructor(fovRad, aspectRatio, near = 0.1, far = 1000, position = Vector3.zeros, orientation = Quaternion.identity, yaw = 0, pitch = 0) {
+        super(position, orientation);
 
         this.#fovRad = fovRad;
         this.#aspectRatio = aspectRatio;
         this.#near = near;
         this.#far = far;
 
-        this.#maxPitch = Math.PI / 2 - Math.radians(1);
-        this.#minPitch = -this.#maxPitch;
+        this.#maxPitchDegrees = 89;
+        this.#minPitchDegrees = -this.#maxPitchDegrees;
 
         this.#targetPosition = this._position.copy;
         this.#targetOrientation = this._orientation.copy;
-        this.#direction = Vector3.direction(-this._orientation.x, -this._orientation.y);
+        this.#direction = Vector3.directionFromQuaternion(this._orientation);
+        this.#yaw = yaw;
+        this.#pitch = pitch;
 
         this.projectionMatrix = Matrix4.perspective(fovRad, aspectRatio, near, far);
 
@@ -87,38 +102,36 @@ export class PerspectiveCamera extends WorldObject {
     }
 
     update(deltaTime) {
-        this.#targetOrientation.y = Math.clamp(this.#targetOrientation.y, this.#minPitch, this.#maxPitch);
-
-        this._orientation.elements = [
-            Math.lerp(this._orientation.x, this.#targetOrientation.x, 1 - Math.exp(-8 * deltaTime)),
-            Math.lerp(this._orientation.y, this.#targetOrientation.y, 1 - Math.exp(-8 * deltaTime)),
-            0.0,
-        ];
+        const t = 1 - Math.exp(-8 * deltaTime);
+        this._orientation
+            .slerpTo(this.#targetOrientation, t)
+            .normalise();
+        this.#direction.directionFromQuaternion(this._orientation);
 
         const lerpConstant = 1 - Math.exp(-10 * deltaTime);
-        this._position.elements = [
+        this._position.init(
             Math.lerp(this._position.x, this.#targetPosition.x, lerpConstant),
             Math.lerp(this._position.y, this.#targetPosition.y, lerpConstant),
             Math.lerp(this._position.z, this.#targetPosition.z, lerpConstant)
-        ];
-
-        this.#direction.direction(-this._orientation.x, -this._orientation.y);
+        );
 
         this.updateMatrix();
     }
 
     set position(posVector) {
-        this.#targetPosition = new Vector3(posVector);
-        super.position = posVector;
+        this.#targetPosition.init(posVector.x, posVector.y, posVector.z);
+        super.position.init(posVector.x, posVector.y, posVector.z);
+        this.updateMatrix();
     }
 
     get position() {
         return super.position;
     }
 
-    set orientation(orientationRad) {
-        this.targetOrientation = orientationRad.copy;
-        super.orientation = orientationRad;
+    set orientation(orientation) {
+        this.#targetOrientation.copyFrom(orientation);
+        super.orientation.copyFrom(orientation);
+        this.updateMatrix();
     }
 
     get orientation() {
@@ -126,28 +139,45 @@ export class PerspectiveCamera extends WorldObject {
     }
 
     set targetPosition(posVector) {
-        this.#targetPosition = new Vector3(posVector);
+        this.#targetPosition.init(posVector.x, posVector.y, posVector.z);
     }
 
     get targetPosition() {
         return this.#targetPosition;
     }
 
-    set targetOrientation(orientationRad) {
-        this.#targetOrientation = orientationRad.copy;
-    }
+    /**
+     * @param {number} yawDegrees
+     * @param {number} pitchDegrees
+     */
+    setTargetYawPitch(yawDegrees, pitchDegrees) {
+        this.#yaw = yawDegrees;
+        this.#pitch = pitchDegrees;
 
-    get targetOrientation() {
-        return this.#targetOrientation.copy;
+        this.#targetOrientation = Quaternion.fromYawPitch(this.#yaw, this.#pitch);
     }
 
     get direction() {
         return this.#direction.copy;
     }
 
+    get yaw() {
+        return this.#yaw;
+    }
+
+    get pitch() {
+        return this.#pitch;
+    }
+
     translate(vec) {
         this.#targetPosition.add(vec);
         super.translate(vec);
+    }
+
+    updateMatrix() {
+        return this.matrix
+            .fromRotationTranslation(this._orientation, this._position)
+            .invert();
     }
 
     /**
@@ -156,27 +186,27 @@ export class PerspectiveCamera extends WorldObject {
      * but the sideways movement is computed using the x–z projection so that
      * its speed remains constant regardless of the camera’s pitch.
      *
-     * @param {Vector2} vec - x component for forward/backward and y for sideways.
+     * @param {number} forward - Forward/backward movement.
+     * @param {number} sideways - Left/right movement.
      */
-    move(vec) {
-        const forwardComponent = this.#direction.copy.mul(vec.x);
-
-        let forwardXZ = new Vector3(this.#direction.x, 0, this.#direction.z);
-        if (forwardXZ.magnitudeSquared() < 1e-6) forwardXZ = new Vector3(0, 0, -1);
-        else forwardXZ.normalise();
-
-        const right = new Vector3(-forwardXZ.z, 0, forwardXZ.x);
-        const sidewaysComponent = right.mul(vec.y);
-
-        // Add both components to the target position.
-        this.#targetPosition.add(forwardComponent).add(sidewaysComponent);
+    move(forward, sideways) {
+        this.#targetPosition
+            .add(this.#direction
+                .multiplied(forward))
+            .add(Vector3.unitY
+                .leftCross(this.#direction)
+                .mul(sideways));
     }
 
-    turn(vecRad) {
-        this.#targetOrientation.add(new Vector3(vecRad.x, vecRad.y, 0.0));
-    }
+    /**
+     * Rotates the camera.
+     * @param {number} degreesHorizontal - Horizontal rotation in degrees.
+     * @param {number} degreesVertical - Vertical rotation in degrees.
+     */
+    turn(degreesHorizontal, degreesVertical) {
+        this.#yaw = Math.normalizeDegrees(this.#yaw + degreesHorizontal);
+        this.#pitch = Math.clamp(this.#pitch + degreesVertical, this.#minPitchDegrees, this.#maxPitchDegrees);
 
-    updateMatrix() {
-        return this.matrix.lookAt(this._position, this._position.copy.add(this.#direction), Vector3.unitY);
+        this.#targetOrientation = Quaternion.fromYawPitch(this.#yaw, this.#pitch);
     }
 }

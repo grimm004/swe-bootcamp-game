@@ -1,13 +1,14 @@
 // noinspection JSCheckFunctionSignatures,JSValidateTypes,JSUnusedGlobalSymbols
 
-import {mat4, vec3, vec4} from "../../lib/gl-matrix/index.js";
+import {mat4, quat, vec3, vec4} from "../../lib/gl-matrix/index.js";
 import {oimo} from "../../lib/oimo-physics.module.js";
 
 Math.clamp = (x, min, max) => Math.min(Math.max(x, min), max);
 Math.radians = (degrees) => Math.PI * degrees / 180.0;
 Math.degrees = (radians) => 180.0 * radians / Math.PI;
 Math.lerp = (a, b, v) => (a * (1 - v)) + (b * v);
-Math.normalizeAngle = (angle) => ((angle + Math.PI) % (2 * Math.PI) + (2 * Math.PI)) % (2 * Math.PI) - Math.PI;
+Math.normalizeRadians = (angle) => ((angle + Math.PI) % (2 * Math.PI) + (2 * Math.PI)) % (2 * Math.PI) - Math.PI;
+Math.normalizeDegrees = (angle) => ((angle + 180) % 360 + 360) % 360 - 180;
 
 export class FrameCounter {
     #frameTimeBuffer;
@@ -64,13 +65,39 @@ export class Matrix4 extends Float32Array {
         for (let i = 0; i < Math.min(16, this.elements.length); i++) this[i] = values[i];
     }
 
-    transpose() {
-        mat4.transpose(this, this);
-        return this;
+    /**
+     * @returns {Matrix4}
+     */
+    identity() {
+        return mat4.identity(this);
     }
 
+    /**
+     * @returns {Matrix4}
+     */
+    static get identity() {
+        return new Matrix4();
+    }
+
+    /**
+     * @returns {Matrix4}
+     */
+    transpose() {
+        return mat4.transpose(this, this);
+    }
+
+    /**
+     * @returns {Matrix4}
+     */
     invert() {
         return mat4.invert(this, this);
+    }
+
+    /**
+     * @returns {Matrix4}
+     */
+    get inverted() {
+        return this.copy.invert();
     }
 
     /**
@@ -119,63 +146,84 @@ export class Matrix4 extends Float32Array {
 
     /**
      * @param {Vector3} scaleVector
-     * @param {boolean} [concat=true]
      * @returns {Matrix4}
      */
-    scale(scaleVector, concat = true) {
-        if (!concat) this.identity();
-        mat4.scale(this, this, scaleVector);
-        return this;
+    scale(scaleVector) {
+        return mat4.scale(this, this, scaleVector);
     }
 
-    static scale(scaleVector) {
-        return new Matrix4().scale(scaleVector);
+    /**
+     * @param {Vector3} scaleVector
+     * @returns {Matrix4}
+     */
+    fromScale(scaleVector) {
+        return mat4.fromScaling(this, scaleVector);
+    }
+
+    /**
+     * @param {Vector3} scaleVector
+     * @returns {Matrix4}
+     */
+    static fromScale(scaleVector) {
+        return new Matrix4().fromScale(scaleVector);
     }
 
     /**
      * @param {number} angleRad
      * @param {Vector4|Vector3} axisVector
-     * @param {boolean} [concat=true]
      * @returns {Matrix4}
      */
-    rotate(angleRad, axisVector, concat = true) {
-        if (!concat) this.identity();
-        mat4.rotate(this, this, angleRad, axisVector.elements);
-        return this;
+    rotate(angleRad, axisVector) {
+        return mat4.rotate(this, this, angleRad, axisVector.elements);
     }
 
-    static rotate(angleRad, axisVector) {
-        return new Matrix4().scale(angleRad, axisVector);
+    /**
+     * @param {number} angleRad
+     * @param {Vector4|Vector3} axisVector
+     * @returns {Matrix4}
+     */
+    static fromRotation(angleRad, axisVector) {
+        return new Matrix4().rotate(angleRad, axisVector);
+    }
+
+    /**
+     * @param {Quaternion} quat
+     * @returns {Matrix4}
+     */
+    fromQuat(quat) {
+        return mat4.fromQuat(this, quat);
+    }
+
+    /**
+     * @param {Quaternion} quat
+     * @returns {Matrix4}
+     */
+    static fromQuat(quat) {
+        return new Matrix4().fromQuat(quat);
     }
 
     /**
      * @param {Vector3} translationVector
-     * @param {boolean} [concat=true]
      * @returns {Matrix4}
      */
-    translate(translationVector, concat = true) {
-        if (!concat) this.identity();
-        mat4.translate(this, this, translationVector);
-        return this;
-    }
-
-    static translate(translationVector) {
-        return new Matrix4().translate(translationVector);
+    translate(translationVector) {
+        return mat4.translate(this, this, translationVector);
     }
 
     /**
+     * @param {Vector3} translation
      * @returns {Matrix4}
      */
-    identity() {
-        mat4.identity(this);
-        return this;
+    fromTranslation(translation) {
+        return mat4.fromTranslation(this, translation);
     }
 
     /**
+     * @param {Vector3} translation
      * @returns {Matrix4}
      */
-    static get identity() {
-        return new Matrix4();
+    static fromTranslation(translation) {
+        return new Matrix4().fromTranslation(translation);
     }
 
     /**
@@ -186,8 +234,7 @@ export class Matrix4 extends Float32Array {
      * @returns {Matrix4}
      */
     perspective(fov, aspectRatio, near, far) {
-        mat4.perspective(this, fov, aspectRatio, near, far);
-        return this;
+        return mat4.perspective(this, fov, aspectRatio, near, far);
     }
 
     static perspective(fov, aspectRatio, near, far) {
@@ -201,8 +248,7 @@ export class Matrix4 extends Float32Array {
      * @returns {Matrix4}
      */
     lookAt(eyeVector, centerVector, upVector) {
-        mat4.lookAt(this, eyeVector, centerVector, upVector);
-        return this;
+        return mat4.lookAt(this, eyeVector, centerVector, upVector);
     }
 
     static createLookAt(eyeVector, centerVector, upVector) {
@@ -251,6 +297,82 @@ export class Matrix4 extends Float32Array {
      */
     static positionOrientationScale(position = Vector3.zeros, orientation = Vector3.zeros, scale = Vector3.ones) {
         return new Matrix4().positionOrientationScale(position, orientation, scale, true);
+    }
+
+    /**
+     * @param {Quaternion} rotation
+     * @param {Vector3} scale
+     * @param {Vector3} translation
+     * @returns {Matrix4}
+     */
+    fromOriginRotationScaleTranslation(rotation, scale, translation) {
+        return mat4.fromRotationTranslationScaleOrigin(this, rotation, translation, scale, Vector3.zeros);
+    }
+
+    /**
+     * @param {Quaternion} rotation
+     * @param {Vector3} scale
+     * @param {Vector3} translation
+     * @returns {Matrix4}
+     */
+    static fromOriginRotationScaleTranslation(rotation, scale, translation) {
+        return new Matrix4().fromOriginRotationScaleTranslation(scale, rotation, translation);
+    }
+
+    /**
+     * @param {Quaternion} quat
+     * @param {Vector3} vec
+     * @param {Vector3} scale
+     * @returns {Matrix4}
+     */
+    fromRotationTranslationScale(quat, vec, scale) {
+        return mat4.fromRotationTranslationScale(this, quat, vec, scale);
+    }
+
+    /**
+     * @param {Quaternion} quat
+     * @param {Vector3} vec
+     * @param {Vector3} scale
+     * @returns {Matrix4}
+     */
+    static fromRotationTranslationScale(quat, vec, scale) {
+        return new Matrix4().fromRotationTranslationScale(quat, vec, scale);
+    }
+
+    /**
+     * @param {Quaternion} quat
+     * @param {Vector3} vec
+     * @returns {Matrix4}
+     */
+    fromOriginRotationTranslation(quat, vec) {
+        return mat4.fromRotationTranslationScaleOrigin(this, quat, vec, Vector3.ones, Vector3.zeros);
+    }
+
+    /**
+     * @param {Quaternion} quat
+     * @param {Vector3} vec
+     * @returns {Matrix4}
+     */
+    static fromOriginRotationTranslation(quat, vec) {
+        return new Matrix4().fromOriginRotationTranslation(quat, vec);
+    }
+
+    /**
+     * @param {Quaternion} quat
+     * @param {Vector3} vec
+     * @returns {Matrix4}
+     */
+    fromRotationTranslation(quat, vec) {
+        return mat4.fromRotationTranslation(this, quat, vec);
+    }
+
+    /**
+     * @param {Quaternion} quat
+     * @param {Vector3} vec
+     * @returns {Matrix4}
+     */
+    static fromRotationTranslation(quat, vec) {
+        return new Matrix4().fromRotationTranslation(quat, vec);
     }
 }
 
@@ -362,7 +484,7 @@ export class Vector extends Float32Array {
      * @param {Vector|number} val
      * @returns {this}
      */
-    plus(val) {
+    added(val) {
         return this.copy.add(val);
     }
 
@@ -547,28 +669,56 @@ export class Vector3 extends Vector {
         super([xVal, yVal, zVal], Vector3);
     }
 
+    /**
+     * @returns {number}
+     */
     get x() {
         return this[0];
     }
 
+    /**
+     * @param {number} value
+     */
     set x(value) {
         this[0] = value;
     }
 
+    /**
+     * @returns {number}
+     */
     get y() {
         return this[1];
     }
 
+    /**
+     * @param value
+     */
     set y(value) {
         this[1] = value;
     }
 
+    /**
+     * @returns {number}
+     */
     get z() {
         return this[2];
     }
 
+    /**
+     * @param value
+     */
     set z(value) {
         this[2] = value;
+    }
+
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {number} z
+     * @returns {Vector3}
+     */
+    init(x, y, z) {
+        return vec3.set(this, x, y, z);
     }
 
     /**
@@ -580,6 +730,38 @@ export class Vector3 extends Vector {
     }
 
     /**
+     * @param {Vector3} vec
+     * @returns {Vector3}
+     */
+    cross(vec) {
+        return vec3.cross(this, this, vec);
+    }
+
+    /**
+     * @param {Vector3} vec
+     * @returns {Vector3}
+     */
+    crossed(vec) {
+        return this.copy.cross(vec);
+    }
+
+    /**
+     * @param {Vector3} vec
+     * @returns {Vector3}
+     */
+    leftCross(vec) {
+        return vec3.cross(this, vec, this);
+    }
+
+    /**
+     * @param {Vector3} vec
+     * @returns {Vector3}
+     */
+    leftCrossed(vec) {
+        return this.copy.leftCross(vec);
+    }
+
+    /**
      * @param {number} yawRad
      * @param {number} pitchRad
      * @returns {Vector3}
@@ -587,34 +769,50 @@ export class Vector3 extends Vector {
     direction(yawRad, pitchRad) {
         const sinYaw = Math.sin(yawRad), cosYaw = Math.cos(yawRad);
         const sinPitch = Math.sin(pitchRad), cosPitch = Math.cos(pitchRad);
-        this.elements = [
-            -sinYaw * cosPitch,
-            sinPitch,
-            -cosYaw * cosPitch
-        ];
+        this[0] = -sinYaw * cosPitch;
+        this[1] = sinPitch;
+        this[2] = -cosYaw * cosPitch;
         return this;
     }
 
+    /**
+     * @param {number} yawRad
+     * @param {number} pitchRad
+     * @returns {Vector3}
+     */
     static direction(yawRad, pitchRad) {
         return Vector3.zeros.direction(yawRad, pitchRad);
     }
 
     /**
-     * @param {oimo.Quat} quaternion
+     * @param {Quaternion|oimo.Quat} quaternion
+     * @returns {Vector3}
+     */
+    transformByQuaternion(quaternion) {
+        return vec3.transformQuat(this, this, quaternion);
+    }
+
+    /**
+     * @param {Quaternion|oimo.Quat} quaternion
+     * @returns {Vector3}
+     */
+    directionFromQuaternion(quaternion) {
+        return this.init(0, 0, -1).transformByQuaternion(quaternion);
+    }
+
+    /**
+     * @param {Quaternion|oimo.Quat} quaternion
      * @returns {Vector3}
      */
     static directionFromQuaternion(quaternion) {
-        const x = 2 * (quaternion.x * quaternion.z - quaternion.w * quaternion.y);
-        const y = 2 * (quaternion.y * quaternion.z + quaternion.w * quaternion.x);
-        const z = 1 - 2 * (quaternion.x * quaternion.x + quaternion.y * quaternion.y);
-        return new Vector3(x, y, z);
+        return new Vector3().directionFromQuaternion(quaternion);
     }
 
     /**
      * @param {oimo.Quat} quaternion
      * @returns {Vector3}
      */
-    static orientationFromQuaternion(quaternion) {
+    static eulerFromQuaternion(quaternion) {
         const { w, x, y, z } = quaternion;
 
         const test = 2 * (w * x - y * z);
@@ -648,8 +846,22 @@ export class Vector3 extends Vector {
     /**
      * @returns {Vector3}
      */
+    zero() {
+        return vec3.zero(this);
+    }
+
+    /**
+     * @returns {Vector3}
+     */
     static get zeros() {
         return new Vector3();
+    }
+
+    /**
+     * @returns {Vector3}
+     */
+    ones() {
+        return vec3.set(this, 1.0, 1.0, 1.0);
     }
 
     /**
@@ -662,8 +874,22 @@ export class Vector3 extends Vector {
     /**
      * @returns {Vector3}
      */
+    unitX() {
+        return vec3.set(this, 1.0, 0.0, 0.0);
+    }
+
+    /**
+     * @returns {Vector3}
+     */
     static get unitX() {
         return new Vector3(1.0, 0.0, 0.0);
+    }
+
+    /**
+     * @returns {Vector3}
+     */
+    unitY() {
+        return vec3.set(this, 0.0, 1.0, 0.0);
     }
 
     /**
@@ -676,14 +902,21 @@ export class Vector3 extends Vector {
     /**
      * @returns {Vector3}
      */
+    unitZ() {
+        return vec3.set(this, 0.0, 0.0, 1.0);
+    }
+
+    /**
+     * @returns {Vector3}
+     */
     static get unitZ() {
         return new Vector3(0.0, 0.0, 1.0);
     }
 }
 
-export class Vector4 {
+export class Vector4 extends Float32Array {
     /**
-     * @param {number|Vector4|Vector3|Vector2|Float32Array|Array} [x]
+     * @param {number|Vector4|Vector3|Vector2|Float32Array|Array|oimo.common.Quat} [x]
      * @param {number|Vector2} [y]
      * @param {number} [z]
      * @param {number} [w]
@@ -695,7 +928,7 @@ export class Vector4 {
             yVal = typeof y === "number" ? y : xVal;
             zVal = typeof z === "number" ? z : yVal;
             wVal = typeof w === "number" ? w : 1.0;
-        } else if (x instanceof Vector4) {
+        } else if (x instanceof Vector4 || x instanceof oimo.common.Quat) {
             xVal = x.x;
             yVal = x.y;
             zVal = x.z;
@@ -722,9 +955,44 @@ export class Vector4 {
             wVal = x[3];
         }
 
-        this.elements = [xVal, yVal, zVal, wVal];
+        super([xVal, yVal, zVal, wVal]);
     }
 
+    get x() {
+        return this[0];
+    }
+
+    set x(value) {
+        this[0] = value;
+    }
+
+    get y() {
+        return this[1];
+    }
+
+    set y(value) {
+        this[1] = value;
+    }
+
+    get z() {
+        return this[2];
+    }
+
+    set z(value) {
+        this[2] = value;
+    }
+
+    get w() {
+        return this[3];
+    }
+
+    set w(value) {
+        this[3] = value;
+    }
+
+    /**
+     * @returns {Vector4}
+     */
     get copy() {
         return new Vector4(this);
     }
@@ -736,18 +1004,39 @@ export class Vector4 {
         return this.x + this.y + this.z;
     }
 
-    get elements() {
-        return new Float32Array([this.x, this.y, this.z, this.w]);
+    /**
+     * @returns {number}
+     */
+    get squareSum() {
+        return this.x * this.x + this.y * this.y + this.z * this.z;
     }
 
+    /**
+     * @returns {Float32Array}
+     */
+    get elements() {
+        return new Float32Array(this);
+    }
+
+    /**
+     * @param {number[]|Float32Array} value
+     */
     set elements(value) {
         [this.x, this.y, this.z, this.w] = value.slice(0, 4);
     }
 
+    /**
+     * @returns {number[]}
+     */
+    toArray() {
+        return Array.from(this);
+    }
+
+    /**
+     * @returns {Vector4}
+     */
     normalise() {
-        const elements = this.elements;
-        vec4.normalize(elements, elements);
-        this.elements = elements;
+        return vec4.normalize(this, this);
     }
 
     /**
@@ -756,11 +1045,11 @@ export class Vector4 {
      * @returns {Vector4}
      */
     map(f, includeW = false) {
-        this.x = f(this.x);
-        this.y = f(this.y);
-        this.z = f(this.z);
+        this[0] = f(this[0]);
+        this[1] = f(this[1]);
+        this[2] = f(this[2]);
         if (includeW)
-            this.w = f(this.w);
+            this[3] = f(this[3]);
         return this;
     }
 
@@ -769,11 +1058,11 @@ export class Vector4 {
      * @returns {Vector4}
      */
     negate(includeW = false) {
-        this.x *= -1;
-        this.y *= -1;
-        this.z *= -1;
+        this[0] *= -1;
+        this[1] *= -1;
+        this[2] *= -1;
         if (includeW)
-            this.w *= -1;
+            this[3] *= -1;
         return this;
     }
 
@@ -782,11 +1071,11 @@ export class Vector4 {
      * @returns {Vector4}
      */
     invert(includeW = false) {
-        this.x = 1 / this.x;
-        this.y = 1 / this.y;
-        this.z = 1 / this.z;
+        this[0] = 1 / this[0];
+        this[1] = 1 / this[1];
+        this[2] = 1 / this[2];
         if (includeW)
-            this.w = 1 / this.w;
+            this[3] = 1 / this[3];
         return this;
     }
 
@@ -797,11 +1086,11 @@ export class Vector4 {
      */
     add(val, includeW = false) {
         if (val instanceof Vector4) {
-            this.x += val.x;
-            this.y += val.y;
-            this.z += val.z;
+            this[0] += val[0];
+            this[1] += val[1];
+            this[2] += val[2];
             if (includeW)
-                this.w += val.w;
+                this[3] += val[3];
         } else if (typeof val === "number")
             this.add(new Vector4(val), includeW);
         return this;
@@ -814,11 +1103,11 @@ export class Vector4 {
      */
     mul(val, includeW = false) {
         if (val instanceof Vector4) {
-            this.x *= val.x;
-            this.y *= val.y;
-            this.z *= val.z;
+            this[0] *= val[0];
+            this[1] *= val[1];
+            this[2] *= val[2];
             if (includeW)
-                this.w *= val.w;
+                this[3] *= val[3];
         } else if (typeof val === "number")
             this.mul(new Vector4(val), includeW);
         return this;
@@ -830,8 +1119,7 @@ export class Vector4 {
      * @returns {Vector4}
      */
     sub(val, includeW = false) {
-        this.add(val instanceof Vector4 ? val.copy.negate() : new Vector4(-val), includeW);
-        return this;
+        return this.add(val instanceof Vector4 ? val.copy.negate() : new Vector4(-val), includeW);
     }
 
     /**
@@ -840,8 +1128,7 @@ export class Vector4 {
      * @returns {Vector4}
      */
     div(val, includeW = false) {
-        this.mul(val instanceof Vector4 ? val.copy.invert() : new Vector4(1.0 / val), includeW);
-        return this;
+        return this.mul(val instanceof Vector4 ? val.copy.invert() : new Vector4(1.0 / val), includeW);
     }
 
     /**
@@ -881,6 +1168,225 @@ export class Vector4 {
      */
     static get ones() {
         return new Vector4(1.0);
+    }
+}
+
+export class Quaternion extends Vector4 {
+    /**
+     * @param {number|Vector4|Vector3|Vector2|Float32Array|Array|oimo.common.Quat} [x]
+     * @param {number|Vector2} [y]
+     * @param {number} [z]
+     * @param {number} [w=1.0]
+     */
+    constructor(x = undefined, y = undefined, z = undefined, w = undefined) {
+        super(x, y, z, w);
+    }
+
+    /**
+     * @returns {Quaternion}
+     */
+    get copy() {
+        return new Quaternion(this);
+    }
+
+    /**
+     * @param {Quaternion} value
+     * @returns {Quaternion}
+     */
+    copyFrom(value) {
+        return quat.copy(this, value);
+    }
+
+    /**
+     * @returns {Quaternion}
+     */
+    get identity() {
+        return quat.identity(this);
+    }
+
+    /**
+     * @returns {Quaternion}
+     */
+    static get identity() {
+        return new Quaternion(0, 0, 0, 1);
+    }
+
+    /**
+     * @returns {Quaternion}
+     */
+    normalise() {
+        return quat.normalize(this, this);
+    }
+
+    /**
+     * @returns {Quaternion}
+     */
+    normalised() {
+        return this.copy.normalise();
+    }
+
+    /**
+     * @param {Quaternion} quaternion
+     * @returns {Quaternion}
+     */
+    multiply(quaternion) {
+        return quat.multiply(this, this, quaternion);
+    }
+
+    /**
+     * @returns {Quaternion}
+      */
+    conjugate() {
+        return quat.conjugate(this, this);
+    }
+
+    /**
+     * @returns {Quaternion}
+     */
+    conjugated() {
+        return this.copy.conjugate();
+    }
+
+    /**
+     * @param {Quaternion} target
+     * @param {number} t
+     * @returns {Quaternion}
+     */
+    slerpTo(target, t) {
+        return quat.slerp(this, this, target, t);
+    }
+
+    /**
+     * @param {Quaternion} target
+     * @param {number} t
+     * @returns {Quaternion}
+     */
+    slerpedTo(target, t) {
+        return this.copy.slerpTo(target, t);
+    }
+
+    /**
+     * @param {number} angle
+     * @returns {Quaternion}
+     */
+    rotateX(angle) {
+        return quat.rotateX(this, this, angle);
+    }
+
+    /**
+     * @param {number} angle
+     * @returns {Quaternion}
+     */
+    rotatedX(angle) {
+        return this.copy.rotateX(angle);
+    }
+
+    /**
+     * @param {number} angle
+     * @returns {Quaternion}
+     */
+    rotateY(angle) {
+        return quat.rotateY(this, this, angle);
+    }
+
+    /**
+     * @param {number} angle
+     * @returns {Quaternion}
+     */
+    rotatedY(angle) {
+        return this.copy.rotateY(angle);
+    }
+
+    /**
+     * @param {number} angle
+     * @returns {Quaternion}
+     */
+    rotateZ(angle) {
+        return quat.rotateZ(this, this, angle);
+    }
+
+    /**
+     * @param {number} angle
+     * @returns {Quaternion}
+     */
+    rotatedZ(angle) {
+        return this.copy.rotateZ(angle);
+    }
+
+    /**
+     * @param {Vector3} axis
+     * @param {number} angle
+     * @returns {Quaternion}
+     */
+    setAxisAngle(axis, angle) {
+        return quat.setAxisAngle(this, axis, angle);
+    }
+
+    /**
+     * @param {Vector3} axis
+     * @param {number} angle
+     * @returns {Quaternion}
+     */
+    static fromAxisAngle(axis, angle) {
+        return Quaternion.identity.setAxisAngle(axis, angle);
+    }
+
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {number} z
+     * @returns {Quaternion}
+     */
+    fromEuler(x, y, z) {
+        return quat.fromEuler(this, x, y, z);
+    }
+
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {number} z
+     * @returns {Quaternion}
+     */
+    static fromEuler(x, y, z) {
+        return new Quaternion().fromEuler(x, y, z);
+    }
+
+    /**
+     * @param {number} yaw
+     * @param {number} pitch
+     * @returns {Quaternion}
+     */
+    fromYawPitch(yaw, pitch) {
+        return this.fromEuler(-pitch, -yaw, 0.0);
+    }
+
+    /**
+     * @param {number} yawDegrees
+     * @param {number} pitchDegrees
+     * @returns {Quaternion}
+     */
+    static fromYawPitch(yawDegrees, pitchDegrees) {
+        return new Quaternion().fromYawPitch(yawDegrees, pitchDegrees);
+    }
+
+    /**
+     * @param {number} yawDegrees
+     * @param {number} pitchDegrees
+     * @param {number} rollDegrees
+     * @returns {Quaternion}
+     */
+    fromTaitBryan(yawDegrees, pitchDegrees, rollDegrees) {
+        return quat.fromEuler(this, yawDegrees, pitchDegrees, rollDegrees, "xyz");
+    }
+
+    /**
+     * @param {number} yawDegrees
+     * @param {number} pitchDegrees
+     * @param {number} rollDegrees
+     * @returns {Quaternion}
+     */
+    static fromTaitBryan(yawDegrees, pitchDegrees, rollDegrees) {
+        return new Quaternion().fromTaitBryan(pitchDegrees, yawDegrees, rollDegrees);
     }
 }
 

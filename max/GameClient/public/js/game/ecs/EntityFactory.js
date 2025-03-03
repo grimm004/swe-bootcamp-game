@@ -6,7 +6,7 @@ import WindowInfoComponent from "./components/WindowInfoComponent.js";
 import MouseInputComponent from "./components/MouseInputComponent.js";
 import KeyboardInputComponent from "./components/KeyboardInputComponent.js";
 import CameraComponent from "./components/CameraComponent.js";
-import {Vector3} from "../../graphics/maths.js";
+import {Quaternion, Vector3} from "../../graphics/maths.js";
 import PlayerComponent from "./components/PlayerComponent.js";
 import MultiplayerComponent from "./components/MultiplayerComponent.js";
 import SizeComponent from "./components/SizeComponent.js";
@@ -69,7 +69,19 @@ export default class EntityFactory {
         });
     }
 
-    createPlayerEntity(id, fovRad, near, far, initialPosition, initialDirection, mouseSensitivity) {
+    /**
+     * @param {string} id
+     * @param {number} fovRad
+     * @param {number} near
+     * @param {number} far
+     * @param {Vector3} initialPosition
+     * @param {Quaternion} initialOrientation
+     * @param {number} mouseSensitivity
+     * @param {number} yawDegrees
+     * @param {number} pitchDegrees
+     * @returns {WorldEntity}
+     */
+    createPlayerEntity(id, fovRad, near, far, initialPosition, mouseSensitivity, yawDegrees, pitchDegrees) {
         return this.#ecsWorld.createEntity({
             id,
             c: {
@@ -82,6 +94,8 @@ export default class EntityFactory {
                     fovRad,
                     near,
                     far,
+                    yawDegrees,
+                    pitchDegrees,
                 },
                 position: {
                     type: PositionComponent.name,
@@ -89,7 +103,7 @@ export default class EntityFactory {
                 },
                 orientation: {
                     type: OrientationComponent.name,
-                    direction: initialDirection,
+                    orientation: Quaternion.fromYawPitch(yawDegrees, pitchDegrees),
                 },
             }
         });
@@ -109,7 +123,7 @@ export default class EntityFactory {
                 },
                 orientation: {
                     type: OrientationComponent.name,
-                    direction: Vector3.zeros,
+                    orientation: Quaternion.identity,
                 },
                 time: {
                     type: FrameInfoComponent.name,
@@ -137,13 +151,13 @@ export default class EntityFactory {
      * @param {SceneNode} sceneNode
      * @param {Vector3} size
      * @param {Vector3} initialPosition
-     * @param {Vector3} initialDirection
+     * @param {Quaternion} initialOrientation
      * @param {number} [density=1]
      * @param {number} [friction=0.2]
      * @param {number} [restitution=0.2]
      * @returns {WorldEntity}
      */
-    createPhysicalObjectEntity(id, sceneNode, size, initialPosition, initialDirection, density= 1, friction = 0.2, restitution = 0.2) {
+    createPhysicalObjectEntity(id, sceneNode, size, initialPosition, initialOrientation, density= 1, friction = 0.2, restitution = 0.2) {
         return this.#ecsWorld.createEntity({
             id,
             c: {
@@ -160,7 +174,7 @@ export default class EntityFactory {
                 },
                 orientation: {
                     type: OrientationComponent.name,
-                    direction: initialDirection,
+                    orientation: initialOrientation,
                 },
                 size: {
                     type: SizeComponent.name,
@@ -180,13 +194,13 @@ export default class EntityFactory {
      * @param {string} id
      * @param {Vector3} size
      * @param {Vector3} initialPosition
-     * @param {Vector3} initialDirection
+     * @param {Quaternion} initialOrientation
      * @param {number} [density=1]
      * @param {number} [friction=0.2]
      * @param {number} [restitution=0.2]
      * @returns {WorldEntity}
      */
-    createCollisionBox(id, size, initialPosition, initialDirection, density= 1, friction = 0.2, restitution = 0.2) {
+    createCollisionBox(id, size, initialPosition, initialOrientation, density= 1, friction = 0.2, restitution = 0.2) {
         return this.#ecsWorld.createEntity({
             id,
             c: {
@@ -203,7 +217,7 @@ export default class EntityFactory {
                 },
                 orientation: {
                     type: OrientationComponent.name,
-                    direction: initialDirection,
+                    orientation: initialOrientation,
                 },
                 size: {
                     type: SizeComponent.name,

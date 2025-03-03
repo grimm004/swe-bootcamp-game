@@ -227,9 +227,12 @@ class GameUi {
      * @param {PlayerState} playerState
      * @param {string} physicsDebugStats
      */
-    #onGameUpdateCompleted({playerState, physicsDebugStats}) {
-        const {position: [x, y, z], direction: [a, b, c]} = playerState;
-        this.#playerPositionLabel.innerHTML = `Pos: ${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}<br>Dir: ${a.toFixed(2)}, ${b.toFixed(2)}, ${c.toFixed(2)}`;
+    #onGameUpdateCompleted({playerState: {position, cameraRotation, direction, orientation}, physicsDebugStats}) {
+        this.#playerPositionLabel.innerHTML = `
+            Pos: ${position.map(x => x.toFixed(2)).join(", ")}<br>
+            Yaw: ${cameraRotation.yaw.toFixed(0)} / Pitch: ${cameraRotation.pitch.toFixed(0)}<br>
+            Dir: ${direction.map(x => x.toFixed(2)).join(", ")}<br>
+            Quat: ${orientation.map(x => x.toFixed(2)).join(", ")}<br>`;
         this.#physicsStatsLabel.innerHTML = physicsDebugStats;
     }
 

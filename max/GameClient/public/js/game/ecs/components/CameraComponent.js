@@ -9,4 +9,6 @@ CameraComponent.properties = {
     near: 0.1,
     far: 1000,
     camera: null,
+    yawDegrees: 0,
+    pitchDegrees: 0,
 };

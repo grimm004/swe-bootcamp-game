@@ -1,4 +1,4 @@
-import {Colour, Matrix4, Vector3} from "./maths.js";
+import {Colour, Matrix4, Quaternion, Vector3} from "./maths.js";
 import {WorldObject} from "./world.js";
 
 
@@ -7,12 +7,12 @@ export class SceneNode extends WorldObject {
 
     /**
      * @param {Vector3} [position=Vector3.zeros]
-     * @param {Vector3} [orientationRad=Vector3.zeros]
+     * @param {Quaternion} [orientation=Quaternion.identity]
      * @param {Vector3} [scale=Vector3.ones]
      * @param {SceneNode[]} [children=[]]
      */
-    constructor(position = Vector3.zeros, orientationRad = Vector3.zeros, scale = Vector3.ones, children = []) {
-        super(position, orientationRad);
+    constructor(position = Vector3.zeros, orientation = Quaternion.identity, scale = Vector3.ones, children = []) {
+        super(position, orientation);
 
         this.#scale = new Vector3(scale);
         /**
@@ -56,7 +56,7 @@ export class SceneNode extends WorldObject {
      * @param {Matrix4} [transform=Matrix4.identity]
      */
     update(deltaTime, uniforms, transform = Matrix4.identity) {
-        this._transform = transform.copy.mul(this.matrix);
+        this._transform = transform.multiplied(this.matrix);
 
         for (const child of this.children)
             child.update(deltaTime, uniforms, this._transform);
@@ -91,7 +91,7 @@ export class SceneNode extends WorldObject {
     _drawSelf() {}
 
     updateMatrix() {
-        return this.matrix.positionOrientationScale(this._position, this._orientation, this.#scale);
+        return this.matrix.fromRotationTranslationScale(this._orientation, this._position, this.#scale);
     }
 }
 
@@ -99,12 +99,12 @@ export class DrawableSceneNode extends SceneNode {
     /**
      * @param {Mesh} mesh
      * @param {Vector3} [position=Vector3.zeros]
-     * @param {Vector3} [orientationRad=Vector3.zeros]
+     * @param {Quaternion} [orientation=Quaternion.identity]
      * @param {Vector3} [scale=Vector3.ones]
      * @param {SceneNode[]} [children=[]]
      */
-    constructor(mesh, position = Vector3.zeros, orientationRad = Vector3.zeros, scale = Vector3.ones, children = []) {
-        super(position, orientationRad, scale, children);
+    constructor(mesh, position = Vector3.zeros, orientation = Quaternion.identity, scale = Vector3.ones, children = []) {
+        super(position, orientation, scale, children);
 
         this.mesh = mesh;
         this.uniforms = {};
@@ -139,11 +139,11 @@ export class LitSceneNode extends DrawableSceneNode {
     /**
      * @param {Mesh} mesh
      * @param {Vector3} [position=Vector3.zeros]
-     * @param {Vector3} [orientation=Vector3.zeros]
+     * @param {Quaternion} [orientation=Quaternion.identity]
      * @param {Vector3} [scale=Vector3.ones]
      * @param {SceneNode[]} [children=[]]
      */
-    constructor(mesh, position = Vector3.zeros, orientation = Vector3.zeros, scale = Vector3.ones,
+    constructor(mesh, position = Vector3.zeros, orientation = Quaternion.identity, scale = Vector3.ones,
                 children = []) {
         super(mesh, position, orientation, scale, children);
 
@@ -174,11 +174,11 @@ export class UnlitSceneNode extends DrawableSceneNode {
     /**
      * @param {Mesh} mesh
      * @param {Vector3} [position=Vector3.zeros]
-     * @param {Vector3} [orientation=Vector3.zeros]
+     * @param {Quaternion} [orientation=Quaternion.identity]
      * @param {Vector3} [scale=Vector3.ones]
      * @param {SceneNode[]} [children=[]]
      */
-    constructor(mesh, position = Vector3.zeros, orientation = Vector3.zeros, scale = Vector3.ones,
+    constructor(mesh, position = Vector3.zeros, orientation = Quaternion.identity, scale = Vector3.ones,
                 children = []) {
         super(mesh, position, orientation, scale, children);
 
