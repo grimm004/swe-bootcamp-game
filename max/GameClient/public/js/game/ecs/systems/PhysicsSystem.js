@@ -47,6 +47,7 @@ export default class PhysicsSystem extends ApeEcs.System {
      */
     get physicsDebugStats() {
         let debugStats = `
+            <b>Physics System</b><br>
             RigidBody Count: ${this._physicsWorld.getNumRigidBodies()}<br>
             Joint Count: ${this._physicsWorld.getNumJoints()}<br>
             Shape Count: ${this._physicsWorld.getNumShapes()}<br>
@@ -108,6 +109,14 @@ export default class PhysicsSystem extends ApeEcs.System {
     }
 
     update() {
+        for (const entity of this._rigidBodyQuery.execute()) {
+            const physicsBody = this.#getOrCreateOimoBody(entity);
+            if (!physicsBody) continue;
+
+            physicsBody.setPosition(entity.c.position.position);
+            physicsBody.setOrientation(entity.c.orientation.orientation);
+        }
+
         for (const entity of this._impulseQuery.execute()) {
             const physicsBody = this.#getOrCreateOimoBody(entity);
             if (!physicsBody) continue;
@@ -118,7 +127,7 @@ export default class PhysicsSystem extends ApeEcs.System {
             }
         }
 
-        let stepCount = 0.0;
+        let stepCount = 0;
         this._timeAccumulator += this._frameInfo.deltaTime;
         while (this._timeAccumulator >= this._fixedTimeStep) {
             stepCount++;

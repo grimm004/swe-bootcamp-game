@@ -29,6 +29,21 @@ public class GameHub(ILogger<LobbyHub> logger) : Hub
         await Clients.Group(lobbyId).SendAsync("PlayerStateUpdate", playerId, state, deltaTime);
     }
 
+    /// <summary>
+    /// Called when the host world state changes.
+    /// </summary>
+    /// <param name="lobbyId">Lobby GUID</param>
+    /// <param name="playerId">Player GUID</param>
+    /// <param name="entityId">Entity ID</param>
+    /// <param name="state">New player state</param>
+    public async Task WorldStateUpdate(string lobbyId, string playerId, string state)
+    {
+        // todo: infer group from user identity context
+        // todo: restrict to host player
+        // for now, forward state to all players in the game. todo: maintain global state and send interpolated state on a fixed interval
+        await Clients.Group(lobbyId).SendAsync("WorldStateUpdate", playerId, state);
+    }
+
     // Optionally, override OnConnectedAsync/OnDisconnectedAsync to add/remove users to/from groups.
     public override async Task OnConnectedAsync()
     {

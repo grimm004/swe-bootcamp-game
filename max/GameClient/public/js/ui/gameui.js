@@ -17,6 +17,7 @@ class GameUi {
     #fpsLabel;
     #playerPositionLabel;
     #physicsStatsLabel;
+    #multiplayerStatsLabel;
 
     /**
      * Creates a new instance of the game UI.
@@ -33,6 +34,7 @@ class GameUi {
         this.#fpsLabel = document.getElementById("fpsLabel");
         this.#playerPositionLabel = document.getElementById("playerPositionLabel");
         this.#physicsStatsLabel = document.getElementById("physicsStatsLabel");
+        this.#multiplayerStatsLabel = document.getElementById("multiplayerStatsLabel");
     }
 
     /**
@@ -220,20 +222,23 @@ class GameUi {
         this.#app.debugEnabled = !!e.target.checked;
         this.#playerPositionLabel.classList.toggle("d-none", !this.#app.debugEnabled);
         this.#physicsStatsLabel.classList.toggle("d-none", !this.#app.debugEnabled);
+        this.#multiplayerStatsLabel.classList.toggle("d-none", !this.#app.debugEnabled);
     }
 
     /**
      * Handles the game update completed event
      * @param {PlayerState} playerState
      * @param {string} physicsDebugStats
+     * @param {string} multiplayerDebugStats
      */
-    #onGameUpdateCompleted({playerState: {position, cameraRotation, direction, orientation}, physicsDebugStats}) {
+    #onGameUpdateCompleted({playerState: {position, cameraRotation, direction, orientation}, physicsDebugStats, multiplayerDebugStats}) {
         this.#playerPositionLabel.innerHTML = `
             Pos: ${position.map(x => x.toFixed(2)).join(", ")}<br>
             Yaw: ${cameraRotation.yaw.toFixed(0)} / Pitch: ${cameraRotation.pitch.toFixed(0)}<br>
             Dir: ${direction.map(x => x.toFixed(2)).join(", ")}<br>
             Quat: ${orientation.map(x => x.toFixed(2)).join(", ")}<br>`;
         this.#physicsStatsLabel.innerHTML = physicsDebugStats;
+        this.#multiplayerStatsLabel.innerHTML = multiplayerDebugStats;
     }
 
     /**
@@ -250,7 +255,7 @@ class GameUi {
      * @returns {Promise<void>}
      */
     async joinGame(user, lobby) {
-        await this.#app.joinGame(user.id, lobby.id);
+        await this.#app.joinGame(user.id, lobby.id, user.id == lobby.hostId);
         this.#captureEnabled = true;
     }
 

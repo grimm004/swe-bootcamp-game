@@ -44,6 +44,7 @@ import MultiplayerComponent from "./ecs/components/MultiplayerComponent.js";
 import GameHostComponent from "./ecs/components/GameHostComponent.js";
 import SizeComponent from "./ecs/components/SizeComponent.js";
 import RigidBodyComponent from "./ecs/components/RigidBodyComponent.js";
+import NetworkSynchroniseComponent from "./ecs/components/NetworkSyncroniseComponent.js";
 
 /**
  * @typedef {{position: [x: number, y: number, z: number], direction: [x: number, y: number, z: number], orientation: [x: number, y: number, z: number, w: number]}} PlayerState
@@ -93,6 +94,7 @@ export class SweBootcampGame extends Application {
         this.#ecsWorld.registerComponent(PlayerComponent);
         this.#ecsWorld.registerComponent(MultiplayerComponent);
         this.#ecsWorld.registerComponent(GameHostComponent);
+        this.#ecsWorld.registerComponent(NetworkSynchroniseComponent);
 
         this.#windowInfoEntity = this.#entityFactory.createWindowEntity(WindowInfoEntityId, gl.canvas.clientWidth, gl.canvas.clientHeight);
         this.#frameInfoEntity = this.#entityFactory.createTimingEntity(FrameInfoEntityId);
@@ -156,6 +158,15 @@ export class SweBootcampGame extends Application {
      */
     get physicsDebugStats() {
         return this.#physicsSystem.physicsDebugStats;
+    }
+
+    // noinspection JSUnusedGlobalSymbols
+    /**
+     * Fetches the multiplayer debug stats.
+     * @returns {string}
+     */
+    get multiplayerDebugStats() {
+        return this.#multiplayerSystem.multiplayerDebugStats;
     }
 
     /**
@@ -476,9 +487,10 @@ export class SweBootcampGame extends Application {
      * Join the specified game.
      * @param {string} playerId - The ID of the player to join.
      * @param {string} gameId - The ID of the game to join.
+     * @param {boolean} isHost - Whether the player is the host.
      */
-    async joinGame(playerId, gameId) {
-        await this.#multiplayerSystem.joinGame(playerId, gameId);
+    async joinGame(playerId, gameId, isHost) {
+        await this.#multiplayerSystem.joinGame(playerId, gameId, isHost);
     }
 
     onMouseMove(dx, dy, x, y) {

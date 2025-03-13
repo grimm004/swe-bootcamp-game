@@ -722,6 +722,14 @@ export class Vector3 extends Vector {
     }
 
     /**
+     * @param {Vector3} vec
+     * @returns {Vector3}
+     */
+    copyFrom(vec) {
+        return vec3.copy(this, vec);
+    }
+
+    /**
      * @param {(x: number, i: number, vec: Vector3) => number} f
      * @returns {Vector3}
      */

@@ -4,9 +4,13 @@ import MultiplayerComponent from "../components/MultiplayerComponent.js";
 import PositionComponent from "../components/PositionComponent.js";
 import OrientationComponent from "../components/OrientationComponent.js";
 import {Debug} from "../../debug.js";
-import {Colour, Quaternion, Vector3} from "../../../graphics/maths.js";
+import {Colour, FrameCounter, Quaternion, Vector3} from "../../../graphics/maths.js";
 import {HubConnectionBuilder, LogLevel} from "../../../../lib/signalr.module.js";
 import {showMessage} from "../../../ui/message-popup.js";
+import NetworkSynchroniseComponent from "../components/NetworkSyncroniseComponent.js";
+import GameHostComponent from "../components/GameHostComponent.js";
+import RigidBodyComponent from "../components/RigidBodyComponent.js";
+import SizeComponent from "../components/SizeComponent.js";
 
 
 export default class MultiplayerSystem extends ApeEcs.System {
@@ -20,6 +24,10 @@ export default class MultiplayerSystem extends ApeEcs.System {
             .fromAll(MultiplayerComponent.name, PositionComponent.name, OrientationComponent.name)
             .persist();
 
+        this.synchroniseQuery = this.createQuery()
+            .fromAll(NetworkSynchroniseComponent.name, PositionComponent.name, OrientationComponent.name, SizeComponent.name, RigidBodyComponent.name)
+            .persist();
+
         this._entityFactory = entityFactory;
         this._gameHubUrl = gameHubUrl;
 
@@ -30,15 +38,38 @@ export default class MultiplayerSystem extends ApeEcs.System {
         this._gameHubConnection = null;
 
         this._frameInfo = this.world.getEntity(FrameInfoEntityId).c.time;
+        this._fixedTimeStep = 1 / 64;
+        this._timeAccumulator = 0;
+        this._frameCounter = new FrameCounter();
+        this._lastTickTime = null;
+    }
+
+    /**
+     * Fetches the multiplayer debug stats.
+     * @returns {string}
+     */
+    get multiplayerDebugStats() {
+        return this._gameHubConnection
+            ? `
+            <b>Multiplayer System</b><br>
+            Fixed Time Step:&nbsp;&nbsp;${this._fixedTimeStep.toFixed(4)}s<br>
+            Time Accumulator:&nbsp;${this._timeAccumulator.toFixed(4)}s<br>
+            Network Tickrate:&nbsp;&nbsp;&nbsp;${String(Math.max(0.0, this._frameCounter.averageFrameRate).toFixed(1)).padStart(5, "0")}`
+            : "<b>Multiplayer System</b><br>Not Connected";
     }
 
     /**
      * Joins the specified game.
      * @param {string} playerId
      * @param {string} gameId
+     * @param {boolean} isHost
      */
-    async joinGame(playerId, gameId) {
+    async joinGame(playerId, gameId, isHost) {
         this.world.getEntity(PlayerEntityId).c.player.update({playerId, gameId});
+        if (isHost)
+            this.world.getEntity(PlayerEntityId).addComponent({
+                type: GameHostComponent.name,
+            });
         await this.#startGameHubConnection(gameId);
     }
 
@@ -70,6 +101,7 @@ export default class MultiplayerSystem extends ApeEcs.System {
         }
 
         gameHubConnection?.on("PlayerStateUpdate", this.#onPlayerStateUpdate.bind(this));
+        gameHubConnection?.on("WorldStateUpdate", this.#onWorldStateUpdate.bind(this));
 
         this._gameHubConnection = gameHubConnection;
         return true;
@@ -111,6 +143,37 @@ export default class MultiplayerSystem extends ApeEcs.System {
     }
 
     /**
+     * @param {string} playerId
+     * @param {string} state
+     */
+    #onWorldStateUpdate(playerId, state) {
+        if (this.world.getEntity(PlayerEntityId).c.player.playerId === playerId) return;
+
+        for (const entityStateUpdate of JSON.parse(state)) {
+            const {
+                id,
+                data: {
+                    position,
+                    orientation,
+                    size,
+                },
+            } = entityStateUpdate;
+
+            this.#setRigidBodyState(playerId, id, position, orientation, size);
+        }
+    }
+
+    #setRigidBodyState(playerId, entityId, position, orientation, size) {
+        let entity = this.world.getEntity(entityId);
+        if (!entity)
+            throw new Error(`Entity not found: ${entityId}`);
+
+        entity.c.position.update({position: new Vector3(position)});
+        entity.c.orientation.update({orientation: new Quaternion(orientation)});
+        entity.c.size.update({size: new Vector3(size)});
+    }
+
+    /**
      * Stops the game hub connection.
      * @returns {Promise<void>}
      */
@@ -129,14 +192,13 @@ export default class MultiplayerSystem extends ApeEcs.System {
     async update() {
         const playerEntity = this.world.getEntity(PlayerEntityId);
         if (!playerEntity) return;
-        const playerComponent = playerEntity.c.player;
 
         for (const entity of this.query.execute()) {
             const multiplayerComponent = entity.c.multiplayer;
             const positionComponent = entity.c.position;
             const orientationComponent = entity.c.orientation;
 
-            if (multiplayerComponent.playerId === playerComponent.playerId)
+            if (multiplayerComponent.playerId === playerEntity.c.player.playerId)
                 throw new Error("Player entity found with multiplayer component.");
 
             const playerPosition = positionComponent.position;
@@ -146,16 +208,51 @@ export default class MultiplayerSystem extends ApeEcs.System {
             Debug.setBox(`player_${multiplayerComponent.playerId}`, playerPosition, playerOrientation, new Vector3(0.2), Colour.black, false);
         }
 
-        // Broadcast local player state
-        if (this._gameHubConnection) {
-            const playerPosition = playerEntity.c.position.position;
-            const playerOrientation = playerEntity.c.orientation.orientation;
+        if (!this._gameHubConnection) return;
 
-            // noinspection JSCheckFunctionSignatures
-            await this._gameHubConnection?.invoke("PlayerStateUpdate", playerComponent.gameId, playerComponent.playerId, JSON.stringify({
-                position: playerPosition.toArray(),
-                orientation: playerOrientation.toArray(),
-            }), this._frameInfo.deltaTime);
+        if (this._lastTickTime == null) {
+            this._lastTickTime = performance.now();
         }
+
+        this._timeAccumulator += this._frameInfo.deltaTime;
+        while (this._timeAccumulator >= this._fixedTimeStep) {
+            await this.#sendState(playerEntity);
+            this._timeAccumulator -= this._fixedTimeStep;
+
+            const now = performance.now();
+            const tickDeltaTime = (now - this._lastTickTime) / 1000;
+
+            this._lastTickTime = now;
+            this._frameCounter.tick(tickDeltaTime);
+        }
+
+    }
+
+    /**
+     * @param {Entity} playerEntity
+     * @returns {Promise<void>}
+     */
+    async #sendState(playerEntity) {
+        const playerComponent = playerEntity.c.player;
+        const playerPosition = playerEntity.c.position.position;
+        const playerOrientation = playerEntity.c.orientation.orientation;
+        await this._gameHubConnection?.invoke("PlayerStateUpdate", playerComponent.gameId, playerComponent.playerId, JSON.stringify({
+            position: playerPosition.toArray(),
+            orientation: playerOrientation.toArray(),
+        }), this._frameInfo.deltaTime);
+
+        if (!playerEntity.has(GameHostComponent.name)) return;
+
+        const entityData = [...this.synchroniseQuery.execute()].map(entity => ({
+            id: entity.id,
+            data: {
+                position: entity.c.position.position.toArray(),
+                orientation: entity.c.orientation.orientation.toArray(),
+                size: entity.c.size.size.toArray(),
+            }
+        }));
+
+        await this._gameHubConnection?.invoke(
+            "WorldStateUpdate", playerComponent.gameId, playerComponent.playerId, JSON.stringify(entityData));
     }
 }

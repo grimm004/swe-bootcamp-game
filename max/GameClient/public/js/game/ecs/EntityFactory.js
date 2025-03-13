@@ -11,6 +11,7 @@ import PlayerComponent from "./components/PlayerComponent.js";
 import MultiplayerComponent from "./components/MultiplayerComponent.js";
 import SizeComponent from "./components/SizeComponent.js";
 import RigidBodyComponent from "./components/RigidBodyComponent.js";
+import NetworkSynchroniseComponent from "./components/NetworkSyncroniseComponent.js";
 
 
 export default class EntityFactory {
@@ -161,6 +162,9 @@ export default class EntityFactory {
         return this.#ecsWorld.createEntity({
             id,
             c: {
+                network: {
+                    type: NetworkSynchroniseComponent.name,
+                },
                 rigidBody: {
                     type: RigidBodyComponent.name,
                     move: true,

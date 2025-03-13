@@ -63,7 +63,8 @@ export class SceneNode extends WorldObject {
     }
 
     set scale(scaleVector) {
-        this.#scale = new Vector3(scaleVector);
+        this.#scale.copyFrom(scaleVector);
+        this.updateMatrix();
     }
 
     get scale() {

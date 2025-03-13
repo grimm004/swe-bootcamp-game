@@ -247,6 +247,15 @@ button:hover {
     border-radius: 0 0 10px 10px;
 }
 
+.debug-stats-left {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    padding: 5px 8px 5px 5px;
+    border-radius: 0 10px 10px 0;
+}
+
 .debug-stats-right {
     position: absolute;
     top: 50%;
