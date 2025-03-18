@@ -6,7 +6,7 @@ using User = GameServer.Domain.Models.User;
 
 namespace GameServer.Data.Repositories;
 
-public class UserRepository(GameServerDbContext dbContext) : IUserRepository
+internal sealed class UserRepository(GameServerDbContext dbContext) : IUserRepository
 {
     public async Task<User?> CreateUserAsync(string username, byte[] passwordSalt, byte[] passwordHash, string displayName, CancellationToken token = default)
     {

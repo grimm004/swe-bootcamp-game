@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using GameServer.Api.Constants;
 using GameServer.Api.Contracts.Requests;
 using GameServer.Api.Contracts.Responses;
@@ -7,7 +8,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace GameServer.Api.Endpoints;
 
-public static class AdminEndpoints
+[ExcludeFromCodeCoverage]
+internal static class AdminEndpoints
 {
     private const string AdminRoute = "/admin";
 

@@ -5,12 +5,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GameServer.Data;
 
-public class GameServerDbContext(DbContextOptions<GameServerDbContext> options, ISaltedHashService saltedHashService) : DbContext(options)
+internal class GameServerDbContext(DbContextOptions<GameServerDbContext> options, ISaltedHashService saltedHashService) : DbContext(options)
 {
-    internal DbSet<User> Users => Set<User>();
-    internal DbSet<AuthRole> AuthRoles => Set<AuthRole>();
-    internal DbSet<AuthSession> AuthSessions => Set<AuthSession>();
-    internal DbSet<Lobby> Lobbies => Set<Lobby>();
+    public DbSet<User> Users => Set<User>();
+    public DbSet<AuthRole> AuthRoles => Set<AuthRole>();
+    public DbSet<AuthSession> AuthSessions => Set<AuthSession>();
+    public DbSet<Lobby> Lobbies => Set<Lobby>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         modelBuilder

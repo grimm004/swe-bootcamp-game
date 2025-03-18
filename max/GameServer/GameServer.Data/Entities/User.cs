@@ -1,6 +1,6 @@
 namespace GameServer.Data.Entities;
 
-internal class User
+internal sealed class User
 {
     public Guid Id { get; set; }
 

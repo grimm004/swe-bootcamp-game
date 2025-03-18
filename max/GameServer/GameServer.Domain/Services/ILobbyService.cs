@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using GameServer.Domain.Models;
 using OneOf;
 using OneOf.Types;
@@ -18,16 +19,21 @@ public struct LobbyClosed;
 public struct InvalidJoinCode;
 
 [GenerateOneOf]
+[ExcludeFromCodeCoverage]
 public partial class CreateLobbyResult : OneOfBase<Lobby, Error<string>>;
 
 [GenerateOneOf]
+[ExcludeFromCodeCoverage]
 public partial class LobbyResult : OneOfBase<Lobby, NotFound, Error<string>>;
 
 [GenerateOneOf]
+[ExcludeFromCodeCoverage]
 public partial class DisbandLobbyResult : OneOfBase<Success, NotFound, Error<string>>;
 
 [GenerateOneOf]
+[ExcludeFromCodeCoverage]
 public partial class JoinLobbyResult : OneOfBase<Lobby, NotFound, LobbyClosed, InvalidJoinCode, Error<string>>;
 
 [GenerateOneOf]
+[ExcludeFromCodeCoverage]
 public partial class LeaveLobbyResult : OneOfBase<Lobby, NotFound, Error<string>>;

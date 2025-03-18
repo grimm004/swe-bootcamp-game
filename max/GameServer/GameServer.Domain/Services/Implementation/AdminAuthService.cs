@@ -4,7 +4,7 @@ using OneOf.Types;
 
 namespace GameServer.Domain.Services.Implementation;
 
-public class AdminAuthService(IUserRepository userRepository, IAuthRoleRepository authRoleRepository) : IAdminAuthService
+internal class AdminAuthService(IUserRepository userRepository, IAuthRoleRepository authRoleRepository) : IAdminAuthService
 {
     public async Task<AuthRoleCreationResult> CreateRoleAsync(NewAuthRole role, CancellationToken token = default)
     {

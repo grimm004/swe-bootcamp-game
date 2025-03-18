@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GameServer.Data.Repositories;
 
-public class AuthSessionRepository(GameServerDbContext dbContext) : IAuthSessionRepository
+internal sealed class AuthSessionRepository(GameServerDbContext dbContext) : IAuthSessionRepository
 {
     public async Task<Domain.Models.AuthSessionInfo?> CreateSessionAsync(Guid userId, byte[] authTokenHash, CancellationToken token = default)
     {
@@ -43,7 +43,7 @@ public class AuthSessionRepository(GameServerDbContext dbContext) : IAuthSession
     {
         var entity = await dbContext.AuthSessions.AsNoTracking()
             .Include(x => x.User)
-            .ThenInclude(x => x.Roles)
+                .ThenInclude(x => x!.Roles)
             .FirstOrDefaultAsync(x => x.TokenHash == authTokenHash, token);
 
         return entity?.MapToAuthSessionInfo();

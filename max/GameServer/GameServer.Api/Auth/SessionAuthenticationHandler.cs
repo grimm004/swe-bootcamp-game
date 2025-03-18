@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
@@ -6,7 +7,8 @@ using GameServer.Domain.Services;
 
 namespace GameServer.Api.Auth;
 
-public class SessionAuthenticationHandler(
+[ExcludeFromCodeCoverage]
+internal sealed class SessionAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
     ILoggerFactory loggerFactory,
     UrlEncoder encoder,

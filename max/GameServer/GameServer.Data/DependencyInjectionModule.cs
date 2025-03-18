@@ -1,4 +1,3 @@
-using GameServer.Data.Entities;
 using GameServer.Data.Repositories;
 using GameServer.Domain.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -20,4 +19,11 @@ public static class DependencyInjectionModule
             .AddScoped<IAuthRoleRepository, AuthRoleRepository>()
             .AddScoped<IAuthSessionRepository, AuthSessionRepository>()
             .AddScoped<ILobbyRepository, LobbyRepository>();
+
+    public static async Task EnsureDatabaseCreatedAsync(this IServiceProvider serviceProvider)
+    {
+        await using var serviceScope = serviceProvider.CreateAsyncScope();
+        await using var dbContext = serviceScope.ServiceProvider.GetRequiredService<GameServerDbContext>();
+        await dbContext.Database.EnsureCreatedAsync();
+    }
 }

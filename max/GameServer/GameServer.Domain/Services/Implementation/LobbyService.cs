@@ -4,7 +4,7 @@ using OneOf.Types;
 
 namespace GameServer.Domain.Services.Implementation;
 
-public class LobbyService(ILobbyRepository lobbyRepository) : ILobbyService
+internal class LobbyService(ILobbyRepository lobbyRepository) : ILobbyService
 {
     private const string LobbyJoinCodeChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private const int LobbyJoinCodeLength = 6;

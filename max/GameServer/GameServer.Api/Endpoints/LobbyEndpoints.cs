@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using GameServer.Api.Constants;
 using GameServer.Api.Contracts.Requests;
 using GameServer.Api.Contracts.Responses;
@@ -10,7 +11,8 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace GameServer.Api.Endpoints;
 
-public static class LobbyEndpoints
+[ExcludeFromCodeCoverage]
+internal static class LobbyEndpoints
 {
     private const string Route = "/lobbies";
     private const string Category = "LobbyEndpoints";

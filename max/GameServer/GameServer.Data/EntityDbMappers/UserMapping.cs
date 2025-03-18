@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace GameServer.Data.EntityDbMappers;
 
-internal class UserMapping(ISaltedHashService saltedHashService) : IEntityTypeConfiguration<User>
+internal sealed class UserMapping(ISaltedHashService saltedHashService) : IEntityTypeConfiguration<User>
 {
     private const string DefaultAdminPassword = "admin";
 

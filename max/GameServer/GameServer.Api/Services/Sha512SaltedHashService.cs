@@ -3,7 +3,7 @@ using GameServer.Domain.Services;
 
 namespace GameServer.Api.Services;
 
-public class Sha512SaltedHashService(byte[] commonSalt) : ISaltedHashService
+internal sealed class Sha512SaltedHashService(byte[] commonSalt) : ISaltedHashService
 {
     private byte[] GetHashSalt(byte[] salt)
     {
@@ -27,11 +27,8 @@ public class Sha512SaltedHashService(byte[] commonSalt) : ISaltedHashService
         return salt;
     }
 
-    private static byte[] GenerateSaltedHash(byte[] data, byte[]? salt)
+    private static byte[] GenerateSaltedHash(byte[] data, byte[] salt)
     {
-        if (salt is null)
-            return SHA512.HashData(data);
-
         var plainTextWithSaltBytes = new byte[data.Length + salt.Length];
 
         for (var i = 0; i < data.Length; i++)

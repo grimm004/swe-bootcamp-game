@@ -1,6 +1,6 @@
 namespace GameServer.Data.Entities;
 
-internal class AuthSession
+internal sealed class AuthSession
 {
     public Guid Id { get; set; }
     public required Guid UserId { get; set; }

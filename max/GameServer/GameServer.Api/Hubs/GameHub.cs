@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace GameServer.Api.Hubs;
 
-public class GameHub(ILogger<LobbyHub> logger) : Hub
+internal sealed class GameHub(ILogger<LobbyHub> logger) : Hub
 {
     /// <summary>
     /// Adds the connection to the game group for the specified lobby.

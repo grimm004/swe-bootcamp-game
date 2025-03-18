@@ -1,11 +1,11 @@
 namespace GameServer.Domain.Models;
 
-public class Lobby
+public sealed record Lobby
 {
-    public Guid Id { get; set; }
-    public string JoinCode { get; set; } = null!;
-    public Guid HostId { get; set; }
-    public LobbyStatus Status { get; set; }
+    public Guid Id { get; init; }
+    public string JoinCode { get; init; } = null!;
+    public Guid HostId { get; init; }
+    public LobbyStatus Status { get; init; }
 
-    public IEnumerable<User> Users { get; set; } = [];
+    public IEnumerable<User> Users { get; init; } = [];
 }

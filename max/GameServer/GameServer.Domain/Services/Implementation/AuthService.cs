@@ -6,7 +6,7 @@ using OneOf.Types;
 
 namespace GameServer.Domain.Services.Implementation;
 
-public class AuthService(
+internal class AuthService(
     IUserRepository userRepository, IAuthSessionRepository sessionRepository, IAuthRoleRepository roleRepository, ISaltedHashService saltedHashService) : IAuthService
 {
     public async Task<RegisterResult> RegisterAsync(AuthRegistration registration, IEnumerable<string> roles, CancellationToken token = default)
@@ -88,29 +88,29 @@ public class AuthService(
         return result ? new Success() : new Error<string>("Failed to delete session.");
     }
 
-    public async Task<OneOf<AuthSessionInfo, NotFound, Unauthorized, Error<string>>> GetSessionAsync(byte[] authTokenData, CancellationToken token = default)
+    public async Task<OneOf<AuthSessionInfo, Unauthorized, Error<string>>> GetSessionAsync(byte[] authTokenData, CancellationToken token = default)
     {
         var authTokenHash = saltedHashService.HashData(authTokenData);
 
         var session = await sessionRepository.GetSessionByTokenHashAsync(authTokenHash, token);
 
         if (session is null)
-            return new NotFound();
+            return new Unauthorized();
 
         return session.RevokedAt.HasValue || session.ExpiresAt < DateTime.UtcNow ? new Unauthorized() : session;
     }
 
-    public async Task<OneOf<User, NotFound, Unauthorized, Error<string>>> UpdateProfileAsync(byte[] authTokenData, UserUpdate userUpdate, CancellationToken token = default)
+    public async Task<OneOf<User, Unauthorized, Error<string>>> UpdateProfileAsync(byte[] authTokenData, UserUpdate userUpdate, CancellationToken token = default)
     {
         var authTokenHash = saltedHashService.HashData(authTokenData);
 
         var session = await sessionRepository.GetSessionByTokenHashAsync(authTokenHash, token);
         if (session is null)
-            return new NotFound();
+            return new Unauthorized();
 
         var user = await userRepository.UpdateUserAsync(session.User.Id, userUpdate.DisplayName, token);
         if (user is null)
-            return new NotFound();
+            return new Error<string>("Failed to update user.");
 
         return user;
     }

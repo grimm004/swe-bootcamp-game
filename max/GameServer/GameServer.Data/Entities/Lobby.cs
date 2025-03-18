@@ -1,6 +1,6 @@
 namespace GameServer.Data.Entities;
 
-internal class Lobby
+internal sealed class Lobby
 {
     public Guid Id { get; set; }
     public string JoinCode { get; set; } = null!;

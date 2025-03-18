@@ -4,6 +4,7 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,10 +22,6 @@
   <ItemGroup>
     <Watch Include="..\..\GameClient\public\**\*" />
     <PublicFiles Include="..\..\GameClient\public\**\*.*" Visible="false" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Validators\" />
   </ItemGroup>
 
   <Target Name="CopyGameClientPublicToWwwRoot" BeforeTargets="PrepareForRun">

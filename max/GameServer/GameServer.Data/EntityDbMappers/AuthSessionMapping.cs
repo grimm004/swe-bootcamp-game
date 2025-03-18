@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace GameServer.Data.EntityDbMappers;
 
-internal class AuthSessionMapping : IEntityTypeConfiguration<AuthSession>
+internal sealed class AuthSessionMapping : IEntityTypeConfiguration<AuthSession>
 {
     public void Configure(EntityTypeBuilder<AuthSession> builder)
     {

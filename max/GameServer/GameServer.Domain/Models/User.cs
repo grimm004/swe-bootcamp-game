@@ -1,6 +1,6 @@
 namespace GameServer.Domain.Models;
 
-public record User
+public sealed record User
 {
     public Guid Id { get; init; }
     public string Username { get; init; } = null!;

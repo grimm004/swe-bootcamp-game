@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using GameServer.Domain.Models;
 using OneOf;
 using OneOf.Types;
@@ -17,22 +18,29 @@ public interface IAdminAuthService
 }
 
 [GenerateOneOf]
+[ExcludeFromCodeCoverage]
 public partial class AuthRoleCreationResult : OneOfBase<AuthRole, AlreadyExists, Error<string>>;
 
 [GenerateOneOf]
+[ExcludeFromCodeCoverage]
 public partial class AuthRoleDeletionResult : OneOfBase<Success, AlreadyExists, Error<string>>;
 
 [GenerateOneOf]
+[ExcludeFromCodeCoverage]
 public partial class AuthRoleAssignmentResult : OneOfBase<AuthRole, NotFound, AlreadyExists, Error<string>>;
 
 [GenerateOneOf]
+[ExcludeFromCodeCoverage]
 public partial class AuthRoleUnassignmentResult : OneOfBase<Success, NotFound, Error<string>>;
 
 [GenerateOneOf]
+[ExcludeFromCodeCoverage]
 public partial class RoleResult : OneOfBase<AuthRole, NotFound, Error<string>>;
 
 [GenerateOneOf]
+[ExcludeFromCodeCoverage]
 public partial class RolesResult : OneOfBase<List<AuthRole>, Error<string>>;
 
 [GenerateOneOf]
+[ExcludeFromCodeCoverage]
 public partial class UserRolesResult : OneOfBase<List<AuthRole>, NotFound, Error<string>>;

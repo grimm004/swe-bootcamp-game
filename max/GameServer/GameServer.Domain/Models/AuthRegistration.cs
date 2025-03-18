@@ -1,8 +1,8 @@
 namespace GameServer.Domain.Models;
 
-public class AuthRegistration
+public sealed record AuthRegistration
 {
-    public string Username { get; set; } = null!;
-    public string Password { get; set; } = null!;
-    public string DisplayName { get; set; } = null!;
+    public string Username { get; init; } = null!;
+    public string Password { get; init; } = null!;
+    public string DisplayName { get; init; } = null!;
 }

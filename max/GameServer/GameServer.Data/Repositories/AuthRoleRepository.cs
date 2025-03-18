@@ -6,7 +6,7 @@ using AuthRole = GameServer.Data.Entities.AuthRole;
 
 namespace GameServer.Data.Repositories;
 
-public class AuthRoleRepository(GameServerDbContext dbContext) : IAuthRoleRepository
+internal sealed class AuthRoleRepository(GameServerDbContext dbContext) : IAuthRoleRepository
 {
     public async Task<Domain.Models.AuthRole?> CreateRoleAsync(NewAuthRole role, CancellationToken token = default)
     {
@@ -73,7 +73,7 @@ public class AuthRoleRepository(GameServerDbContext dbContext) : IAuthRoleReposi
         var entities = await dbContext.Users
             .Include(u => u.Roles)
             .Where(u => u.Id == userId)
-            .SelectMany(u => u.Roles)
+            .SelectMany(u => u.Roles!)
             .ToListAsync(token);
 
         return entities.Select(DomainMappers.MapToAuthRole);
@@ -87,7 +87,7 @@ public class AuthRoleRepository(GameServerDbContext dbContext) : IAuthRoleReposi
         if (user is null || role is null)
             return false;
 
-        user.Roles.Add(role);
+        user.Roles!.Add(role);
         var rowsChanged = await dbContext.SaveChangesAsync(token);
 
         return rowsChanged > 0;
@@ -101,7 +101,7 @@ public class AuthRoleRepository(GameServerDbContext dbContext) : IAuthRoleReposi
         if (user is null || role is null)
             return false;
 
-        user.Roles.Remove(role);
+        user.Roles!.Remove(role);
         var rowsChanged = await dbContext.SaveChangesAsync(token);
 
         return rowsChanged > 0;

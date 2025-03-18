@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace GameServer.Data.EntityDbMappers;
 
-internal class AuthRoleMapping : IEntityTypeConfiguration<AuthRole>
+internal sealed class AuthRoleMapping : IEntityTypeConfiguration<AuthRole>
 {
     public void Configure(EntityTypeBuilder<AuthRole> builder)
     {

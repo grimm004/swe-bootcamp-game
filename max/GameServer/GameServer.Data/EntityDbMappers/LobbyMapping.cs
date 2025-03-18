@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace GameServer.Data.EntityDbMappers;
 
-internal class LobbyMapping : IEntityTypeConfiguration<Lobby>
+internal sealed class LobbyMapping : IEntityTypeConfiguration<Lobby>
 {
     public void Configure(EntityTypeBuilder<Lobby> builder)
     {

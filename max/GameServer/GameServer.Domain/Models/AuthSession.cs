@@ -1,10 +1,10 @@
 namespace GameServer.Domain.Models;
 
-public record AuthSession
+public sealed record AuthSession
 {
-    public Guid Id { get; set; }
-    public User User { get; set; } = null!;
-    public byte[] TokenData { get; set; } = null!;
-    public DateTime CreatedAt { get; set; }
-    public DateTime ExpiresAt { get; set; }
+    public Guid Id { get; init; }
+    public User User { get; init; } = null!;
+    public byte[] TokenData { get; init; } = null!;
+    public DateTime CreatedAt { get; init; }
+    public DateTime ExpiresAt { get; init; }
 }

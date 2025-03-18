@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using GameServer.Api.Auth;
 using GameServer.Api.Constants;
 using GameServer.Api.Endpoints;
@@ -48,9 +49,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 
-    await using var serviceScope = app.Services.CreateAsyncScope();
-    await using var dbContext = serviceScope.ServiceProvider.GetRequiredService<GameServerDbContext>();
-    await dbContext.Database.EnsureCreatedAsync();
+    await app.Services.EnsureDatabaseCreatedAsync();
 }
 
 app.UseHttpsRedirection();
@@ -68,3 +67,6 @@ app.MapHub<LobbyHub>("/hubs/v1/lobby");
 app.MapHub<GameHub>("/hubs/v1/game");
 
 app.Run();
+
+[ExcludeFromCodeCoverage]
+public static partial class Program;

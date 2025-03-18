@@ -1,6 +1,6 @@
 namespace GameServer.Domain.Models;
 
-public class UserUpdate
+public sealed record UserUpdate
 {
-    public string? DisplayName { get; set; }
+    public string? DisplayName { get; init; }
 }

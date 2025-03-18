@@ -4,7 +4,7 @@ using GameServer.Domain.Models;
 
 namespace GameServer.Api.Mappers;
 
-public static class AuthMappers
+internal static class AuthMappers
 {
     public static AuthRegistration MapToAuthRegistration(this RegisterRequest request) => new()
     {

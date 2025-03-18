@@ -8,6 +8,16 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameServer.Api.Contracts", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameServer.Domain", "GameServer.Domain\GameServer.Domain.csproj", "{A38A6107-8950-45DA-A37A-9F8BC4180E08}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameServer.Tests.Unit", "GameServer.Tests.Unit\GameServer.Tests.Unit.csproj", "{CE22FA9C-6E70-451F-884C-BB7FA0712D36}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{82A04D5A-AEAE-4E69-8D1C-87F818A02C4F}"
+	ProjectSection(SolutionItems) = preProject
+		Dockerfile = Dockerfile
+		.dockerignore = .dockerignore
+		.gitignore = .gitignore
+		README.md = README.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -30,5 +40,9 @@ Global
 		{A38A6107-8950-45DA-A37A-9F8BC4180E08}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A38A6107-8950-45DA-A37A-9F8BC4180E08}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A38A6107-8950-45DA-A37A-9F8BC4180E08}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CE22FA9C-6E70-451F-884C-BB7FA0712D36}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CE22FA9C-6E70-451F-884C-BB7FA0712D36}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CE22FA9C-6E70-451F-884C-BB7FA0712D36}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CE22FA9C-6E70-451F-884C-BB7FA0712D36}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

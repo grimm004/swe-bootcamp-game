@@ -4,7 +4,7 @@ using GameServer.Domain.Models;
 
 namespace GameServer.Api.Mappers;
 
-public static class AuthRoleMappers
+internal static class AuthRoleMappers
 {
     public static NewAuthRole MapToNewAuthRole(this CreateAuthRoleRequest request) =>
         new()

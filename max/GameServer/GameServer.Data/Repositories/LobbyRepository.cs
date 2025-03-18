@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GameServer.Data.Repositories;
 
-public class LobbyRepository(GameServerDbContext dbContext) : ILobbyRepository
+internal sealed class LobbyRepository(GameServerDbContext dbContext) : ILobbyRepository
 {
     public async Task<Domain.Models.Lobby?> CreateLobbyAsync(Guid hostId, string joinCode, CancellationToken token = default)
     {

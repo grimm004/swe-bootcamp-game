@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using GameServer.Api.Constants;
 using GameServer.Api.Contracts.Requests;
 using GameServer.Api.Contracts.Responses;
@@ -8,7 +9,8 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace GameServer.Api.Endpoints;
 
-public static class AuthEndpoints
+[ExcludeFromCodeCoverage]
+internal static class AuthEndpoints
 {
     private const string Route = "/auth";
     private const string Category = "AuthEndpoints";
@@ -109,7 +111,6 @@ public static class AuthEndpoints
 
         return updateResult.Match<IResult>(
             user => Results.Ok(user.MapToResponse()),
-            _ => Results.NotFound(),
             _ => Results.Unauthorized(),
             error => Results.Problem(error.Value, statusCode: StatusCodes.Status500InternalServerError));
     }
