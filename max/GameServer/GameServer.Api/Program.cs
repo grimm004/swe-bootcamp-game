@@ -11,17 +11,30 @@ using GameServer.Domain.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 
-var builder = WebApplication.CreateBuilder(args);
+const string defaultConnectionString = "Data Source=game-server.db";
 
-const string dbPath = "game-server.db";
+var dbProvider = Environment.GetEnvironmentVariable("GameServerDbProvider")?.ToUpperInvariant() switch
+{
+    "SQLITE" => DbProvider.Sqlite,
+    "SQLSERVER" => DbProvider.SqlServer,
+    null => DbProvider.Sqlite,
+    _ => (DbProvider?)null
+};
+
+var connectionString = Environment.GetEnvironmentVariable("GameServerDbConnectionString") ?? defaultConnectionString;
+
+var builder = WebApplication.CreateBuilder(args);
 
 builder.Services
     .AddEndpointsApiExplorer()
     .AddSwaggerGen()
     .AddGameServerData(dbContextOptions =>
-        dbContextOptions
-            .UseSqlite($"Data Source={dbPath}")
-            .EnableSensitiveDataLogging())
+        (dbProvider switch
+        {
+            DbProvider.Sqlite => dbContextOptions.UseSqlite(connectionString),
+            DbProvider.SqlServer => dbContextOptions.UseSqlServer(connectionString),
+            _ => throw new Exception("Invalid or unsupported database provider specified.")
+        }).EnableSensitiveDataLogging())
     .AddSingleton<ISaltedHashService, Sha512SaltedHashService>(_ =>
         new Sha512SaltedHashService("GameUserPasswordSalt"u8.ToArray()))
     .AddDomain();
@@ -70,3 +83,9 @@ app.Run();
 
 [ExcludeFromCodeCoverage]
 public static partial class Program;
+
+internal enum DbProvider
+{
+    Sqlite,
+    SqlServer
+}
