@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using GameServer.Api.Constants;
 using GameServer.Api.Contracts.Requests;
 using GameServer.Api.Contracts.Responses;
+using GameServer.Api.Extensions;
 using GameServer.Api.Mappers;
 using GameServer.Domain.Models;
 using GameServer.Domain.Services;
@@ -73,12 +74,17 @@ internal static class AuthEndpoints
             error => Results.Problem(error.Value, statusCode: StatusCodes.Status500InternalServerError));
     }
 
-    private static async Task<IResult> Login(LoginRequest request, IAuthService authService, CancellationToken token)
+    private static async Task<IResult> Login(LoginRequest request, IAuthService authService, HttpContext context, CancellationToken token)
     {
         var loginResult = await authService.LoginAsync(request.MapToAuthCredentials(), token);
 
         return loginResult.Match<IResult>(
-            authSession => Results.Ok(authSession.MapToResponse()),
+            authSession =>
+            {
+                var sessionResponse = authSession.MapToResponse();
+                context.Response.Cookies.AppendSessionToken(sessionResponse.Token, sessionResponse.ExpiresAt);
+                return Results.Ok(sessionResponse);
+            },
             _ => Results.NotFound(),
             error => Results.Problem(error.Value, statusCode: StatusCodes.Status500InternalServerError));
     }

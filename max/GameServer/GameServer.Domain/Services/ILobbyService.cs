@@ -13,6 +13,8 @@ public interface ILobbyService
     Task<DisbandLobbyResult> DisbandLobbyAsync(Guid lobbyId, CancellationToken token = default);
     Task<JoinLobbyResult> JoinLobbyAsync(Guid userId, string joinCode, CancellationToken token = default);
     Task<LeaveLobbyResult> LeaveLobbyAsync(Guid userId, CancellationToken token = default);
+    Task<LobbyResult> GetLobbyByUserIdAsync(Guid userId, CancellationToken token = default);
+    Task<StartGameResult> StartGameAsync(Guid userId, CancellationToken token = default);
 }
 
 public struct LobbyClosed;
@@ -37,3 +39,7 @@ public partial class JoinLobbyResult : OneOfBase<Lobby, NotFound, LobbyClosed, I
 [GenerateOneOf]
 [ExcludeFromCodeCoverage]
 public partial class LeaveLobbyResult : OneOfBase<Lobby, NotFound, Error<string>>;
+
+[GenerateOneOf]
+[ExcludeFromCodeCoverage]
+public partial class StartGameResult : OneOfBase<Lobby, NotFound, LobbyClosed, Error<string>>;

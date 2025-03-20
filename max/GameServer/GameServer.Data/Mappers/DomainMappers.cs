@@ -50,4 +50,13 @@ internal static class DomainMappers
             LobbyStatus.InGame => Domain.Models.LobbyStatus.InGame,
             _ => throw new ArgumentOutOfRangeException(nameof(lobbyStatus), lobbyStatus, null)
         };
+
+    public static LobbyStatus MapToLobbyStatus(this Domain.Models.LobbyStatus lobbyStatus) =>
+        lobbyStatus switch
+        {
+            Domain.Models.LobbyStatus.Closed => LobbyStatus.Closed,
+            Domain.Models.LobbyStatus.Open => LobbyStatus.Open,
+            Domain.Models.LobbyStatus.InGame => LobbyStatus.InGame,
+            _ => throw new ArgumentOutOfRangeException(nameof(lobbyStatus), lobbyStatus, null)
+        };
 }

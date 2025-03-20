@@ -38,6 +38,8 @@ async function main() {
 
     // gameUi.onGameFinish = () => { menu.show(); };
     app.run();
+
+    await menu.attemptAutoLogin();
 }
 
 window.onload = main;

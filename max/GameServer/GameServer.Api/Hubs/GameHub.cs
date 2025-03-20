@@ -1,62 +1,102 @@
+using System.Collections.Immutable;
+using GameServer.Api.Constants;
+using GameServer.Api.Contracts.Responses;
+using GameServer.Api.Mappers;
+using GameServer.Domain.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace GameServer.Api.Hubs;
 
-internal sealed class GameHub(ILogger<LobbyHub> logger) : Hub
+[Authorize(AuthPolicies.Player)]
+internal sealed class GameHub(ILobbyService lobbyService, IGameService gameService, ILogger<LobbyHub> logger) : Hub<IGameClient>
 {
-    /// <summary>
-    /// Adds the connection to the game group for the specified lobby.
-    /// </summary>
-    /// <param name="lobbyId">Lobby GUID</param>
-    public async Task AddToGameGroup(string lobbyId)
-    {
-        // todo: check the user is in the lobby and reconcile reconnections, perhaps perform this automatically on connection
-        logger.LogInformation("Connection {ConnectionId} added to game for lobby {LobbyId}", Context.ConnectionId, lobbyId);
-        await Groups.AddToGroupAsync(Context.ConnectionId, lobbyId);
-    }
-
     /// <summary>
     /// Called when a player state changes.
     /// </summary>
-    /// <param name="lobbyId">Lobby GUID</param>
-    /// <param name="playerId">Player GUID</param>
     /// <param name="state">New player state</param>
-    /// <param name="deltaTime">Time since last state update</param>
-    public async Task PlayerStateUpdate(string lobbyId, string playerId, string state, float deltaTime)
+    // ReSharper disable once UnusedMember.Global
+    public void PlayerStateUpdate(GamePlayerStateUpdate state)
     {
-        // todo: infer group from user identity context
-        // for now, forward state to all players in the game. todo: maintain global state and send interpolated state on a fixed interval
-        await Clients.Group(lobbyId).SendAsync("PlayerStateUpdate", playerId, state, deltaTime);
+        if (!Guid.TryParse(Context.UserIdentifier, out var userId))
+        {
+            logger.LogWarning("User identifier is not a valid GUID: {UserId}", Context.UserIdentifier);
+            throw new HubException("User identifier is not a valid GUID");
+        }
+
+        var lobbyId = gameService.GetLobbyIdByUserId(userId);
+        if (!lobbyId.HasValue)
+        {
+            logger.LogWarning("Lobby ID not found for user {UserId}", userId);
+            throw new HubException("Lobby ID not found");
+        }
+
+        gameService.UpdatePlayerState(lobbyId.Value, userId, state.MapToGamePlayerState());
     }
 
     /// <summary>
     /// Called when the host world state changes.
     /// </summary>
-    /// <param name="lobbyId">Lobby GUID</param>
-    /// <param name="playerId">Player GUID</param>
-    /// <param name="entityId">Entity ID</param>
-    /// <param name="state">New player state</param>
-    public async Task WorldStateUpdate(string lobbyId, string playerId, string state)
+    /// <param name="states">New object states</param>
+    // ReSharper disable once UnusedMember.Global
+    public void WorldStateUpdate(IEnumerable<GameObjectStateUpdate> states)
     {
-        // todo: infer group from user identity context
-        // todo: restrict to host player
-        // for now, forward state to all players in the game. todo: maintain global state and send interpolated state on a fixed interval
-        await Clients.Group(lobbyId).SendAsync("WorldStateUpdate", playerId, state);
+        if (!Guid.TryParse(Context.UserIdentifier, out var userId))
+        {
+            logger.LogWarning("User identifier is not a valid GUID: {UserId}", Context.UserIdentifier);
+            throw new HubException("User identifier is not a valid GUID");
+        }
+
+        var lobbyId = gameService.GetLobbyIdByUserId(userId);
+        if (!lobbyId.HasValue)
+        {
+            logger.LogWarning("Lobby ID not found for user {UserId}", userId);
+            throw new HubException("Lobby ID not found");
+        }
+
+        gameService.UpdateObjectStates(lobbyId.Value, states.Select(GameMappers.MapToGameObjectState).ToImmutableList());
     }
 
-    // Optionally, override OnConnectedAsync/OnDisconnectedAsync to add/remove users to/from groups.
     public override async Task OnConnectedAsync()
     {
-        logger.LogInformation("Connection {ConnectionId} connected", Context.ConnectionId);
-        // You might add the connection to a group corresponding to the lobby
-        // todo: use Context.User
+        if (!Guid.TryParse(Context.UserIdentifier, out var userId))
+        {
+            logger.LogWarning("User identifier is not a valid GUID: {UserId}", Context.UserIdentifier);
+            throw new HubException("User identifier is not a valid GUID");
+        }
+
+        logger.LogInformation("Game connection {ConnectionId} for user {UserId} connected", Context.ConnectionId, userId);
+        var lobbyResult = await lobbyService.GetLobbyByUserIdAsync(userId, Context.ConnectionAborted);
+
+        if (!lobbyResult.TryPickT0(out var lobby, out var errors))
+            errors.Switch(
+                _ => throw new HubException("Lobby not found"),
+                error => throw new HubException($"Error retrieving lobby: {error.Value}"));
+
+        await Groups.AddToGroupAsync(Context.ConnectionId, lobby.Id.ToString(), Context.ConnectionAborted);
+
         await base.OnConnectedAsync();
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        logger.LogInformation("Connection {ConnectionId} disconnected", Context.ConnectionId);
-        // Clean up groups and notify others, if needed.
+        if (!Guid.TryParse(Context.UserIdentifier, out var userId))
+        {
+            logger.LogWarning("User identifier is not a valid GUID: {UserId}", Context.UserIdentifier);
+            return;
+        }
+
+        logger.LogInformation("Game connection {ConnectionId} for user {UserId} disconnected", Context.ConnectionId, userId);
+
+        var lobbyResult = await lobbyService.GetLobbyByIdAsync(userId);
+
+        if (!lobbyResult.TryPickT0(out var lobby, out var errors))
+            errors.Switch(
+                _ => throw new HubException("Lobby not found"),
+                error => throw new HubException($"Error retrieving lobby: {error.Value}"));
+
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, lobby.Id.ToString());
+
         await base.OnDisconnectedAsync(exception);
     }
 }

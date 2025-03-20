@@ -73,4 +73,25 @@ internal class LobbyService(ILobbyRepository lobbyRepository) : ILobbyService
         lobby = await lobbyRepository.RemoveUserFromLobbyAsync(lobby.Id, userId, token);
         return lobby is null ? new Error<string>("Failed to leave lobby") : lobby;
     }
+
+    public async Task<LobbyResult> GetLobbyByUserIdAsync(Guid userId, CancellationToken token = default)
+    {
+        var lobby = await lobbyRepository.GetLobbyByUserIdAsync(userId, token);
+        return lobby is null ? new NotFound() : lobby;
+    }
+
+    public async Task<StartGameResult> StartGameAsync(Guid hostId, CancellationToken token = default)
+    {
+        var lobby = await lobbyRepository.GetLobbyByHostIdAsync(hostId, token);
+        if (lobby is null)
+            return new NotFound();
+
+        if (lobby.Status == LobbyStatus.InGame)
+            return new LobbyClosed();
+
+        var updatedLobby = await lobbyRepository.UpdateLobbyStatusAsync(lobby.Id, LobbyStatus.InGame, token);
+        return updatedLobby is not null
+            ? updatedLobby
+            : new Error<string>("Failed to start game");
+    }
 }

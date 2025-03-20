@@ -76,7 +76,7 @@ class Menu {
             await this.#lobbyPanel.leaveLobby();
 
             if (this.#currentUser) {
-                await logoutUser(this.#currentUser);
+                await logoutUser();
                 this.#currentUser = null;
             }
 
@@ -88,6 +88,14 @@ class Menu {
         });
 
         return this;
+    }
+
+    /**
+     * Attempts to automatically log in the user.
+     * @returns {Promise<void>}
+     */
+    async attemptAutoLogin() {
+        await this.#authPanel.attemptAutoLogin();
     }
 
     /**

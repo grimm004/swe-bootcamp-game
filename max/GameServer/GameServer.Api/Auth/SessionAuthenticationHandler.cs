@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using GameServer.Api.Constants;
 using GameServer.Domain.Services;
 
 namespace GameServer.Api.Auth;
@@ -20,11 +21,12 @@ internal sealed class SessionAuthenticationHandler(
     {
         logger.LogInformation("Authenticating request: {Path}", Request.Path);
 
-        if (!Request.Headers.TryGetValue("Authorization", out var authHeader) ||
-            !authHeader.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        if (!TryGetCookieToken(out var authToken) && !TryGetBearerToken(out authToken))
+        {
+            logger.LogWarning("Could not resolve bearer header or cookie token");
             return AuthenticateResult.NoResult();
+        }
 
-        var authToken = authHeader.ToString()["Bearer ".Length..].Trim();
         var authTokenData = new byte[32];
 
         if (!Convert.TryFromBase64String(authToken, authTokenData, out var bytesWritten) || bytesWritten != authTokenData.Length)
@@ -69,5 +71,31 @@ internal sealed class SessionAuthenticationHandler(
         Context.Items["TokenData"] = authTokenData;
 
         return AuthenticateResult.Success(ticket);
+    }
+
+    private bool TryGetBearerToken([NotNullWhen(true)] out string? token)
+    {
+        token = null;
+
+        if (!Request.Headers.TryGetValue(HttpHeaders.Authorization, out var authHeader) ||
+            !authHeader.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            return false;
+
+        token = authHeader.ToString()["Bearer ".Length..].Trim();
+        logger.LogInformation("Resolved session token from bearer token in Authorization header.");
+        return true;
+    }
+
+    private bool TryGetCookieToken([NotNullWhen(true)] out string? token)
+    {
+        token = null;
+
+        if (!Request.Cookies.TryGetValue(AuthCookies.SessionCookie, out var cookieValue) ||
+            string.IsNullOrEmpty(cookieValue))
+            return false;
+
+        token = cookieValue;
+        logger.LogInformation("Resolved session token from cookie.");
+        return true;
     }
 }

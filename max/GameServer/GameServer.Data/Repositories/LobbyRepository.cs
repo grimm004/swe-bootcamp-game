@@ -119,4 +119,18 @@ internal sealed class LobbyRepository(GameServerDbContext dbContext) : ILobbyRep
         var updatedRows = await dbContext.SaveChangesAsync(token);
         return updatedRows > 0 ? lobby.MapToLobby() : null;
     }
+
+    public async Task<Domain.Models.Lobby?> UpdateLobbyStatusAsync(Guid lobbyId, Domain.Models.LobbyStatus status, CancellationToken token = default)
+    {
+        var lobby = await dbContext.Lobbies
+            .FindAsync([lobbyId], cancellationToken: token);
+
+        if (lobby is null)
+            return null;
+
+        lobby.Status = status.MapToLobbyStatus();
+
+        var updatedRows = await dbContext.SaveChangesAsync(token);
+        return updatedRows > 0 ? await GetLobbyByIdAsync(lobbyId, token) : null;
+    }
 }

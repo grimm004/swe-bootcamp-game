@@ -24,8 +24,12 @@ internal sealed class LobbyMapping : IEntityTypeConfiguration<Lobby>
             .Property(l => l.Status)
             .IsRequired();
 
+        // Lobby.HostId and Lobby.Host
         builder
-            .HasOne(l => l.Host);
+            .HasOne(l => l.Host)
+            .WithMany()
+            .HasForeignKey(l => l.HostId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder
             .HasMany(l => l.Users)

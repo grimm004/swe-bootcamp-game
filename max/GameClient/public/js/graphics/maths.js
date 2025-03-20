@@ -642,7 +642,7 @@ export class Vector2 extends Vector {
 
 export class Vector3 extends Vector {
     /**
-     * @param {number|Vector3|Vector2|Float32Array|Array|oimo.common.Vec3} [x]
+     * @param {number|Vector3|Vector2|Float32Array|Array|oimo.common.Vec3|{x: number, y: number, z: number}} [x]
      * @param {number} [y]
      * @param {number} [z]
      */
@@ -652,7 +652,8 @@ export class Vector3 extends Vector {
             xVal = x;
             yVal = typeof y === "number" ? y : xVal;
             zVal = typeof z === "number" ? z : yVal;
-        } else if (x instanceof Vector3 || x instanceof Vector4 || x instanceof oimo.common.Vec3) {
+        } else if (x instanceof Vector3 || x instanceof Vector4 || x instanceof oimo.common.Vec3 ||
+            (x instanceof Object && Object.hasOwn(x, "x") && Object.hasOwn(x, "y") && Object.hasOwn(x, "z"))) {
             xVal = x.x;
             yVal = x.y;
             zVal = x.z;
@@ -709,6 +710,13 @@ export class Vector3 extends Vector {
      */
     set z(value) {
         this[2] = value;
+    }
+
+    /**
+     * @returns {{x: number, y: number, z: number}}
+     */
+    toSerializable() {
+        return { x: this.x, y: this.y, z: this.z };
     }
 
     /**
@@ -924,7 +932,7 @@ export class Vector3 extends Vector {
 
 export class Vector4 extends Float32Array {
     /**
-     * @param {number|Vector4|Vector3|Vector2|Float32Array|Array|oimo.common.Quat} [x]
+     * @param {number|Vector4|Vector3|Vector2|Float32Array|Array|oimo.common.Quat|{x: number, y: number, z: number, w: number}} [x]
      * @param {number|Vector2} [y]
      * @param {number} [z]
      * @param {number} [w]
@@ -936,7 +944,9 @@ export class Vector4 extends Float32Array {
             yVal = typeof y === "number" ? y : xVal;
             zVal = typeof z === "number" ? z : yVal;
             wVal = typeof w === "number" ? w : 1.0;
-        } else if (x instanceof Vector4 || x instanceof oimo.common.Quat) {
+        } else if (x instanceof Vector4 || x instanceof oimo.common.Quat ||
+            (x instanceof Object && Object.hasOwn(x, "x") && Object.hasOwn(x, "y")
+                && Object.hasOwn(x, "z") && Object.hasOwn(x, "w"))) {
             xVal = x.x;
             yVal = x.y;
             zVal = x.z;
@@ -1038,6 +1048,13 @@ export class Vector4 extends Float32Array {
      */
     toArray() {
         return Array.from(this);
+    }
+
+    /**
+     * @returns {{x: number, y: number, z: number, w: number}}
+     */
+    toSerializable() {
+        return { x: this.x, y: this.y, z: this.z, w: this.w };
     }
 
     /**
@@ -1181,7 +1198,7 @@ export class Vector4 extends Float32Array {
 
 export class Quaternion extends Vector4 {
     /**
-     * @param {number|Vector4|Vector3|Vector2|Float32Array|Array|oimo.common.Quat} [x]
+     * @param {number|Quaternion|Vector4|Vector3|Vector2|Float32Array|Array|oimo.common.Quat|{x: number, y: number, z: number, w: number}} [x]
      * @param {number|Vector2} [y]
      * @param {number} [z]
      * @param {number} [w=1.0]

@@ -1,5 +1,7 @@
-import { loginUser, signupUser } from "../../services/auth.js";
+import {fetchUser, loginUser, signupUser} from "../../services/auth.js";
 import { showMessage } from "../message-popup.js";
+import {getCookie} from "../util/cookies.js";
+import {SessionCookie} from "../../constants.js";
 
 
 class AuthPanel {
@@ -44,6 +46,19 @@ class AuthPanel {
         this.#authForm.addEventListener("submit", this.#onAuthFormSubmit.bind(this));
 
         return this;
+    }
+
+    /**
+     * Attempts to automatically log in the user.
+     * @returns {Promise<void>}
+     */
+    async attemptAutoLogin() {
+        if (!getCookie(SessionCookie)) return;
+
+        const user = await fetchUser();
+        if (!user) return;
+
+        this.onLoginSuccess?.(user);
     }
 
     /**

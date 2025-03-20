@@ -1,5 +1,7 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Text.Json;
 using GameServer.Api.Auth;
+using GameServer.Api.BackgroundServices;
 using GameServer.Api.Constants;
 using GameServer.Api.Endpoints;
 using GameServer.Api.Extensions;
@@ -13,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 
 const string defaultConnectionString = "Data Source=game-server.db";
 
+// todo: switch to using IConfiguration
 var dbProvider = Environment.GetEnvironmentVariable("GameServerDbProvider")?.ToUpperInvariant() switch
 {
     "SQLITE" => DbProvider.Sqlite,
@@ -39,11 +42,16 @@ builder.Services
         new Sha512SaltedHashService("GameUserPasswordSalt"u8.ToArray()))
     .AddDomain();
 
-builder.Services.AddSignalR();
+builder.Services.AddSignalR().AddJsonProtocol(options =>
+{
+    options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    options.PayloadSerializerOptions.DictionaryKeyPolicy = null;
+});
+builder.Services.AddHostedService<GameBackgroundService>();
 
-builder.Services.AddAuthentication("GameServerScheme")
+builder.Services.AddAuthentication(AuthenticationSchemes.GameServerScheme)
     .AddScheme<AuthenticationSchemeOptions, SessionAuthenticationHandler>(
-        "GameServerScheme", _ => { });
+        AuthenticationSchemes.GameServerScheme, _ => { });
 
 builder.Services.AddAuthorizationBuilder()
     .AddPolicy(AuthPolicies.AllAuthenticated, policy => policy

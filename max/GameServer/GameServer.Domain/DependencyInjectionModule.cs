@@ -12,5 +12,6 @@ public static class DependencyInjectionModule
         services
             .AddScoped<IAdminAuthService, AdminAuthService>()
             .AddScoped<IAuthService, AuthService>()
-            .AddScoped<ILobbyService, LobbyService>();
+            .AddScoped<ILobbyService, LobbyService>()
+            .AddSingleton<IGameService, InMemoryGameService>();
 }

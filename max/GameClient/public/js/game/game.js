@@ -487,10 +487,11 @@ export class SweBootcampGame extends Application {
      * Join the specified game.
      * @param {string} playerId - The ID of the player to join.
      * @param {string} gameId - The ID of the game to join.
+     * @param {string} accessToken - The access token to use for the connection.
      * @param {boolean} isHost - Whether the player is the host.
      */
-    async joinGame(playerId, gameId, isHost) {
-        await this.#multiplayerSystem.joinGame(playerId, gameId, isHost);
+    async joinGame(playerId, gameId, accessToken, isHost) {
+        await this.#multiplayerSystem.joinGame(playerId, gameId, accessToken, isHost);
     }
 
     onMouseMove(dx, dy, x, y) {

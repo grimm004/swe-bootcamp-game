@@ -1,20 +1,19 @@
 import {Lobby, LobbyUser} from "../models/lobby.js";
+import {BaseUrl} from "../constants.js";
 
-const baseUrl = "/api/v1";
-const lobbyBaseUrl = `${baseUrl}/lobbies`;
+const lobbyBaseUrl = `${BaseUrl}/lobbies`;
 
 /**
  * Creates a new lobby.
- * @param {string} token - The current user's auth token.
  * @returns {Promise<Lobby|null>} - The lobby data on success; otherwise null.
  */
-export const createLobby = async (token) => {
+export const createLobby = async () => {
     try {
         const response = await fetch(`${lobbyBaseUrl}`, {
             method: "POST",
+            credentials: "same-origin",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`,
             },
         });
 
@@ -40,16 +39,15 @@ export const createLobby = async (token) => {
 /**
  * Retrieves a lobby by its join code.
  * @param {string} joinCode - The join code to search for.
- * @param {string} token - The current user's auth token.
  * @returns {Promise<Lobby|null>} - The lobby data on success; otherwise null.
  */
-export const getLobbyByCode = async (joinCode, token) => {
+export const getLobbyByCode = async (joinCode) => {
     try {
         const response = await fetch(`${lobbyBaseUrl}?code=${encodeURIComponent(joinCode)}`, {
             method: "GET",
+            credentials: "same-origin",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`,
             },
         });
 
@@ -80,16 +78,15 @@ export const getLobbyByCode = async (joinCode, token) => {
 /**
  * Retrieves a lobby by its ID.
  * @param {string} id - The ID of the lobby to retrieve.
- * @param {string} token - The current user's auth token.
  * @returns {Promise<Lobby|null>} - The lobby data on success; otherwise null.
  */
-export const getLobbyById = async (id, token) => {
+export const getLobbyById = async (id) => {
     try {
         const response = await fetch(`${lobbyBaseUrl}/${id}`, {
             method: "GET",
+            credentials: "same-origin",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`,
             },
         });
 
@@ -114,12 +111,11 @@ export const getLobbyById = async (id, token) => {
 /**
  * Joins an existing lobby using its join code.
  * @param {string} joinCode - The join code provided by the user.
- * @param {string} token - The current user's auth token.
  * @returns {Promise<Lobby|null>} - The updated lobby data on success; otherwise null.
  */
-export const joinLobby = async (joinCode, token) => {
+export const joinLobby = async (joinCode) => {
     try {
-        const lobbyData = await getLobbyByCode(joinCode, token);
+        const lobbyData = await getLobbyByCode(joinCode);
         if (!lobbyData || !lobbyData.id) {
             console.error("Lobby not found for code:", joinCode);
             return null;
@@ -127,9 +123,9 @@ export const joinLobby = async (joinCode, token) => {
 
         const response = await fetch(`${lobbyBaseUrl}/${lobbyData.id}/users`, {
             method: "POST",
+            credentials: "same-origin",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`,
             },
             body: JSON.stringify({ joinCode }),
         });
@@ -156,16 +152,15 @@ export const joinLobby = async (joinCode, token) => {
  * Leaves the lobby.
  * @param {string} lobbyId - The lobby's ID.
  * @param {string} userId - The current user's ID.
- * @param {string} token - The current user's auth token.
  * @returns {Promise<boolean>} - True on success; otherwise false.
  */
-export const leaveLobby = async (lobbyId, userId, token) => {
+export const leaveLobby = async (lobbyId, userId) => {
     try {
         const response = await fetch(`${lobbyBaseUrl}/${lobbyId}/users/${userId}`, {
             method: "DELETE",
+            credentials: "same-origin",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`,
             },
         });
 
@@ -180,16 +175,15 @@ export const leaveLobby = async (lobbyId, userId, token) => {
  * Removes a player from the lobby (typically called by the lobby leader).
  * @param {string} lobbyId - The lobby's ID.
  * @param {string} userId - The user ID of the player to remove.
- * @param {string} token - The current user's auth token.
  * @returns {Promise<Lobby|null>} - The updated lobby data on success; otherwise null.
  */
-export const removePlayerFromLobby = async (lobbyId, userId, token) => {
+export const removePlayerFromLobby = async (lobbyId, userId) => {
     try {
         const response = await fetch(`${lobbyBaseUrl}/${lobbyId}/users/${userId}`, {
             method: "DELETE",
+            credentials: "same-origin",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`,
             },
         });
 

@@ -13,4 +13,5 @@ public interface ILobbyRepository
     Task<bool> UserIsInLobbyAsync(Guid userId, CancellationToken token = default);
     Task<Lobby?> AddUserToLobbyAsync(Guid lobbyId, Guid userId, CancellationToken token = default);
     Task<Lobby?> RemoveUserFromLobbyAsync(Guid lobbyId, Guid userId, CancellationToken token = default);
+    Task<Lobby?> UpdateLobbyStatusAsync(Guid lobbyId, LobbyStatus status, CancellationToken token = default);
 }

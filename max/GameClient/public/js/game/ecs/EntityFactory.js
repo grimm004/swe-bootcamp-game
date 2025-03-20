@@ -126,9 +126,6 @@ export default class EntityFactory {
                     type: OrientationComponent.name,
                     orientation: Quaternion.identity,
                 },
-                time: {
-                    type: FrameInfoComponent.name,
-                },
             }
         });
     }

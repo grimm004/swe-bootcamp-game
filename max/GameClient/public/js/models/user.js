@@ -4,15 +4,13 @@ export class User {
      * @param {string} username
      * @param {string} displayName
      * @param {string[]} roles
-     * @param {string} token
      * @param {Date} expiresAt
      */
-    constructor(id, username, displayName, roles, token, expiresAt) {
+    constructor(id, username, displayName, roles, expiresAt) {
         this.id = id;
         this.username = username;
         this.displayName = displayName;
         this.roles = roles;
-        this.token = token;
         this.expiresAt = expiresAt;
     }
 

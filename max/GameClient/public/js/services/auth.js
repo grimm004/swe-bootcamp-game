@@ -1,7 +1,8 @@
 import {User} from "../models/user.js";
+import {BaseUrl, SessionCookie} from "../constants.js";
+import {clearCookie} from "../ui/util/cookies.js";
 
-const baseUrl = "/api/v1";
-const authBaseUrl = `${baseUrl}/auth`;
+const authBaseUrl = `${BaseUrl}/auth`;
 
 /**
  * @param {string} username
@@ -22,11 +23,10 @@ export const loginUser = async (username, password) => {
 
         const {
             user,
-            token,
             expiresAt,
         } = await response.json();
 
-        return new User(user.id, user.username, user.displayName, user.roles, token, new Date(expiresAt));
+        return new User(user.id, user.username, user.displayName, user.roles, new Date(expiresAt));
     }
     catch (error) {
         console.error(error);
@@ -35,18 +35,46 @@ export const loginUser = async (username, password) => {
 };
 
 /**
- * @param {User} user
+ * @returns {Promise<User|null>}
+ */
+export const fetchUser = async () => {
+    try {
+        const response = await fetch(`${authBaseUrl}/me`, {
+            method: "GET",
+            credentials: "same-origin",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+
+        if (!response.ok) return null;
+
+        const {
+            user,
+            expiresAt,
+        } = await response.json();
+
+        return new User(user.id, user.username, user.displayName, user.roles, new Date(expiresAt));
+    } catch (error) {
+        console.error(error);
+        return null;
+    }
+}
+
+/**
  * @returns {Promise<boolean>}
  */
-export const logoutUser = async (user) => {
+export const logoutUser = async () => {
     try{
         const response = await fetch(`${authBaseUrl}/logout`, {
             method: "POST",
+            credentials: "same-origin",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${user.token}`,
             },
         });
+
+        clearCookie(SessionCookie);
 
         return response.ok;
     }
@@ -92,9 +120,9 @@ export const updateProfile = async (user) => {
     try {
         const response = await fetch(`${authBaseUrl}/me`, {
             method: "PUT",
+            credentials: "same-origin",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${user.token}`,
             },
             body: JSON.stringify({ displayName: user.displayName }),
         });

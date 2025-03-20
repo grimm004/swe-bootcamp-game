@@ -1,3 +1,6 @@
+import {getCookie} from "./util/cookies.js";
+import {SessionCookie} from "../constants.js";
+
 class GameUi {
     /**
      * @type {SweBootcampGame}
@@ -255,7 +258,7 @@ class GameUi {
      * @returns {Promise<void>}
      */
     async joinGame(user, lobby) {
-        await this.#app.joinGame(user.id, lobby.id, user.id == lobby.hostId);
+        await this.#app.joinGame(user.id, lobby.id, getCookie(SessionCookie), user.id === lobby.hostId);
         this.#captureEnabled = true;
     }
 

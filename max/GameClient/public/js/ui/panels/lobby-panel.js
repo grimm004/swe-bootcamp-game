@@ -5,8 +5,10 @@ import {
     leaveLobby,
     removePlayerFromLobby
 } from "../../services/lobby.js";
-import { HubConnectionBuilder, LogLevel } from "../../../lib/signalr.module.js";
+import { HubConnectionBuilder } from "../../../lib/signalr.module.js";
 import { showMessage } from "../message-popup.js";
+import {HubLogLevel} from "../../constants.js";
+import {getCookie} from "../util/cookies.js";
 
 
 class LobbyPanel {
@@ -102,7 +104,7 @@ class LobbyPanel {
     async #onCreateLobbyClicked() {
         if (!this.#currentUser) return;
 
-        const lobbyData = await createLobby(this.#currentUser.token);
+        const lobbyData = await createLobby();
         if (!lobbyData) {
             showMessage("Failed to create lobby.", "error");
             return;
@@ -139,7 +141,8 @@ class LobbyPanel {
      */
     async #onStartGameClicked() {
         if (!this.#lobbyHubConnection || !this.#currentLobby) return;
-        await this.#lobbyHubConnection?.invoke("StartGame", this.#currentLobby.id);
+        // noinspection JSCheckFunctionSignatures
+        await this.#lobbyHubConnection?.invoke("StartGame");
     }
 
     /**
@@ -149,7 +152,7 @@ class LobbyPanel {
     async leaveLobby() {
         if (!this.#currentLobby) return;
 
-        await leaveLobby(this.#currentLobby.id, this.#currentUser.id, this.#currentUser.token);
+        await leaveLobby(this.#currentLobby.id, this.#currentUser.id);
         this.#currentLobby = null;
         await this.#stopLobbyHubConnection();
         this.#updateLobbyUi(null);
@@ -163,7 +166,7 @@ class LobbyPanel {
     async #joinLobby(joinCode) {
         if (!this.#currentUser) return;
 
-        const lobbyData = await joinLobby(joinCode, this.#currentUser.token);
+        const lobbyData = await joinLobby(joinCode);
         if (!lobbyData) {
             showMessage(`Could not find lobby with code "${joinCode}".`, "error");
             return;
@@ -186,15 +189,13 @@ class LobbyPanel {
             await this.#stopLobbyHubConnection();
 
         this.#lobbyHubConnection = new HubConnectionBuilder()
-            .withUrl(this.#lobbyHubUrl)
+            .withUrl(this.#lobbyHubUrl, { accessTokenFactory: () => getCookie("session") })
             .withAutomaticReconnect()
-            .configureLogging(LogLevel.Information)
+            .configureLogging(HubLogLevel)
             .build();
 
         try {
             await this.#lobbyHubConnection?.start();
-            // noinspection JSCheckFunctionSignatures
-            await this.#lobbyHubConnection?.invoke("AddToLobbyGroup", lobbyId);
         } catch {
             showMessage("Failed to connect to lobby hub.", "error");
             this.#lobbyHubConnection = null;
@@ -202,7 +203,7 @@ class LobbyPanel {
         }
 
         this.#lobbyHubConnection?.on("PlayerJoined", async () => {
-            const lobbyData = await getLobbyById(lobbyId, this.#currentUser.token);
+            const lobbyData = await getLobbyById(lobbyId);
             if (!lobbyData) return;
 
             this.#currentLobby = lobbyData;
@@ -217,7 +218,7 @@ class LobbyPanel {
                 return;
             }
 
-            const lobbyData = await getLobbyById(lobbyId, this.#currentUser.token);
+            const lobbyData = await getLobbyById(lobbyId);
             if (!lobbyData) return;
 
             this.#currentLobby = lobbyData;
@@ -317,7 +318,7 @@ class LobbyPanel {
     async #removePlayerFromLobby(userId) {
         if (!this.#currentLobby) return;
 
-        const result = await removePlayerFromLobby(this.#currentLobby.id, userId, this.#currentUser.token);
+        const result = await removePlayerFromLobby(this.#currentLobby.id, userId);
         if (result) {
             showMessage("Player removed from lobby.", "info");
             this.#currentLobby = result;
