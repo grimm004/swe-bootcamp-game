@@ -294,6 +294,8 @@ class LobbyPanel {
             removeBtn.style.marginLeft = "auto";
             removeBtn.addEventListener("click", async () => await this.#removePlayerFromLobby(user.id));
 
+            li.appendChild(removeBtn);
+
             return li;
         };
 

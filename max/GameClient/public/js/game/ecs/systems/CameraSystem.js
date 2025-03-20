@@ -10,6 +10,7 @@ import {PerspectiveCamera} from "../../../graphics/cameras.js";
 import {Quaternion, Vector2, Vector3} from "../../../graphics/maths.js";
 import PositionComponent from "../components/PositionComponent.js";
 import OrientationComponent from "../components/OrientationComponent.js";
+import PlayerComponent from "../components/PlayerComponent.js";
 
 
 export default class CameraSystem extends ApeEcs.System {
@@ -78,17 +79,22 @@ export default class CameraSystem extends ApeEcs.System {
 
             camera.aspectRatio = windowInfo.aspectRatio;
 
-            camera.turn(
-                mouseInputComponent.dx * deltaTime * cameraComponent.mouseSensitivity,
-                mouseInputComponent.dy * deltaTime * cameraComponent.mouseSensitivity);
+            if (entity.has(PlayerComponent.name)) {
+                camera.turn(
+                    mouseInputComponent.dx * deltaTime * cameraComponent.mouseSensitivity,
+                    mouseInputComponent.dy * deltaTime * cameraComponent.mouseSensitivity);
 
-            const {x: forwards, y: sideways} = new Vector2(
-                Number(pressedKeys.has("w")) - Number(pressedKeys.has("s")),
-                Number(pressedKeys.has("d")) - Number(pressedKeys.has("a"))
-            ).mul(2 + (2 * Number(pressedKeys.has("shift")))).mul(deltaTime);
-            camera.move(forwards, sideways);
+                const {x: forwards, y: sideways} = new Vector2(
+                    Number(pressedKeys.has("w")) - Number(pressedKeys.has("s")),
+                    Number(pressedKeys.has("d")) - Number(pressedKeys.has("a"))
+                ).mul(2 + (2 * Number(pressedKeys.has("shift")))).mul(deltaTime);
+                camera.move(forwards, sideways);
 
-            camera.update(deltaTime);
+                if (pressedKeys.has("r")) {
+                    camera.targetPosition = new Vector3(2.0);
+                    camera.setTargetYawPitch(-45.0, 30.0);
+                }
+            }
 
             if (entity.has(PositionComponent.name)) {
                 const positionComponent = entity.getOne(PositionComponent.name);
@@ -110,6 +116,8 @@ export default class CameraSystem extends ApeEcs.System {
                 yawDegrees: camera.yaw,
                 pitchDegrees: camera.pitch,
             });
+
+            camera.update(deltaTime);
         }
     }
 }

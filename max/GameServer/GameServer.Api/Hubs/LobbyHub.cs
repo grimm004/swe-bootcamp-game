@@ -26,7 +26,7 @@ internal sealed class LobbyHub(ILobbyService lobbyService, IGameService gameServ
         await startGameResult.Match<Task>(
             async lobby =>
             {
-                gameService.StartGame(lobby.Id, lobby.Users.Select(u => u.Id).ToImmutableList());
+                gameService.StartGame(lobby.Id, lobby.HostId, lobby.Users.Select(u => u.Id).ToImmutableList());
                 logger.LogInformation("Game started in lobby {LobbyId}", lobby.Id);
                 await Clients.Group(lobby.Id.ToString()).SendAsync("GameStarted");
             },

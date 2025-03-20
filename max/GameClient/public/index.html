@@ -39,17 +39,19 @@
 <!-- Menu UI Container: Account, Lobby, and Profile Management -->
 <div id="menuContainer" class="menu-container">
   <!-- Navigation buttons for Lobby and Profile (hidden until login) -->
-  <div class="online-nav d-none">
-    <div class="nav-buttons">
-      <button class="nav-btn" data-target="lobbyPanel">Lobby</button>
-      <button class="nav-btn" data-target="profilePanel">Profile</button>
+  <div id="navContainer" class=" d-none">
+    <div class="online-nav-buttons">
+      <div class="nav-buttons">
+        <button class="nav-btn" data-target="lobbyPanel">Lobby</button>
+        <button class="nav-btn" data-target="profilePanel">Profile</button>
+      </div>
+      <button id="logoutButton" class="nav-btn logout-btn">Log Out</button>
     </div>
-    <button id="logoutButton" class="nav-btn logout-btn">Log Out</button>
+    <hr class="horizontal-spacer"/>
   </div>
 
   <!-- Auth Panel: Login / Sign-Up -->
   <div id="authPanel" class="online-panel">
-    <button id="singlePlayerStartBtn">Start Single Player</button>
     <h2 id="authPageTitle">Log In</h2>
     <form id="authForm">
       <div class="form-group">
@@ -99,8 +101,8 @@
         <input type="text" id="lobbyCodeDisplay" disabled>
       </div>
       <div class="lobby-buttons">
-        <button id="leaveLobbyBtn">Leave Lobby</button>
-        <button id="startGameBtn" class="d-none">Start Game</button>
+        <button id="leaveLobbyBtn" class="stretch-button">Leave Lobby</button>
+        <button id="startGameBtn" class="stretch-button d-none">Start Game</button>
       </div>
     </div>
 
@@ -122,6 +124,9 @@
       <button type="submit" id="profileSaveBtn">Save Profile</button>
     </form>
   </div>
+
+  <hr class="horizontal-spacer"/>
+  <button id="singlePlayerStartBtn">Start Single Player</button>
 </div>
 
 <div id="messageContainer" class="message-container"></div>

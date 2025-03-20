@@ -8,11 +8,12 @@ public class InMemoryGameService : IGameService
     private readonly Dictionary<Guid, Guid> _userLobbyMap = new();
     private readonly Dictionary<Guid, GameState> _gameStates = new();
 
-    public void StartGame(Guid lobbyId, IImmutableList<Guid> playerIds)
+    public void StartGame(Guid lobbyId, Guid hostId, IImmutableList<Guid> playerIds)
     {
         _gameStates[lobbyId] = new GameState
         {
             LobbyId = lobbyId,
+            HostId = hostId,
             Players = playerIds.ToDictionary(playerId => playerId, GamePlayerState.New)
         };
 
@@ -68,6 +69,14 @@ public class InMemoryGameService : IGameService
             _userLobbyMap.Remove(playerId);
 
         _gameStates.Remove(lobbyId);
+    }
+
+    public GameState? GetGameStateByUserId(Guid userId)
+    {
+        if (!_userLobbyMap.TryGetValue(userId, out var lobbyId) || !_gameStates.TryGetValue(lobbyId, out var value))
+            return null;
+
+        return value;
     }
 
     public Guid? GetLobbyIdByUserId(Guid userId)

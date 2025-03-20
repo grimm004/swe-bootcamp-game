@@ -510,40 +510,6 @@ export class SweBootcampGame extends Application {
     }
 
     onKeyDown(key) {
-        const camera = this.#ecsWorld.getEntity(PlayerEntityId).c.camera.camera;
-        if (key === "r") {
-            camera.targetPosition = new Vector3(2.0);
-            camera.setTargetYawPitch(-45.0, 30.0);
-        } else if (key === " ") {
-            // todo: move out to input system
-            for (let i = 0; i < 6; i++) {
-                const chairEntity = this.#ecsWorld.getEntity(`chair_${i}`);
-                chairEntity.addComponent({
-                    type: ImpulseComponent.name,
-                    position: chairEntity.c.position.position.subtracted(new Vector3(0, -1, 0)),
-                    force: new Vector3(0.0, 100.0, 0.0),
-                });
-            }
-        } else if (key === "e") {
-            for (let i = 0; i < 6; i++) {
-                const chairEntity = this.#ecsWorld.getEntity(`chair_${i}`);
-                chairEntity.addComponent({
-                    type: ImpulseComponent.name,
-                    position: chairEntity.c.position.position.multiplied(0.75),
-                    force: new Vector3(0.0, 100.0, 0.0),
-                });
-            }
-        } else if (key === "i") {
-            for (let i = 0; i < 6; i++) {
-                const chairEntity = this.#ecsWorld.getEntity(`chair_${i}`);
-                chairEntity.addComponent({
-                    type: ImpulseComponent.name,
-                    position: chairEntity.c.position.position.multiplied(1.25),
-                    force: new Vector3(0.0, 100.0, 0.0),
-                });
-            }
-        }
-
         super.onKeyDown(key);
         this.#inputSystem.onKeyboardUpdate(this._pressedKeys);
     }

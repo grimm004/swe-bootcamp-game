@@ -38,9 +38,11 @@ html, body {
 }
 
 .menu-container {
+    display: flex;
+    flex-direction: column;
     position: absolute;
     width: 400px;
-    max-height: 500px;
+    max-height: 600px;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
@@ -52,7 +54,7 @@ html, body {
     overflow-y: auto;
 }
 
-.online-nav {
+.online-nav-buttons {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -60,7 +62,7 @@ html, body {
     margin-bottom: 20px;
 }
 
-.online-nav .nav-btn {
+.online-nav-buttons .nav-btn {
     background-color: #444;
     color: #fff;
     border: none;
@@ -69,7 +71,7 @@ html, body {
     border-radius: 4px;
 }
 
-.online-nav .nav-btn:hover {
+.online-nav-buttons .nav-btn:hover {
     background-color: #666;
 }
 
@@ -124,6 +126,11 @@ button {
 
 button:hover {
     background-color: #666;
+}
+
+.horizontal-spacer {
+    width: 100%;
+    border-top: 1px solid;
 }
 
 .lobby-actions {
@@ -182,10 +189,14 @@ button:hover {
     border-radius: 4px;
 }
 
-/* Container for the in-lobby buttons */
 .lobby-buttons {
     display: flex;
+    justify-content: stretch;
     gap: 10px;
+}
+
+.stretch-button {
+    flex: 1;
 }
 
 .toggle-auth-text {

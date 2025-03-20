@@ -12,6 +12,7 @@ import GameHostComponent from "../components/GameHostComponent.js";
 import RigidBodyComponent from "../components/RigidBodyComponent.js";
 import SizeComponent from "../components/SizeComponent.js";
 import {HubLogLevel} from "../../../constants.js";
+import ImpulseComponent from "../components/ImpulseComponent.js";
 
 
 export default class MultiplayerSystem extends ApeEcs.System {
@@ -21,8 +22,12 @@ export default class MultiplayerSystem extends ApeEcs.System {
      * @param {string} gameHubUrl
      */
     init(entityFactory, gameHubUrl) {
-        this.query = this.createQuery()
+        this.playerQuery = this.createQuery()
             .fromAll(MultiplayerComponent.name, PositionComponent.name, OrientationComponent.name)
+            .persist();
+
+        this.impulseQuery = this.createQuery()
+            .fromAll(ImpulseComponent.name)
             .persist();
 
         this.synchroniseQuery = this.createQuery()
@@ -48,6 +53,8 @@ export default class MultiplayerSystem extends ApeEcs.System {
 
         this._lastInboundTickTime = null;
         this._inboundFrameCounter = new FrameCounter();
+
+        this._impulseAccumulator = [];
     }
 
     /**
@@ -108,6 +115,7 @@ export default class MultiplayerSystem extends ApeEcs.System {
         }
 
         gameHubConnection?.on("GameStateUpdate", this.#onGameStateUpdate.bind(this));
+        gameHubConnection?.on("GamePlayerImpulseAction", this.#onGamePlayerImpulseAction.bind(this));
 
         this._gameHubConnection = gameHubConnection;
         return true;
@@ -149,6 +157,12 @@ export default class MultiplayerSystem extends ApeEcs.System {
         player.c.orientation.update({orientation});
     }
 
+    /**
+     * @param {string} entityId
+     * @param {Vector3} position
+     * @param {Quaternion} orientation
+     * @param {Vector3} size
+     */
     #setRigidBodyState(entityId, position, orientation, size) {
         let entity = this.world.getEntity(entityId);
         if (!entity)
@@ -157,6 +171,36 @@ export default class MultiplayerSystem extends ApeEcs.System {
         entity.c.position.update({position});
         entity.c.orientation.update({orientation});
         entity.c.size.update({size});
+    }
+
+    /**
+     * @param {Object[]} actions
+     */
+    #onGamePlayerImpulseAction(actions) {
+        if (!this.world.getEntity(PlayerEntityId).has(GameHostComponent.name)) return;
+
+        for (const {playerId, objectId, position, force} of actions)
+            this.#addImpulse(playerId, objectId, new Vector3(position), new Vector3(force));
+    }
+
+    /**
+     * @param {string} playerId
+     * @param {string} objectId
+     * @param {Vector3} position
+     * @param {Vector3} force
+     */
+    #addImpulse(playerId, objectId, position, force) {
+        const playerEntity = this.world.getEntity(playerId);
+        if (!playerEntity) return;
+
+        const entity = this.world.getEntity(objectId);
+        if (!entity) return;
+
+        entity.addComponent({
+            type: ImpulseComponent.name,
+            position,
+            force,
+        });
     }
 
     /**
@@ -179,7 +223,7 @@ export default class MultiplayerSystem extends ApeEcs.System {
         const playerEntity = this.world.getEntity(PlayerEntityId);
         if (!playerEntity) return;
 
-        for (const entity of this.query.execute()) {
+        for (const entity of this.playerQuery.execute()) {
             const multiplayerComponent = entity.c.multiplayer;
             const positionComponent = entity.c.position;
             const orientationComponent = entity.c.orientation;
@@ -195,6 +239,17 @@ export default class MultiplayerSystem extends ApeEcs.System {
         }
 
         if (!this._gameHubConnection) return;
+
+        const impulsedEntities = [...this.impulseQuery.refresh().execute()];
+        const impulseData = impulsedEntities.map(impulsedEntity =>
+            [...impulsedEntity.getComponents(ImpulseComponent.name)]
+                .map(component => ({
+                    playerId: playerEntity.c.player.playerId,
+                    objectId: impulsedEntity.id,
+                    position: component.position.toSerializable(),
+                    force: component.force.toSerializable(),
+                }))).flat();
+        this._impulseAccumulator.push(...impulseData);
 
         if (this._lastOutboundTickTime == null) {
             this._lastOutboundTickTime = performance.now();
@@ -229,7 +284,15 @@ export default class MultiplayerSystem extends ApeEcs.System {
             orientation: playerOrientation.toSerializable(),
         });
 
-        if (!playerEntity.has(GameHostComponent.name)) return;
+        if (!playerEntity.has(GameHostComponent.name)) {
+            if (this._impulseAccumulator.length > 0) {
+                // noinspection JSCheckFunctionSignatures
+                await this._gameHubConnection?.invoke("GamePlayerImpulseAction", this._impulseAccumulator);
+                this._impulseAccumulator = [];
+            }
+
+            return;
+        }
 
         const entityData = [...this.synchroniseQuery.execute()].map(entity => ({
             objectId: entity.id,

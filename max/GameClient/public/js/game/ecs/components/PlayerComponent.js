@@ -5,4 +5,6 @@ export default class PlayerComponent extends Component {}
 PlayerComponent.properties = {
     playerId: null,
     gameId: null,
+    spawnPosition: null,
+    spawnOrientation: null,
 };

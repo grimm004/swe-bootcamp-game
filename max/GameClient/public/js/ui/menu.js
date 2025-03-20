@@ -16,6 +16,7 @@ class Menu {
     #profilePanel;
 
     #menuContainer;
+    #navContainer;
     #navButtons;
     #logoutButton;
 
@@ -31,7 +32,8 @@ class Menu {
         this.#profilePanel = new ProfilePanel();
 
         this.#menuContainer = document.getElementById("menuContainer");
-        this.#navButtons = document.querySelectorAll(".online-nav .nav-btn");
+        this.#navContainer = document.getElementById("navContainer");
+        this.#navButtons = document.querySelectorAll(".online-nav-buttons .nav-btn");
         this.#logoutButton = document.getElementById("logoutButton");
 
         /**
@@ -45,8 +47,7 @@ class Menu {
         this.#authPanel.onLoginSuccess = (user) => {
             this.#currentUser = user;
             this.#authPanel.hide();
-            const nav = document.querySelector(".online-nav");
-            if (nav) nav.classList.remove("d-none");
+            this.#navContainer.classList.remove("d-none");
             this.#lobbyPanel.onLoginSuccess(user);
             this.#profilePanel.onLoginSuccess(user);
             this.#lobbyPanel.show();
@@ -83,8 +84,7 @@ class Menu {
             this.#lobbyPanel.hide();
             this.#profilePanel.hide();
             this.#authPanel.show();
-            const nav = document.querySelector(".online-nav");
-            if (nav) nav.classList.add("d-none");
+            this.#navContainer.classList.add("d-none");
         });
 
         return this;
