@@ -1,5 +1,5 @@
 import * as ApeEcs from "../../../../lib/ape-ecs.module.js";
-import {FrameInfoEntityId, MouseInputEntityId, PlayerEntityId} from "../../constants.js";
+import {FrameInfoEntityId, KeyboardInputEntityId, MouseInputEntityId, PlayerEntityId} from "../../constants.js";
 import {oimo} from "../../../../lib/oimo-physics.module.js";
 import ImpulseComponent from "../components/ImpulseComponent.js";
 import PositionComponent from "../components/PositionComponent.js";
@@ -8,6 +8,7 @@ import {FrameCounter, Quaternion, Vector3} from "../../../graphics/maths.js";
 import {Debug} from "../../debug.js";
 import SizeComponent from "../components/SizeComponent.js";
 import RigidBodyComponent from "../components/RigidBodyComponent.js";
+import CollisionComponent from "../components/CollisionComponent.js";
 
 
 export default class PhysicsSystem extends ApeEcs.System {
@@ -39,6 +40,44 @@ export default class PhysicsSystem extends ApeEcs.System {
         this._frameInfo = this.world.getEntity(FrameInfoEntityId).c.time;
         this._timeAccumulator = 0;
         this._frameCounter = new FrameCounter();
+
+        this.contactCallback = {
+            beginContact: (contact) => {
+                if (!contact.isTouching()) return;
+
+                const entityAId = contact.getShape1().getRigidBody().userData;
+                const entityBId = contact.getShape2().getRigidBody().userData;
+
+                const entityA = this.world.getEntity(entityAId);
+                const componentIdA = `contact_${entityAId}_${entityBId}`;
+
+                if (!this.world.getComponent(RigidBodyComponent.name))
+                    entityA.addComponent({
+                        type: CollisionComponent.name,
+                        entityId: componentIdA,
+                    });
+
+                const entityB = this.world.getEntity(entityAId);
+                const componentIdB = `contact_${entityBId}_${entityAId}`;
+
+                if (!this.world.getComponent(RigidBodyComponent.name))
+                    entityB.addComponent({
+                        type: CollisionComponent.name,
+                        entityId: componentIdB,
+                    });
+            },
+            endContact: (contact) => {
+                if (!contact.isTouching()) return;
+
+                const entityA = contact.getShape1().getRigidBody().userData;
+                const entityB = contact.getShape1().getRigidBody().userData;
+
+                this.world.getComponent(`contact_${entityA}_${entityB}`)?.destroy();
+                this.world.getComponent(`contact_${entityB}_${entityA}`)?.destroy();
+            },
+            preSolve: () => {},
+            postSolve: () => {},
+        };
     }
 
     /**
@@ -97,6 +136,7 @@ export default class PhysicsSystem extends ApeEcs.System {
         this._shapeConfig.density = rigidBodyComponent.density;
         this._shapeConfig.friction = rigidBodyComponent.friction;
         this._shapeConfig.restitution = rigidBodyComponent.restitution;
+        this._shapeConfig.contactCallback = this.contactCallback;
 
         const oimoBody = new oimo.dynamics.rigidbody.RigidBody(this._rigidBodyConfig);
         oimoBody.userData = entity.id;
@@ -153,13 +193,11 @@ export default class PhysicsSystem extends ApeEcs.System {
             Debug.setBox(`physics_${entity.id}`, entity.c.position.position, entity.c.orientation.orientation, entity.c.size.size);
         }
 
-        this.#inputRayCast();
+        this.#mouseInputRayCast();
+        this.#keyboardInputImpulses();
     }
 
-    /**
-     * todo: move to separate system
-     */
-    #inputRayCast() {
+    #mouseInputRayCast() {
         const camera = this.world.getEntity(PlayerEntityId).c.camera.camera;
         const {x, y, z} = camera.position;
         const {x: dx, y: dy, z: dz} = camera.direction;
@@ -192,5 +230,42 @@ export default class PhysicsSystem extends ApeEcs.System {
             position: hitPosition,
             force: hitPosition.subtracted(camera.position).normalise().mul(10000 * this._frameInfo.deltaTime),
         });
+    }
+
+    #keyboardInputImpulses() {
+        const keys = this.world.getEntity(KeyboardInputEntityId).c.keyboard.keys;
+
+        if (keys.has(" "))
+            for (const entity of this._rigidBodyQuery.execute()) {
+                if (!entity.has(PositionComponent.name) || !entity.getOne(RigidBodyComponent.name).move) continue;
+
+                entity.addComponent({
+                    type: ImpulseComponent.name,
+                    position: entity.c.position.position.subtracted(new Vector3(0, -1, 0)),
+                    force: new Vector3(0.0, 100.0, 0.0).mul(100 * this._frameInfo.deltaTime),
+                });
+            }
+
+        if (keys.has("e"))
+            for (const entity of this._rigidBodyQuery.execute()) {
+                if (!entity.has(PositionComponent.name) || !entity.getOne(RigidBodyComponent.name).move) continue;
+
+                entity.addComponent({
+                    type: ImpulseComponent.name,
+                    position: entity.c.position.position.multiplied(0.75),
+                    force: new Vector3(0.0, 100.0, 0.0).mul(100 * this._frameInfo.deltaTime),
+                });
+            }
+
+        if (keys.has("i"))
+            for (const entity of this._rigidBodyQuery.execute()) {
+                if (!entity.has(PositionComponent.name) || !entity.getOne(RigidBodyComponent.name).move) continue;
+
+                entity.addComponent({
+                    type: ImpulseComponent.name,
+                    position: entity.c.position.position.multiplied(1.25),
+                    force: new Vector3(0.0, 100.0, 0.0).mul(100 * this._frameInfo.deltaTime),
+                });
+            }
     }
 }

@@ -30,6 +30,7 @@ export class SceneNode extends WorldObject {
                 child.parent = this;
                 this.children.push(child);
             }
+        this.ids = {};
 
         this.visible = true;
         /**
@@ -38,15 +39,27 @@ export class SceneNode extends WorldObject {
         this.childrenVisible = null;
     }
 
-    addChild(child) {
+    addChild(child, id = null) {
         child.parent = this;
         this.children.push(child);
+        if (id !== null)
+            this.ids[id] = this.children.length - 1;
         return this;
     }
 
     addChildren(children) {
         for (const child of children)
             this.addChild(child);
+        return this;
+    }
+
+    removeChildById(id) {
+        this.children.splice(this.ids[id], 1);
+        return this;
+    }
+
+    clearChildren() {
+        this.children = [];
         return this;
     }
 
@@ -57,6 +70,10 @@ export class SceneNode extends WorldObject {
      */
     update(deltaTime, uniforms, transform = Matrix4.identity) {
         this._transform = transform.multiplied(this.matrix);
+
+        if (Object.hasOwn(this, "isSuzanne")) {
+            console.trace(uniforms);
+        }
 
         for (const child of this.children)
             child.update(deltaTime, uniforms, this._transform);

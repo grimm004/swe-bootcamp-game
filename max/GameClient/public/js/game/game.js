@@ -45,6 +45,10 @@ import GameHostComponent from "./ecs/components/GameHostComponent.js";
 import SizeComponent from "./ecs/components/SizeComponent.js";
 import RigidBodyComponent from "./ecs/components/RigidBodyComponent.js";
 import NetworkSynchroniseComponent from "./ecs/components/NetworkSyncroniseComponent.js";
+import GameSystem from "./ecs/systems/GameSystem.js";
+import GameComponent from "./ecs/components/GameComponent.js";
+import GameObjectComponent from "./ecs/components/GameObjectComponent.js";
+import CollisionComponent from "./ecs/components/CollisionComponent.js";
 
 /**
  * @typedef {{position: [x: number, y: number, z: number], direction: [x: number, y: number, z: number], orientation: [x: number, y: number, z: number, w: number]}} PlayerState
@@ -63,6 +67,7 @@ export class SweBootcampGame extends Application {
     #inputSystem;
     #physicsSystem;
     #multiplayerSystem;
+    #gameSystem;
 
     /**
      * @param {WebGL2RenderingContext} gl
@@ -84,6 +89,7 @@ export class SweBootcampGame extends Application {
         this.#ecsWorld.registerComponent(CameraComponent);
         this.#ecsWorld.registerComponent(SizeComponent);
         this.#ecsWorld.registerComponent(RigidBodyComponent);
+        this.#ecsWorld.registerComponent(CollisionComponent);
         this.#ecsWorld.registerComponent(ImpulseComponent);
         this.#ecsWorld.registerComponent(DrawComponent);
         this.#ecsWorld.registerComponent(LightComponent);
@@ -94,6 +100,8 @@ export class SweBootcampGame extends Application {
         this.#ecsWorld.registerComponent(PlayerComponent);
         this.#ecsWorld.registerComponent(MultiplayerComponent);
         this.#ecsWorld.registerComponent(GameHostComponent);
+        this.#ecsWorld.registerComponent(GameComponent);
+        this.#ecsWorld.registerComponent(GameObjectComponent);
         this.#ecsWorld.registerComponent(NetworkSynchroniseComponent);
 
         this.#windowInfoEntity = this.#entityFactory.createWindowEntity(WindowInfoEntityId, gl.canvas.clientWidth, gl.canvas.clientHeight);
@@ -110,6 +118,7 @@ export class SweBootcampGame extends Application {
         this.#ecsWorld.registerSystem(EveryUpdateGroup, PositioningSystem);
         /** @type {MultiplayerSystem} */
         this.#multiplayerSystem = this.#ecsWorld.registerSystem(EveryUpdateGroup, MultiplayerSystem, [this.#entityFactory, gameHubUrl]);
+        this.#gameSystem = this.#ecsWorld.registerSystem(EveryUpdateGroup, GameSystem);
         this.#ecsWorld.registerSystem(EveryUpdateGroup, GraphicsSystem);
         this.#ecsWorld.registerSystem(EveryDrawGroup, RenderingSystem, [gl]);
 
@@ -122,6 +131,11 @@ export class SweBootcampGame extends Application {
          * @type {(game: SweBootcampGame, deltaTime: number) => void}
          */
         this.onDrawCompleted = null;
+
+        /**
+         * @type {() => void}
+         */
+        this.onGameFinished = null;
     }
 
     // noinspection JSUnusedGlobalSymbols
@@ -314,11 +328,37 @@ export class SweBootcampGame extends Application {
             shelfMesh,
             bulbMesh,
             bulbHolderMesh,
+            cameraMesh,
         ] = await Promise.all([
             fetchMesh(this._gl, "shelf", woodDirtyTexture),
             fetchMesh(this._gl, "lightbulb_b", null, Colour.white, "col"),
             fetchMesh(this._gl, "lightbulb_h"),
+            fetchMesh(this._gl, "camera", null, Colour.white, "colLit"),
         ]);
+
+        const multiplayerNode = new SceneNode(Vector3.zeros, Quaternion.identity, Vector3.ones);
+
+        this.#multiplayerSystem.playerSceneNodeFactory = (playerId) => {
+            const playerNode = new SceneNode(Vector3.zeros, Quaternion.identity, Vector3.ones, [
+                new LitSceneNode(cameraMesh, new Vector3(0, -0.115, 0), Quaternion.fromYawPitch(180, 90), new Vector3(0.025))
+            ]);
+            multiplayerNode.addChild(playerNode, playerId);
+            return playerNode;
+        };
+
+        this.#multiplayerSystem.onPlayerLeft = (playerId) => {
+            multiplayerNode.removeChildById(playerId);
+        };
+
+        this.#multiplayerSystem.onGameStopped = () => {
+            multiplayerNode.clearChildren();
+            this.onGameFinished?.();
+        };
+
+        this.#gameSystem.onGameFinished = () => {
+            multiplayerNode.clearChildren();
+            this.onGameFinished?.();
+        };
 
         Debug.init(this._gl);
         Debug.setPoint("origin", Vector3.zeros, Colour.white, true);
@@ -331,7 +371,7 @@ export class SweBootcampGame extends Application {
         const tableNode = new SceneNode(Vector3.zeros, Quaternion.identity, Vector3.ones, [this.#loadTable(woodTexture)]);
 
         const shelves = [];
-        for (let i = 0; i < 3; i++)
+        for (let i = 0; i < 4; i++)
             shelves.push(new LitSceneNode(shelfMesh));
 
         shelves[0].position = new Vector3(2.25, 0, 0);
@@ -342,6 +382,9 @@ export class SweBootcampGame extends Application {
 
         shelves[2].position = new Vector3(0, 0, 2.25);
         shelves[2].orientation = Quaternion.fromTaitBryan(0, 0, 0);
+
+        shelves[3].position = new Vector3(0, 0, -2.25);
+        shelves[3].orientation = Quaternion.fromTaitBryan(180, 0, 0);
 
         const floorMesh = new TexPlaneMesh(this._gl, carpetTexture, new Vector2(2.5));
         const ceilingMesh = new TexPlaneMesh(this._gl, woodPlanksTexture, new Vector2(2.5), new Vector3(0.0, -1.0, 0.0));
@@ -362,6 +405,7 @@ export class SweBootcampGame extends Application {
             SceneRootEntityId,
             new SceneNode()
                 .addChild(staticSceneGraph)
+                .addChild(multiplayerNode)
                 .addChild(tableNode)
                 .addChildren(chairNodes));
 
@@ -403,31 +447,37 @@ export class SweBootcampGame extends Application {
 
         const collisionBoxes = [
             {
+                id: "floor",
                 size: new Vector3(5, 0.1, 5),
                 position: new Vector3(0.0, -0.05, 0.0),
                 orientation: Quaternion.identity,
             },
             {
+                id: "ceiling",
                 size: new Vector3(0.1, 2.5, 5),
                 position: new Vector3(-2.55, 1.25, 0.0),
                 orientation: Quaternion.identity,
             },
             {
+                id: "wall1",
                 size: new Vector3(0.1, 2.5, 5),
                 position: new Vector3(2.55, 1.25, 0.0),
                 orientation: Quaternion.identity,
             },
             {
+                id: "wall2",
                 size: new Vector3(5, 2.5, 0.1),
                 position: new Vector3(0.0, 1.25, -2.55),
                 orientation: Quaternion.identity,
             },
             {
+                id: "wall3",
                 size: new Vector3(5, 2.5, 0.1),
                 position: new Vector3(0.0, 1.25, 2.55),
                 orientation: Quaternion.identity,
             },
             {
+                id: "wall4",
                 size: new Vector3(5, 0.1, 5),
                 position: new Vector3(0.0, 2.35, 0.0),
                 orientation: Quaternion.identity,
@@ -435,8 +485,8 @@ export class SweBootcampGame extends Application {
         ];
 
         let i = 0;
-        for (const {size, position, orientation} of collisionBoxes)
-            this.#entityFactory.createCollisionBox(`collisionBox_${i++}`, size, position, orientation);
+        for (const {id, size, position, orientation} of collisionBoxes)
+            this.#entityFactory.createCollisionBox(id, size, position, orientation);
 
         this.#entityFactory.createPhysicalObjectEntity(
             "table",
@@ -444,6 +494,10 @@ export class SweBootcampGame extends Application {
             new Vector3(1.8, 0.85, 0.9),
             new Vector3(0.0, 2.25, 0.0),
             Quaternion.fromEuler(0.0, 90.0, 0.0),
+            1.0,
+            0.2,
+            0.2,
+            4,
         );
 
         const chairPositions = [
@@ -492,6 +546,10 @@ export class SweBootcampGame extends Application {
      */
     async joinGame(playerId, gameId, accessToken, isHost) {
         await this.#multiplayerSystem.joinGame(playerId, gameId, accessToken, isHost);
+    }
+
+    startGame() {
+        this.#gameSystem.startGame();
     }
 
     onMouseMove(dx, dy, x, y) {

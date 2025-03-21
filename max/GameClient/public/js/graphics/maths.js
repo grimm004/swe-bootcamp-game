@@ -1491,4 +1491,8 @@ export class Colour {
     static get magenta() {
         return new Colour(1.0, 0.0, 1.0, 1.0);
     }
+
+    static get brown() {
+        return new Colour(0.647, 0.165, 0.165, 1.0);
+    }
 }

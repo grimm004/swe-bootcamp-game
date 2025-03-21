@@ -28,6 +28,99 @@ export class Mesh {
         this.shader.bind(uniforms);
         this.texture?.bind(this.shaderName);
     }
+
+    /**
+     * @param {WebGL2RenderingContext} gl
+     * @param {string} obj
+     * @param {Texture} texture
+     * @param {Colour} [colour=Colour.white]
+     * @param {string} [shader=""]
+     * @returns {Mesh}
+     */
+    static parseFromWavefrontObj(gl, obj, texture, colour = Colour.white, shader = "") {
+        const objParts = obj.split("\n");
+
+        if (shader === "")
+            shader = texture ? "texLit" : "colLit";
+
+        const usesTexture = shader === "tex" || shader === "texLit";
+        const usesNormals = shader === "colLit" || shader === "texLit";
+
+        const positions = [];
+        const textureCoords = [];
+        const normals = [];
+        const faces = [];
+
+        for (const objPart of objParts) {
+            const [type, ...parameters] = objPart.trim().split(" ");
+            if (type === "v") positions.push(new Vector3(parameters.map(xStr => Number(xStr))));
+            else if (type === "vt" && usesTexture) textureCoords.push(new Vector2(parameters.map(xStr => Number(xStr))));
+            else if (type === "vn" && usesNormals) normals.push(new Vector3(parameters.map(xStr => Number(xStr))));
+            else if (type === "f") {
+                if (parameters.length !== 3)
+                    throw Error("Wavefront .obj needs to be triangulated.");
+                const vertices = [];
+                for (const parameter of parameters) {
+                    const paramParts = parameter.split("/");
+                    let posIndex = null, texIndex = null, normIndex = null;
+                    if (paramParts.length > 0)
+                        posIndex = Number(paramParts[0]) - 1;
+                    if (paramParts.length > 1 && paramParts[1] !== "" && usesTexture)
+                        texIndex = Number(paramParts[1]) - 1;
+                    if (paramParts.length > 2 && usesNormals)
+                        normIndex = Number(paramParts[2]) - 1;
+                    vertices.push([posIndex, texIndex, normIndex]);
+
+                    if (posIndex === null || (usesTexture && texIndex === null) || (usesNormals && normIndex === null))
+                        console.warn(`Null attribute: ${parameter}: ${posIndex}, ${texIndex}, ${normIndex}`);
+                }
+
+                faces.push(vertices);
+            }
+        }
+
+        const positionMap = new Map();
+        const vertexBufferData = [];
+        const indexBufferData = [];
+        let index = 0;
+        for (const face of faces)
+            for (const vertex of face) {
+                const [posIndex, texIndex, normIndex] = vertex;
+
+                let texMap = positionMap.get(posIndex);
+
+                if (texMap === undefined) {
+                    texMap = new Map();
+                    positionMap.set(posIndex, texMap);
+                }
+
+                let normMap = texMap.get(texIndex);
+
+                if (normMap === undefined) {
+                    normMap = new Map();
+                    texMap.set(texIndex, normMap);
+                }
+
+                let cachedIndex = normMap.get(normIndex);
+                if (cachedIndex === undefined) {
+                    cachedIndex = index++;
+                    normMap.set(normIndex, cachedIndex);
+
+                    vertexBufferData.push(...[
+                        ...positions[posIndex],
+                        ...usesNormals ? normals[normIndex] : [],
+                        ...usesTexture ? textureCoords[texIndex] : colour.rgb
+                    ]);
+                }
+
+                indexBufferData.push(cachedIndex);
+            }
+
+        const vertexBuffer = new VertexBuffer(gl, vertexBufferData);
+        const va = new VertexArray(gl).setBuffer(vertexBuffer, shader);
+        const indexBuffer = new IndexBuffer(gl, indexBufferData);
+        return new Mesh(gl, va, indexBuffer, shader, texture);
+    }
 }
 
 export class CubeMesh extends Mesh {
@@ -198,97 +291,4 @@ export class TexPlaneMesh extends Mesh {
         ]);
         super(gl, vertexArray, indexBuffer, "texLit", texture);
     }
-}
-
-/**
- * @param {WebGL2RenderingContext} gl
- * @param {string} obj
- * @param {Texture} texture
- * @param {Colour} [colour=Colour.white]
- * @param {string} [shader=""]
- * @returns {Mesh}
- */
-export function parseWavefrontObj(gl, obj, texture, colour = Colour.white, shader = "") {
-    const objParts = obj.split("\n");
-
-    if (shader === "")
-        shader = texture ? "texLit" : "colLit";
-
-    const usesTexture = shader === "tex" || shader === "texLit";
-    const usesNormals = shader === "colLit" || shader === "texLit";
-
-    const positions = [];
-    const textureCoords = [];
-    const normals = [];
-    const faces = [];
-
-    for (const objPart of objParts) {
-        const [type, ...parameters] = objPart.trim().split(" ");
-        if (type === "v") positions.push(new Vector3(parameters.map(xStr => Number(xStr))));
-        else if (type === "vt" && usesTexture) textureCoords.push(new Vector2(parameters.map(xStr => Number(xStr))));
-        else if (type === "vn" && usesNormals) normals.push(new Vector3(parameters.map(xStr => Number(xStr))));
-        else if (type === "f") {
-            if (parameters.length !== 3)
-                throw Error("Wavefront .obj needs to be triangulated.");
-            const vertices = [];
-            for (const parameter of parameters) {
-                const paramParts = parameter.split("/");
-                let posIndex = null, texIndex = null, normIndex = null;
-                if (paramParts.length > 0)
-                    posIndex = Number(paramParts[0]) - 1;
-                if (paramParts.length > 1 && paramParts[1] !== "" && usesTexture)
-                    texIndex = Number(paramParts[1]) - 1;
-                if (paramParts.length > 2 && usesNormals)
-                    normIndex = Number(paramParts[2]) - 1;
-                vertices.push([posIndex, texIndex, normIndex]);
-
-                if (posIndex === null || (usesTexture && texIndex === null) || (usesNormals && normIndex === null))
-                    console.warn(`Null attribute: ${parameter}: ${posIndex}, ${texIndex}, ${normIndex}`);
-            }
-
-            faces.push(vertices);
-        }
-    }
-
-    const positionMap = new Map();
-    const vertexBufferData = [];
-    const indexBufferData = [];
-    let index = 0;
-    for (const face of faces)
-        for (const vertex of face) {
-            const [posIndex, texIndex, normIndex] = vertex;
-
-            let texMap = positionMap.get(posIndex);
-
-            if (texMap === undefined) {
-                texMap = new Map();
-                positionMap.set(posIndex, texMap);
-            }
-
-            let normMap = texMap.get(texIndex);
-
-            if (normMap === undefined) {
-                normMap = new Map();
-                texMap.set(texIndex, normMap);
-            }
-
-            let cachedIndex = normMap.get(normIndex);
-            if (cachedIndex === undefined) {
-                cachedIndex = index++;
-                normMap.set(normIndex, cachedIndex);
-
-                vertexBufferData.push(...[
-                    ...positions[posIndex],
-                    ...usesNormals ? normals[normIndex] : [],
-                    ...usesTexture ? textureCoords[texIndex] : colour.rgb
-                ]);
-            }
-
-            indexBufferData.push(cachedIndex);
-        }
-
-    const vertexBuffer = new VertexBuffer(gl, vertexBufferData);
-    const va = new VertexArray(gl).setBuffer(vertexBuffer, shader);
-    const indexBuffer = new IndexBuffer(gl, indexBufferData);
-    return new Mesh(gl, va, indexBuffer, shader, texture);
 }

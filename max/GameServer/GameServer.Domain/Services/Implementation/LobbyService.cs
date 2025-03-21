@@ -94,4 +94,16 @@ internal class LobbyService(ILobbyRepository lobbyRepository) : ILobbyService
             ? updatedLobby
             : new Error<string>("Failed to start game");
     }
+
+    public async Task<OpenLobbyResult> OpenLobbyAsync(Guid lobbyId, CancellationToken token = default)
+    {
+        var lobby = await lobbyRepository.GetLobbyByIdAsync(lobbyId, token);
+        if (lobby is null)
+            return new NotFound();
+
+        var updatedLobby = await lobbyRepository.UpdateLobbyStatusAsync(lobby.Id, LobbyStatus.Open, token);
+        return updatedLobby is not null
+            ? updatedLobby
+            : new Error<string>("Failed to re-open lobby");
+    }
 }

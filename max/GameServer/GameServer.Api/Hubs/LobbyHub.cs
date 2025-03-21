@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using GameServer.Api.Constants;
 using GameServer.Domain.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -6,8 +7,9 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace GameServer.Api.Hubs;
 
+[ExcludeFromCodeCoverage]
 [Authorize(AuthPolicies.Player)]
-internal sealed class LobbyHub(ILobbyService lobbyService, IGameService gameService, ILogger<LobbyHub> logger) : Hub
+internal sealed class LobbyHub(ILobbyService lobbyService, IGameService gameService, ILogger<LobbyHub> logger) : Hub<ILobbyClient>
 {
     /// <summary>
     /// Called when the host starts the game.
@@ -28,7 +30,7 @@ internal sealed class LobbyHub(ILobbyService lobbyService, IGameService gameServ
             {
                 gameService.StartGame(lobby.Id, lobby.HostId, lobby.Users.Select(u => u.Id).ToImmutableList());
                 logger.LogInformation("Game started in lobby {LobbyId}", lobby.Id);
-                await Clients.Group(lobby.Id.ToString()).SendAsync("GameStarted");
+                await Clients.Group(lobby.Id.ToString()).GameStarted();
             },
             _ => throw new HubException("Lobby not found or user isn't host"),
             _ => throw new HubException("Game already started"),
@@ -51,6 +53,9 @@ internal sealed class LobbyHub(ILobbyService lobbyService, IGameService gameServ
                 _ => throw new HubException("Lobby not found"),
                 error => throw new HubException($"Error retrieving lobby: {error.Value}"));
 
+        Context.Items["LobbyId"] = lobby.Id;
+        Context.Items["HostId"] = lobby.HostId;
+
         await Groups.AddToGroupAsync(Context.ConnectionId, lobby.Id.ToString(), Context.ConnectionAborted);
 
         await base.OnConnectedAsync();
@@ -69,11 +74,42 @@ internal sealed class LobbyHub(ILobbyService lobbyService, IGameService gameServ
         var lobbyResult = await lobbyService.LeaveLobbyAsync(userId);
 
         if (!lobbyResult.TryPickT0(out var lobby, out var errors))
+        {
             errors.Switch(
-                _ => throw new HubException("Lobby not found"),
-                error => throw new HubException($"Error retrieving lobby: {error.Value}"));
+                _ => logger.LogWarning("Lobby not found for user {UserId}", userId),
+                error => logger.LogWarning("Error retrieving lobby: {Error}", error.Value));
 
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, lobby.Id.ToString());
+            if (Context.Items["LobbyId"] is not Guid lobbyId)
+                return;
+
+            var lobbyResultFromId = await lobbyService.GetLobbyByIdAsync(lobbyId);
+
+            if (!lobbyResultFromId.TryPickT0(out lobby, out _))
+            {
+                logger.LogWarning("Lobby not found by ID {LobbyId}", lobbyId);
+                await Clients.Group(lobbyId.ToString()).LobbyDisbanded();
+
+                await base.OnDisconnectedAsync(exception);
+                return;
+            }
+
+            if (!lobby.Users.Any())
+            {
+                await lobbyService.DisbandLobbyAsync(lobby.Id);
+                await Clients.Group(lobby.Id.ToString()).LobbyDisbanded();
+            }
+
+            await base.OnDisconnectedAsync(exception);
+            return;
+        }
+
+        if (!lobby.Users.Any() || lobby.HostId == userId)
+        {
+            await lobbyService.DisbandLobbyAsync(lobby.Id);
+            await Clients.Group(lobby.Id.ToString()).LobbyDisbanded();
+        }
+        else
+            await Clients.Group(lobby.Id.ToString()).PlayerLeft(userId.ToString());
 
         await base.OnDisconnectedAsync(exception);
     }

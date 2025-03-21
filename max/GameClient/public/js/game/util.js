@@ -1,6 +1,6 @@
 import {Texture} from "../graphics/textures.js";
 import {Colour} from "../graphics/maths.js";
-import {parseWavefrontObj} from "../graphics/meshes.js";
+import {Mesh} from "../graphics/meshes.js";
 
 
 /**
@@ -65,5 +65,5 @@ export const fetchShaderSource = async (name) => {
 export const fetchMesh = async (gl, name, texture = "", colour = Colour.white, shader = "") => {
     if (typeof texture === "string")
         texture = await fetchTexture(gl, texture === "" ? (name + ".png") : texture);
-    return parseWavefrontObj(gl, await fetchText(`assets/meshes/${name}.obj`), texture, colour, shader);
+    return Mesh.parseFromWavefrontObj(gl, await fetchText(`assets/meshes/${name}.obj`), texture, colour, shader);
 }

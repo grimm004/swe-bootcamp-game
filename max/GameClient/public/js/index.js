@@ -36,7 +36,10 @@ async function main() {
             await gameUi.startGame();
     };
 
-    // gameUi.onGameFinish = () => { menu.show(); };
+    gameUi.onGameFinish = () => {
+        menu.show();
+    }
+
     app.run();
 
     await menu.attemptAutoLogin();

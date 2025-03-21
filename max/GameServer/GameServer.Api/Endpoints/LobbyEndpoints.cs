@@ -71,7 +71,7 @@ internal static class LobbyEndpoints
     }
 
     private static async Task<IResult> CreateLobby(
-        ILobbyService lobbyService, ILoggerFactory loggerFactory, HttpContext context, IHubContext<LobbyHub> lobbyHub, CancellationToken token)
+        ILobbyService lobbyService, ILoggerFactory loggerFactory, HttpContext context, IHubContext<LobbyHub, ILobbyClient> lobbyHub, CancellationToken token)
     {
         var user = (User)context.Items["User"]!;
 
@@ -83,8 +83,7 @@ internal static class LobbyEndpoints
         return await lobbyResult.Match<Task<IResult>>(
             async lobby =>
             {
-                await lobbyHub.Clients.Group(lobby.Id.ToString())
-                    .SendAsync("PlayerJoined", user.Id.ToString(), cancellationToken: token);
+                await lobbyHub.Clients.Group(lobby.Id.ToString()).PlayerJoined(user.Id.ToString());
                 return Results.CreatedAtRoute(nameof(GetLobby), new { id = lobby.Id }, lobby.MapToResponse());
             },
             error => Task.FromResult(Results.Problem(error.Value, statusCode: StatusCodes.Status500InternalServerError)));
@@ -115,15 +114,15 @@ internal static class LobbyEndpoints
     }
 
     private static async Task<IResult> DeleteLobby(
-        Guid id, ILobbyService lobbyService, IHubContext<LobbyHub> lobbyHub, CancellationToken token)
+        Guid id, ILobbyService lobbyService, IHubContext<LobbyHub, ILobbyClient> lobbyHub, IHubContext<GameHub, IGameClient> gameHub, CancellationToken token)
     {
         var lobbyResult = await lobbyService.DisbandLobbyAsync(id, token);
 
         return await lobbyResult.Match<Task<IResult>>(
             async _ =>
             {
-                await lobbyHub.Clients.Group(id.ToString())
-                    .SendAsync("LobbyDisbanded", cancellationToken: token);
+                await lobbyHub.Clients.Group(id.ToString()).LobbyDisbanded();
+                await gameHub.Clients.Group(id.ToString()).GameStopped();
                 return Results.NoContent();
             },
             _ => Task.FromResult(Results.NotFound()),
@@ -131,7 +130,7 @@ internal static class LobbyEndpoints
     }
 
     private static async Task<IResult> JoinLobby(
-        Guid id, JoinLobbyRequest request, ILobbyService lobbyService, HttpContext context, IHubContext<LobbyHub> lobbyHub, CancellationToken token)
+        Guid id, JoinLobbyRequest request, ILobbyService lobbyService, HttpContext context, IHubContext<LobbyHub, ILobbyClient> lobbyHub, CancellationToken token)
     {
         var user = (User)context.Items["User"]!;
 
@@ -140,8 +139,7 @@ internal static class LobbyEndpoints
         return await lobbyResult.Match<Task<IResult>>(
             async lobby =>
             {
-                await lobbyHub.Clients.Group(id.ToString())
-                    .SendAsync("PlayerJoined", user.Id.ToString(), cancellationToken: token);
+                await lobbyHub.Clients.Group(id.ToString()).PlayerJoined(user.Id.ToString());
                 return Results.Ok(lobby.MapToResponse());
             },
             _ => Task.FromResult(Results.NotFound()),
@@ -151,7 +149,7 @@ internal static class LobbyEndpoints
     }
 
     private static async Task<IResult> LeaveLobby(
-        Guid id, Guid userId, ILobbyService lobbyService, HttpContext context, IHubContext<LobbyHub> lobbyHub, CancellationToken token)
+        Guid id, Guid userId, ILobbyService lobbyService, HttpContext context, IHubContext<LobbyHub, ILobbyClient> lobbyHub, IHubContext<GameHub, IGameClient> gameHub, CancellationToken token)
     {
         var user = (User)context.Items["User"]!;
         var lobbyResult = await lobbyService.GetLobbyByIdAsync(id, token);
@@ -171,8 +169,8 @@ internal static class LobbyEndpoints
             return await disbandResult.Match<Task<IResult>>(
                 async _ =>
                 {
-                    await lobbyHub.Clients.Group(id.ToString())
-                        .SendAsync("LobbyDisbanded", cancellationToken: token);
+                    await lobbyHub.Clients.Group(id.ToString()).LobbyDisbanded();
+                    await gameHub.Clients.Group(id.ToString()).GameStopped();
                     return Results.NoContent();
                 },
                 _ => Task.FromResult(Results.NotFound()),
@@ -184,8 +182,8 @@ internal static class LobbyEndpoints
         return await lobbyDeleteResult.Match<Task<IResult>>(
             async updatedLobby =>
             {
-                await lobbyHub.Clients.Group(id.ToString())
-                    .SendAsync("PlayerLeft", userId.ToString(), cancellationToken: token);
+                await lobbyHub.Clients.Group(id.ToString()).PlayerLeft(userId.ToString());
+                await gameHub.Clients.Group(id.ToString()).PlayerLeft(userId.ToString());
                 return Results.Ok(updatedLobby.MapToResponse());
             },
             _ => Task.FromResult(Results.NotFound()),

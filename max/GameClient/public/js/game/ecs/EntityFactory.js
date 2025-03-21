@@ -12,6 +12,8 @@ import MultiplayerComponent from "./components/MultiplayerComponent.js";
 import SizeComponent from "./components/SizeComponent.js";
 import RigidBodyComponent from "./components/RigidBodyComponent.js";
 import NetworkSynchroniseComponent from "./components/NetworkSyncroniseComponent.js";
+import GameObjectComponent from "./components/GameObjectComponent.js";
+import GameComponent from "./components/GameComponent.js";
 
 
 export default class EntityFactory {
@@ -76,7 +78,6 @@ export default class EntityFactory {
      * @param {number} near
      * @param {number} far
      * @param {Vector3} initialPosition
-     * @param {Quaternion} initialOrientation
      * @param {number} mouseSensitivity
      * @param {number} yawDegrees
      * @param {number} pitchDegrees
@@ -110,7 +111,7 @@ export default class EntityFactory {
         });
     }
 
-    createMultiplayerEntity(id) {
+    createMultiplayerEntity(id, sceneNodeFactory) {
         return this.#ecsWorld.createEntity({
             id,
             c: {
@@ -126,6 +127,16 @@ export default class EntityFactory {
                     type: OrientationComponent.name,
                     orientation: Quaternion.identity,
                 },
+                draw: {
+                    type: DrawComponent.name,
+                    visible: true,
+                    childrenVisible: true,
+                    sceneNode: sceneNodeFactory?.(),
+                },
+                game: {
+                    type: GameComponent.name,
+                    score: 0,
+                }
             }
         });
     }
@@ -153,9 +164,10 @@ export default class EntityFactory {
      * @param {number} [density=1]
      * @param {number} [friction=0.2]
      * @param {number} [restitution=0.2]
+     * @param {number} [gameValue=1]
      * @returns {WorldEntity}
      */
-    createPhysicalObjectEntity(id, sceneNode, size, initialPosition, initialOrientation, density= 1, friction = 0.2, restitution = 0.2) {
+    createPhysicalObjectEntity(id, sceneNode, size, initialPosition, initialOrientation, density= 1, friction = 0.2, restitution = 0.2, gameValue = 1) {
         return this.#ecsWorld.createEntity({
             id,
             c: {
@@ -186,6 +198,11 @@ export default class EntityFactory {
                     visible: true,
                     childrenVisible: true,
                     sceneNode,
+                },
+                game: {
+                    type: GameObjectComponent.name,
+                    value: gameValue,
+                    active: true,
                 }
             }
         });

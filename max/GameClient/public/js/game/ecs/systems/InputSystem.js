@@ -1,7 +1,6 @@
 import * as ApeEcs from "../../../../lib/ape-ecs.module.js";
-import {KeyboardInputEntityId, MouseInputEntityId, PlayerEntityId} from "../../constants.js";
-import {Vector2, Vector3} from "../../../graphics/maths.js";
-import ImpulseComponent from "../components/ImpulseComponent.js";
+import {KeyboardInputEntityId, MouseInputEntityId} from "../../constants.js";
+import {Vector2} from "../../../graphics/maths.js";
 
 
 export default class InputSystem extends ApeEcs.System {
@@ -77,39 +76,6 @@ export default class InputSystem extends ApeEcs.System {
             });
 
             this._keyboadUpdated = false;
-        }
-    }
-
-    #updateImpulses() {
-        const camera = this.world.getEntity(PlayerEntityId).c.camera.camera;
-        if (key === " ") {
-            // todo: move out to input system
-            for (let i = 0; i < 6; i++) {
-                const chairEntity = this.world.getEntity(`chair_${i}`);
-                chairEntity.addComponent({
-                    type: ImpulseComponent.name,
-                    position: chairEntity.c.position.position.subtracted(new Vector3(0, -1, 0)),
-                    force: new Vector3(0.0, 100.0, 0.0),
-                });
-            }
-        } else if (key === "e") {
-            for (let i = 0; i < 6; i++) {
-                const chairEntity = this.world.getEntity(`chair_${i}`);
-                chairEntity.addComponent({
-                    type: ImpulseComponent.name,
-                    position: chairEntity.c.position.position.multiplied(0.75),
-                    force: new Vector3(0.0, 100.0, 0.0),
-                });
-            }
-        } else if (key === "i") {
-            for (let i = 0; i < 6; i++) {
-                const chairEntity = this.world.getEntity(`chair_${i}`);
-                chairEntity.addComponent({
-                    type: ImpulseComponent.name,
-                    position: chairEntity.c.position.position.multiplied(1.25),
-                    force: new Vector3(0.0, 100.0, 0.0),
-                });
-            }
         }
     }
 }

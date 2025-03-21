@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
 using GameServer.Api.Constants;
 using GameServer.Api.Contracts.Responses;
 using GameServer.Api.Mappers;
@@ -8,6 +9,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace GameServer.Api.Hubs;
 
+[ExcludeFromCodeCoverage]
 [Authorize(AuthPolicies.Player)]
 internal sealed class GameHub(ILobbyService lobbyService, IGameService gameService, ILogger<LobbyHub> logger) : Hub<IGameClient>
 {
@@ -21,17 +23,10 @@ internal sealed class GameHub(ILobbyService lobbyService, IGameService gameServi
         if (!Guid.TryParse(Context.UserIdentifier, out var userId))
         {
             logger.LogWarning("User identifier is not a valid GUID: {UserId}", Context.UserIdentifier);
-            throw new HubException("User identifier is not a valid GUID");
+            return;
         }
 
-        var lobbyId = gameService.GetLobbyIdByUserId(userId);
-        if (!lobbyId.HasValue)
-        {
-            logger.LogWarning("Lobby ID not found for user {UserId}", userId);
-            throw new HubException("Lobby ID not found");
-        }
-
-        gameService.UpdatePlayerState(lobbyId.Value, userId, state.MapToGamePlayerState());
+        gameService.UpdatePlayerState(userId, state.MapToGamePlayerState());
     }
 
     /// <summary>
@@ -44,17 +39,23 @@ internal sealed class GameHub(ILobbyService lobbyService, IGameService gameServi
         if (!Guid.TryParse(Context.UserIdentifier, out var userId))
         {
             logger.LogWarning("User identifier is not a valid GUID: {UserId}", Context.UserIdentifier);
-            throw new HubException("User identifier is not a valid GUID");
+            return;
         }
 
-        var lobbyId = gameService.GetLobbyIdByUserId(userId);
-        if (!lobbyId.HasValue)
+        var gameState = gameService.GetGameStateByUserId(userId);
+        if (gameState is null)
         {
-            logger.LogWarning("Lobby ID not found for user {UserId}", userId);
-            throw new HubException("Lobby ID not found");
+            logger.LogWarning("Game not found for user {UserId}", userId);
+            return;
         }
 
-        gameService.UpdateObjectStates(lobbyId.Value, states.Select(GameMappers.MapToGameObjectState).ToImmutableList());
+        if (gameState.HostId != userId)
+        {
+            logger.LogWarning("User {UserId} is not the host of the game", userId);
+            return;
+        }
+
+        gameService.UpdateObjectStates(gameState.LobbyId, states.Select(GameMappers.MapToGameObjectState).ToImmutableList());
     }
 
     /// <summary>
@@ -62,22 +63,22 @@ internal sealed class GameHub(ILobbyService lobbyService, IGameService gameServi
     /// </summary>
     /// <param name="actions">Player actions</param>
     // ReSharper disable once UnusedMember.Global
-    public void GamePlayerImpulseAction(IEnumerable<GamePlayerImpulseAction> actions)
+    public async Task GamePlayerImpulseAction(IEnumerable<GamePlayerImpulseAction> actions)
     {
         if (!Guid.TryParse(Context.UserIdentifier, out var userId))
         {
             logger.LogWarning("User identifier is not a valid GUID: {UserId}", Context.UserIdentifier);
-            throw new HubException("User identifier is not a valid GUID");
+            return;
         }
 
         var gameState = gameService.GetGameStateByUserId(userId);
         if (gameState is null)
         {
             logger.LogWarning("Game not found for user {UserId}", userId);
-            throw new HubException("Game not found");
+            return;
         }
 
-        Clients.User(gameState.HostId.ToString()).GamePlayerImpulseAction(actions);
+        await Clients.User(gameState.HostId.ToString()).GamePlayerImpulseAction(actions);
     }
 
     public override async Task OnConnectedAsync()
@@ -85,16 +86,19 @@ internal sealed class GameHub(ILobbyService lobbyService, IGameService gameServi
         if (!Guid.TryParse(Context.UserIdentifier, out var userId))
         {
             logger.LogWarning("User identifier is not a valid GUID: {UserId}", Context.UserIdentifier);
-            throw new HubException("User identifier is not a valid GUID");
+            return;
         }
 
         logger.LogInformation("Game connection {ConnectionId} for user {UserId} connected", Context.ConnectionId, userId);
         var lobbyResult = await lobbyService.GetLobbyByUserIdAsync(userId, Context.ConnectionAborted);
 
         if (!lobbyResult.TryPickT0(out var lobby, out var errors))
+        {
             errors.Switch(
-                _ => throw new HubException("Lobby not found"),
-                error => throw new HubException($"Error retrieving lobby: {error.Value}"));
+                _ => logger.LogWarning("Lobby not found for user {UserId}", userId),
+                error => logger.LogWarning("Error retrieving lobby: {Error}", error.Value));
+            return;
+        }
 
         Context.Items["LobbyId"] = lobby.Id;
         Context.Items["HostId"] = lobby.HostId;
@@ -116,12 +120,33 @@ internal sealed class GameHub(ILobbyService lobbyService, IGameService gameServi
 
         var lobbyResult = await lobbyService.GetLobbyByIdAsync(userId);
 
-        if (!lobbyResult.TryPickT0(out var lobby, out var errors))
+        Guid lobbyId;
+        if (lobbyResult.TryPickT0(out var lobby, out var errors))
+            lobbyId = lobby.Id;
+        else
+        {
             errors.Switch(
-                _ => throw new HubException("Lobby not found"),
-                error => throw new HubException($"Error retrieving lobby: {error.Value}"));
+                _ => logger.LogWarning("Lobby not found for user {UserId}", userId),
+                error => logger.LogWarning("Error retrieving lobby: {Error}", error.Value));
 
-        await Groups.RemoveFromGroupAsync(Context.ConnectionId, lobby.Id.ToString());
+            if (Context.Items["LobbyId"] is not Guid id)
+                return;
+
+            lobbyId = id;
+        }
+
+        var gameState = gameService.RemovePlayer(userId);
+
+        await Clients.Group(lobbyId.ToString()).PlayerLeft(userId.ToString());
+
+        if (gameState?.HostId == userId || gameState is { Players.Count: < 2 })
+        {
+            gameService.StopGame(lobbyId);
+            await Clients.Group(lobbyId.ToString()).GameStopped();
+        }
+
+        if (gameState is { Players.Count: < 2 })
+            await lobbyService.OpenLobbyAsync(lobbyId);
 
         await base.OnDisconnectedAsync(exception);
     }

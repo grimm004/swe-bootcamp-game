@@ -218,6 +218,9 @@ class LobbyPanel {
                 return;
             }
 
+            const player = this.#currentLobby?.users.find(u => u.id === userId);
+            showMessage(`Player ${player.displayName ?? player.username} left the lobby.`, "info");
+
             const lobbyData = await getLobbyById(lobbyId);
             if (!lobbyData) return;
 
@@ -226,6 +229,7 @@ class LobbyPanel {
         });
 
         this.#lobbyHubConnection?.on("LobbyDisbanded", async () => {
+            showMessage("The lobby has been disbanded.", "info");
             this.#currentLobby = null;
             await this.#stopLobbyHubConnection();
             this.#updateLobbyUi(null);

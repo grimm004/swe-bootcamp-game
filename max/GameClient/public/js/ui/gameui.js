@@ -38,6 +38,11 @@ class GameUi {
         this.#playerPositionLabel = document.getElementById("playerPositionLabel");
         this.#physicsStatsLabel = document.getElementById("physicsStatsLabel");
         this.#multiplayerStatsLabel = document.getElementById("multiplayerStatsLabel");
+
+        /**
+         * @type {() => void}
+         */
+        this.onGameFinish = null;
     }
 
     /**
@@ -65,6 +70,7 @@ class GameUi {
             .#setupResize()
             .#setupInput()
             .#setupPointerLock()
+            .#setupGame()
             .#setupDebug();
     }
 
@@ -205,6 +211,22 @@ class GameUi {
     }
 
     /**
+     * Sets up the game hooks.
+     * @returns {this}
+     */
+    #setupGame() {
+        this.#app.onGameFinished = this.#onGameFinish.bind(this);
+
+        return this;
+    }
+
+    #onGameFinish() {
+        document.exitPointerLock();
+        this.#captureEnabled = false;
+        this.onGameFinish?.();
+    }
+
+    /**
      * Sets up the debug UI.
      * @returns {this}
      */
@@ -259,7 +281,7 @@ class GameUi {
      */
     async joinGame(user, lobby) {
         await this.#app.joinGame(user.id, lobby.id, getCookie(SessionCookie), user.id === lobby.hostId);
-        this.#captureEnabled = true;
+        await this.startGame();
     }
 
     /**
@@ -268,6 +290,7 @@ class GameUi {
      */
     async startGame() {
         this.#captureEnabled = true;
+        await this.#app.startGame();
     }
 }
 

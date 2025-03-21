@@ -26,8 +26,11 @@ public class InMemoryGameService : IGameService
     public GameState? GetGameState(Guid lobbyId) =>
         _gameStates.GetValueOrDefault(lobbyId);
 
-    public void UpdatePlayerState(Guid lobbyId, Guid playerId, GamePlayerState state)
+    public void UpdatePlayerState(Guid playerId, GamePlayerState state)
     {
+        if (!_userLobbyMap.TryGetValue(playerId, out var lobbyId))
+            return;
+
         if (!_gameStates.TryGetValue(lobbyId, out var gameState))
             return;
 
@@ -79,11 +82,16 @@ public class InMemoryGameService : IGameService
         return value;
     }
 
-    public Guid? GetLobbyIdByUserId(Guid userId)
+    public GameState? RemovePlayer(Guid userId)
     {
-        if (!_userLobbyMap.TryGetValue(userId, out var lobbyId) || !_gameStates.ContainsKey(lobbyId))
+        if (!_userLobbyMap.Remove(userId, out var lobbyId))
             return null;
 
-        return lobbyId;
+        if (!_gameStates.TryGetValue(lobbyId, out var gameState))
+            return null;
+
+        gameState.Players.Remove(userId);
+
+        return gameState;
     }
 }

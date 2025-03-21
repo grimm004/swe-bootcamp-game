@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using GameServer.Api.Hubs;
 using GameServer.Api.Mappers;
 using GameServer.Domain.Services;
@@ -5,6 +6,7 @@ using Microsoft.AspNetCore.SignalR;
 
 namespace GameServer.Api.BackgroundServices;
 
+[ExcludeFromCodeCoverage]
 internal class GameBackgroundService(
     IGameService gameService, IHubContext<GameHub, IGameClient> gameHub, ILogger<GameBackgroundService> logger) : BackgroundService
 {

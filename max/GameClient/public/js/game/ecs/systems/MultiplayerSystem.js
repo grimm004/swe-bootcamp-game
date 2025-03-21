@@ -55,6 +55,13 @@ export default class MultiplayerSystem extends ApeEcs.System {
         this._inboundFrameCounter = new FrameCounter();
 
         this._impulseAccumulator = [];
+
+        this.onGameStopped = null;
+        this.onPlayerLeft = null;
+
+        this.playerSceneNodeFactory = null;
+
+        this.onGameStart = null;
     }
 
     /**
@@ -116,9 +123,37 @@ export default class MultiplayerSystem extends ApeEcs.System {
 
         gameHubConnection?.on("GameStateUpdate", this.#onGameStateUpdate.bind(this));
         gameHubConnection?.on("GamePlayerImpulseAction", this.#onGamePlayerImpulseAction.bind(this));
+        gameHubConnection?.on("PlayerLeft", this.#onPlayerLeft.bind(this));
+        gameHubConnection?.on("GameStart", this.#onGameStart.bind(this));
+        gameHubConnection?.on("GameStopped", this.#onGameStopped.bind(this));
 
         this._gameHubConnection = gameHubConnection;
         return true;
+    }
+
+    #onPlayerLeft(playerId) {
+        const entity = this.world.getEntity(playerId);
+        if (entity)
+            entity.destroy();
+        this.onPlayerLeft?.(playerId);
+    }
+
+    async #onGameStart() {
+        this.onGameStart?.();
+    }
+
+    async #onGameStopped() {
+        await this.#stopGameHubConnection();
+        this.cleanEntities();
+        this.onGameStopped?.();
+    }
+
+    cleanEntities() {
+        for (const component of this.world.getEntity(PlayerEntityId).getComponents(GameHostComponent.name))
+            component.destroy();
+
+        for (const entity of this.playerQuery.execute())
+            entity.destroy();
     }
 
     /**
@@ -148,11 +183,9 @@ export default class MultiplayerSystem extends ApeEcs.System {
     #setMultiplayerState(playerId, position, orientation) {
         if (this.world.getEntity(PlayerEntityId).c.player.playerId === playerId) return;
 
-        let player = this.world.getEntity(playerId) ?? this._entityFactory.createMultiplayerEntity(playerId);
+        let player = this.world.getEntity(playerId) ?? this._entityFactory.createMultiplayerEntity(playerId, this.playerSceneNodeFactory);
 
-        // todo: add actions
         // todo: add interpolation
-        // todo: potentially convert to action components and process them in the update loop (replay actions or take latest state, etc.)
         player.c.position.update({position});
         player.c.orientation.update({orientation});
     }
@@ -212,8 +245,8 @@ export default class MultiplayerSystem extends ApeEcs.System {
 
         try {
             await this._gameHubConnection?.stop();
-        } catch {
-            // Ignore errors.
+        } catch (e) {
+            console.log(e);
         }
 
         this._gameHubConnection = null;
@@ -277,18 +310,25 @@ export default class MultiplayerSystem extends ApeEcs.System {
         const playerId = playerEntity.c.player.playerId;
         const playerPosition = playerEntity.c.position.position;
         const playerOrientation = playerEntity.c.orientation.orientation;
-        // noinspection JSCheckFunctionSignatures
-        await this._gameHubConnection?.invoke("PlayerStateUpdate", {
-            playerId,
-            position: playerPosition.toSerializable(),
-            orientation: playerOrientation.toSerializable(),
-        });
+        try {
+            // noinspection JSCheckFunctionSignatures
+            await this._gameHubConnection?.invoke("PlayerStateUpdate", {
+                playerId,
+                position: playerPosition.toSerializable(),
+                orientation: playerOrientation.toSerializable(),
+            });
+        } catch {
+            return;
+        }
 
         if (!playerEntity.has(GameHostComponent.name)) {
             if (this._impulseAccumulator.length > 0) {
-                // noinspection JSCheckFunctionSignatures
-                await this._gameHubConnection?.invoke("GamePlayerImpulseAction", this._impulseAccumulator);
-                this._impulseAccumulator = [];
+                try {
+                    await this._gameHubConnection?.invoke("GamePlayerImpulseAction", this._impulseAccumulator);
+                    this._impulseAccumulator = [];
+                } catch {
+                    return;
+                }
             }
 
             return;
@@ -301,7 +341,10 @@ export default class MultiplayerSystem extends ApeEcs.System {
             size: entity.c.size.size.toSerializable(),
         }));
 
-        // noinspection JSCheckFunctionSignatures
-        await this._gameHubConnection?.invoke("WorldStateUpdate", entityData);
+        try {
+            await this._gameHubConnection?.invoke("WorldStateUpdate", entityData);
+        } catch {
+            console.log("Failed to send world state update.");
+        }
     }
 }
